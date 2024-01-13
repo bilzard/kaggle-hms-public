@@ -47,7 +47,7 @@ midline(体の左右の対称面に沿う線)上を前頭から後頭にかけ�
 - Fz-Cz
 - Cz-Pz
 
-![](resource/21_electrodes_of_International_10-20_system_for_EEG.svg)
+<img src="resource/21_electrodes_of_International_10-20_system_for_EEG.svg" width="320px" />
 
 ## ラベルについて
 
@@ -65,8 +65,8 @@ midline(体の左右の対称面に沿う線)上を前頭から後頭にかけ�
 - Generalized: 左右両方の脳に同じパターンがほぼ同じ電圧で現れる(Fig. 13)
 - Lateralized: 片方の半球のみ or 左右非対称なパターン(Fig. 14)
 
-![](resource/GPD.png)
-![](resource/LPD.png)
+<img src="resource/GPD.png" width="320px" />
+<img src="resource/LPD.png" width="320px" />
 
 #### Generalizedパターンの詳細な区分
 
@@ -90,8 +90,8 @@ midline(体の左右の対称面に沿う線)上を前頭から後頭にかけ�
 - Bilateral Independent (Fig. 17)
   - 2種類の異なるlateralizedパターンが左右両方の脳に同時にそれぞれ現れる。
 
-![](resource/bilateral_asynchronous.png)
-![](resource/bilateral_independent.png)
+<img src="resource/bilateral_asynchronous.png" width="320px" />
+<img src="resource/bilateral_independent.png" width="320px" />
 
 ### PD v.s. RDA
 
@@ -101,8 +101,8 @@ midline(体の左右の対称面に沿う線)上を前頭から後頭にかけ�
 - Rhythmic Delta Activity (Fig. 21)
   - ほぼ同じ形状の波形がintervalなしに周期的に現れる。
 
-![](resource/periodic_discharges.png)
-![](resource/rythmic_delta_activity.png)
+<img src="resource/periodic_discharges.png" width="640px" />
+<img src="resource/rythmic_delta_activity.png" width="640px" />
 
 ## ラベル以外の専門用語について
 
@@ -118,7 +118,7 @@ midline(体の左右の対称面に沿う線)上を前頭から後頭にかけ�
 - Burst:
   - やや長い期間(0.5s < t <= 30s)でphase>=4
 
-![](resource/discharge_burst.png)
+<img src="resource/discharge_burst.png" width="480px" />
 
 ## Reference
 
