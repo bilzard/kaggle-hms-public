@@ -1,0 +1,6 @@
+data/*
+log/*
+tmp/
+sandbox_*.ipynb
+**/wandb/
+!.gitkeep
