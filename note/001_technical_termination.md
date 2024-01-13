@@ -40,12 +40,22 @@ LPの右側バージョン。
 - C4-P4
 - P4-O2
 
-## Z
+### Fz/Cz/Pz
 
 midline(体の左右の対称面に沿う線)上を前頭から後頭にかけて、隣接する2点の電位差を計測している。
 
 - Fz-Cz
 - Cz-Pz
+
+### EKG
+
+心電図のデータらしい。医師が診断するときこのデータも参考にしているのだろうか？
+
+> The EKG column is for an electrocardiogram lead that records data from the heart.
+
+### A1-A2
+
+両耳の電極はコンペデータでは欠落している。
 
 <img src="resource/21_electrodes_of_International_10-20_system_for_EEG.svg" width="320px" />
 
