@@ -1,0 +1,277 @@
+from pathlib import Path
+
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import numpy as np
+import polars as pl
+
+from src.constant import EEG_PROBE_PAIRS
+from src.preprocess import load_eeg, load_spectrogram, process_eeg, process_spectrogram
+
+
+def format_time(x, pos):
+    sgn = "-" if x < 0 else ""
+    total_seconds = int(abs(x))
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{sgn}{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+def mean_std_normalization(x, axis=None, eps=1e-5):
+    x_mean = np.mean(x, axis=axis, keepdims=True)
+    x_std = np.std(x, axis=axis, keepdims=True)
+    return (x - x_mean) / (x_std + eps)
+
+
+def mean_normalization(x, axis=None):
+    x_mean = np.mean(x, axis=axis, keepdims=True)
+    return x - x_mean
+
+
+def normalize_for_image(x, axis=None):
+    x_min = np.min(x, axis=axis, keepdims=True)
+    x_max = np.max(x, axis=axis, keepdims=True)
+    return (x - x_min) / (x_max - x_min) * 255
+
+
+def plot_eeg(
+    eeg,
+    offset_sec=0,
+    time_zoom: float = 1.0,
+    sampling_rate: float = 200,
+    duration_sec=50,
+    shift=100,
+    ax=None,
+    lw=0.8,
+    display_all_series=True,
+):
+    def plot_probes(time, probe_pairs, ax, offset=0, names=[], color="black"):
+        for pos, gnd in probe_pairs:
+            name = f"{pos}-{gnd}" if gnd is not None else pos
+            voltage = (
+                x[:, probe2idx[pos]] - x[:, probe2idx[gnd]]
+                if gnd is not None
+                else x[:, probe2idx[pos]]
+            )
+            if name == "EKG":
+                voltage = mean_std_normalization(voltage) * shift / 10
+            else:
+                voltage = mean_normalization(voltage)
+            ax.plot(time, voltage + offset, label=f"{pos}-{gnd}", color=color, lw=lw)
+            offset += shift
+            names.append(name)
+        return offset, names
+
+    probe2idx = {p: idx for idx, p in enumerate(eeg.columns)}
+    probe_paris = [p.split("-") for p in EEG_PROBE_PAIRS]
+    pb_ll, pb_lp, pb_rl, pb_rp, pb_z = (
+        probe_paris[:4],
+        probe_paris[4:8],
+        probe_paris[8:12],
+        probe_paris[12:16],
+        probe_paris[16:18],
+    )
+    pb_ekg = [("EKG", None)]
+
+    center_sec = offset_sec + duration_sec / 2
+    window_sec = (duration_sec / 2) / time_zoom
+    time_start_sec = center_sec - window_sec
+    time_end_sec = center_sec + window_sec
+    total_sec = eeg.shape[0] / sampling_rate
+
+    x = process_eeg(eeg)
+
+    if ax is None:
+        _, ax = plt.subplots(1, 1, figsize=(12, 12))
+    names = []
+    offset_y = 0
+
+    num_samples = x.shape[0]
+    time = np.linspace(0, total_sec, num_samples)
+
+    offset_y, names = plot_probes(time, pb_ll, ax, offset_y, names, "C0")
+    names.append(" ")
+    offset_y += shift
+    offset_y, names = plot_probes(time, pb_rl, ax, offset_y, names, "C1")
+    names.append(" ")
+    offset_y += shift
+    offset_y, names = plot_probes(time, pb_lp, ax, offset_y, names, "C0")
+    names.append(" ")
+    offset_y += shift
+    offset_y, names = plot_probes(time, pb_rp, ax, offset_y, names, "C1")
+    names.append(" ")
+    offset_y += shift
+    offset_y, names = plot_probes(time, pb_z, ax, offset_y, names, "C2")
+    names.append(" ")
+    offset_y += shift
+    offset_y, names = plot_probes(time, pb_ekg, ax, offset_y, names, "red")
+
+    ax.set_yticks(ticks=np.arange(0, offset_y, shift), labels=names)
+    ax.invert_yaxis()
+    ax.vlines(
+        center_sec, -shift, offset_y, color="gray", linewidth=lw, linestyles="dashed"
+    )
+    ax.vlines(time_start_sec, -shift, offset_y, color="gray", linewidth=lw)
+    ax.vlines(time_end_sec, -shift, offset_y, color="gray", linewidth=lw)
+    ax.axvspan(
+        time_start_sec, time_end_sec, -shift, offset_y, alpha=0.5, color="yellow"
+    )
+    if not display_all_series:
+        ax.set_xlim(time_start_sec, time_end_sec)
+
+    formatter = ticker.FuncFormatter(format_time)
+    ax.xaxis.set_major_formatter(formatter)
+
+    return ax
+
+
+def plot_spectrogram(
+    spectrogram,
+    offset_sec=0,
+    axes=None,
+    sampling_rate: float = 0.5,
+    duration_sec=600,
+):
+    formatter = ticker.FuncFormatter(format_time)
+    freqs = [float(col[3:]) for col in spectrogram.columns[1:101]][::-1]
+
+    x = process_spectrogram(spectrogram)
+    x_ll = x[:, 1:101]
+    x_rl = x[:, 101:201]
+    x_lp = x[:, 201:301]
+    x_rp = x[:, 301:401]
+
+    num_samples = x_ll.shape[0]
+    duration = num_samples / sampling_rate
+    time = np.linspace(0, duration, num_samples)
+    center_sec = offset_sec + duration_sec / 2
+
+    extent = (time[0], time[-1], freqs[0], freqs[-1])
+
+    categories = ["LL", "RL", "LP", "RP"]
+    if axes is None:
+        _, axes = plt.subplots(4, 1, figsize=(12, 12), sharex=True)
+    plt.subplots_adjust(hspace=0.05)
+    for ax, x, category in zip(axes, [x_ll, x_rl, x_lp, x_rp], categories):
+        ax.xaxis.set_major_formatter(formatter)
+        ax.imshow(x.T, aspect="auto", cmap="jet", extent=extent, vmin=0, vmax=8)
+        ax.set(ylabel="Freq[Hz]")
+        ax.invert_yaxis()
+        ax.text(
+            -0.06,
+            0.94,
+            category,
+            transform=ax.transAxes,
+            ha="left",
+            va="bottom",
+            size=12,
+        )
+        ax.vlines(
+            center_sec,
+            freqs[0],
+            freqs[-1],
+            color="white",
+            linewidth=1,
+            linestyles="dashed",
+        )
+        ax.vlines(
+            offset_sec,
+            freqs[0],
+            freqs[-1],
+            color="white",
+            linewidth=1,
+        )
+        ax.vlines(
+            offset_sec + duration_sec,
+            freqs[0],
+            freqs[-1],
+            color="white",
+            linewidth=1,
+        )
+        ax.axvspan(offset_sec, offset_sec + duration_sec, alpha=0.5, color="white")
+
+
+def plot_data(
+    metadata,
+    eeg_id,
+    eeg_sub_id,
+    data_dir=Path("../../../input/hms-harmful-brain-activity-classification"),
+    phase="train",
+):
+    row = metadata.filter(
+        pl.col("eeg_id").eq(eeg_id).and_(pl.col("eeg_sub_id").eq(eeg_sub_id))
+    )
+    eeg_id, spectrogram_id = row["eeg_id"][0], row["spectrogram_id"][0]
+    label_id = row["label_id"][0]
+    labels = [
+        "seizure",
+        "lpd",
+        "gpd",
+        "lrda",
+        "grda",
+        "other",
+    ]
+    vote_columns = [f"{label}_vote" for label in labels]
+    label2vote = (
+        row.select(vote_columns)
+        .rename({k: v for k, v in zip(vote_columns, labels)})
+        .to_pandas()
+        .T[0]
+        .to_dict()
+    )
+
+    vote_tags = []
+    for label, vote in sorted(label2vote.items(), key=lambda x: x[1], reverse=True):
+        if vote > 0:
+            vote_tags.append(f"{vote} {label.upper()}")
+
+    fig = plt.figure(figsize=(16, 8))
+    gs = gridspec.GridSpec(4, 3, width_ratios=(2, 3, 2))
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[1, 0], sharex=ax1)
+    ax3 = fig.add_subplot(gs[2, 0], sharex=ax1)
+    ax4 = fig.add_subplot(gs[3, 0], sharex=ax1)
+    ax5 = fig.add_subplot(gs[:, 1])
+    ax6 = fig.add_subplot(gs[:, 2])
+
+    plt.setp(ax1.get_xticklabels(), visible=False)
+    plt.setp(ax2.get_xticklabels(), visible=False)
+    plt.setp(ax3.get_xticklabels(), visible=False)
+
+    eeg = load_eeg(eeg_id, data_dir, phase=phase)
+    spectrogram = load_spectrogram(spectrogram_id, data_dir, phase=phase)
+
+    spectrogram_offset_sec = row["spectrogram_label_offset_seconds"][0]
+    eeg_offset_sec = row["eeg_label_offset_seconds"][0]
+    plot_spectrogram(
+        spectrogram,
+        axes=[ax1, ax2, ax3, ax4],
+        duration_sec=600,
+        offset_sec=spectrogram_offset_sec,
+    )
+    plot_eeg(
+        eeg,
+        ax=ax5,
+        duration_sec=50,
+        offset_sec=eeg_offset_sec,
+        display_all_series=False,
+    )
+    plot_eeg(eeg, ax=ax6, duration_sec=50, offset_sec=eeg_offset_sec)
+
+    vote_tag = ", ".join(vote_tags)
+    fig.suptitle(vote_tag, fontsize=24)
+    fig.text(
+        0,
+        1,
+        f"label_id={label_id}, eeg_id={eeg_id}-{eeg_sub_id}, spectrogram_id={spectrogram_id}",
+        fontsize=16,
+    )
+    print(
+        f"label_id={label_id}, eeg_id={eeg_id}, eeg_sub_id={eeg_sub_id}, spectrogram_id={spectrogram_id}"
+    )
+    print(
+        f"spectrogram_offset_sec={spectrogram_offset_sec}, eeg_offset_sec={eeg_offset_sec}"
+    )
+    plt.tight_layout()
