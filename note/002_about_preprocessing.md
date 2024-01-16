@@ -25,27 +25,45 @@
 具体的にはLocal Outlier Factor(LOF)という以下の指標によりoutlierの度合いを評価する。
 
 $$
-\text{LOF}_k(p) = \frac{\sum_{o \in N_k(p)}\text{LRD}_k(o) / \text{LRD}_k(p)}{\vert N_k(p) \vert}
+\text{LOF}_k(p) = \frac{\sum_{o \in N_k(p)}\text{LRD}_k(o) / \text{LRD}_k(p)}{\vert N_k(p) \vert} \tag{1}
 $$
 
 $$
-\text{LRD}_k(p) = \left( \frac{\sum_{o \in N_k(p)} d_k(p, o)}{\vert N_k(p) \vert } \right)^{-1}
+\text{LRD}_k(p) = \left( \frac{\sum_{o \in N_k(p)} d_k(p, o)}{\vert N_k(p) \vert } \right)^{-1} \tag{2}
 $$
 
 $$
-d_k(p, o) = \max\{ d_{L_2}(p, o), d_{\text{std}L_2}(p, o) \}
+d_k(p, o) = \max\{ d_{L_2}(p, o), d_{\text{std}L_2}(p, o) \} \tag{3}
 $$
 
 $$
-d_{L_2} = \sqrt{\sum_{i=1}^n (q_i - p_i)^2 }
+d_{L_2} = \sqrt{\sum_{i=1}^n (q_i - p_i)^2 } \tag{4}
 $$
 
 $$
-d_{\text{std}L_2} = \sqrt{\sum_{i=1}^n \left( \frac{q_i - p_i}{\sigma_i} \right)^2 }
+d_{\text{std}L_2} = \sqrt{\sum_{i=1}^n \left( \frac{q_i - p_i}{\sigma_i} \right)^2 } \tag{5}
 $$
 
 LRD(Local Reachability Density)は、対象とするnode $p$に対して、周囲のtop-kとの距離の和の平均の逆数によって定義され、直感的には*node p周辺のクラスタの密度*に対応する。また、LOFはnode pにおけるLRDを、*周辺のk近傍の点のLRDと相対的な大きさを比較した指標*として定義される。node pにおけるLRDが周囲と比べて大きい場合、*周囲よりも疎な領域に位置するサンプルであることを現るので*outlierとして評価される。逆に、pにおけるLRDが周囲と同じくらいの場合、*node pは比較的密集した領域にある*ことを示すため、正常なサンプルとして評価される。
 なお、論文ではハイパーパラメータ$N_k$ は$N_k=3$ で固定し、outlierかどうかを決定する閾値はcross validationにより決定している。
+
+### LOFの幾何学的な意味について
+
+1, 2式を整理すると、以下のようになる。
+
+$$
+\begin{align*}
+\text{LOF}_k(p) &= \frac{1}{N_k} \sum_{o \in N_k(p)} \frac{\sum_{o^\prime \in N_k(p)}d_k(p, o^\prime)}{\sum_{q^\prime \in N_k(o)}d_k(o, q)} \\ \tag{6}
+&= \frac{1}{N_k} \sum_{o \in N_k(p)} \left( \frac{1}{N_k} \sum_{o^\prime \in N_k}d_k(p, o^\prime) \right) \cdot  \left(\frac{1}{N_k} \sum_{q^\prime \in N_k(o)}d_k(o, q) \right)^{-1} \\
+&= \frac{1}{N_k} \sum_{o \in N_k(p)} \frac{D_k(p)}{D_k(o)}, \\
+D_k(p) &:= \frac{1}{N_k} \sum_{o \in N_k(o)}d_k(p, o)
+\end{align*}
+$$
+
+LOFは*pのk-近傍点との距離の平均値を、近傍点o周辺との距離の平均値で正規化したもの*とみなすことができる。
+すなわち、*"近傍点との距離のtop-k平均"という尺度について、p自身の尺度をその近傍点における尺度で正規化したもの*とみなすことができる。「pがoutlierの場合、p周辺はサンプルが疎に分布しているのに対し、pの近傍点はサンプルが比較的密に分布している」という仮定に基づくと、このようなサンプルpのLOFは大きな値をとる。
+
+<img src="resource/lof.svg" width="320px" />
 
 ## さまざまなノイズ源とartifactについて
 
