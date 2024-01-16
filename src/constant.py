@@ -28,6 +28,7 @@ PROBE2IDX = {
     "O2": 18,
     "EKG": 19,
 }
+IDX2PROBE = {v: k for k, v in PROBE2IDX.items()}
 PROBES = list(PROBE2IDX.keys())
 EEG_PROBES = PROBES[:-1]
 KEG_PROBE = PROBES[-1]
