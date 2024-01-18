@@ -7,7 +7,13 @@ import numpy as np
 import polars as pl
 
 from src.constant import EEG_PROBE_PAIRS
-from src.preprocess import load_eeg, load_spectrogram, process_eeg, process_spectrogram
+from src.preprocess import (
+    load_eeg,
+    load_spectrogram,
+    process_eeg,
+    process_mask,
+    process_spectrogram,
+)
 
 
 def format_time(x, pos):
@@ -46,20 +52,24 @@ def plot_eeg(
     ax=None,
     lw: float = 0.8,
     display_all_series=True,
+    use_mask=False,
 ):
-    def plot_probes(time, probe_pairs, ax, offset=0, names=[], color="black"):
-        for pos, gnd in probe_pairs:
-            name = f"{pos}-{gnd}" if gnd is not None else pos
+    def plot_probes(x, mask, time, probe_pairs, ax, offset=0, names=[], color="black"):
+        for p1, p2 in probe_pairs:
+            name = f"{p1}-{p2}" if p2 is not None else p1
             voltage = (
-                x[:, probe2idx[pos]] - x[:, probe2idx[gnd]]
-                if gnd is not None
-                else x[:, probe2idx[pos]]
+                x[:, probe2idx[p1]] - x[:, probe2idx[p2]]
+                if p2 is not None
+                else x[:, probe2idx[p1]]
             )
+            if mask is not None:
+                voltage *= mask[:, probe2idx[p1]] * mask[:, probe2idx[p2]]
             if name == "EKG":
                 voltage = mean_std_normalization(voltage) * shift / 10
             else:
                 voltage = mean_normalization(voltage)
-            ax.plot(time, voltage + offset, label=f"{pos}-{gnd}", color=color, lw=lw)
+
+            ax.plot(time, voltage + offset, label=f"{p1}-{p2}", color=color, lw=lw)
             offset += shift
             names.append(name)
         return offset, names
@@ -82,6 +92,10 @@ def plot_eeg(
     total_sec = eeg.shape[0] / sampling_rate
 
     x = process_eeg(eeg)
+    if use_mask:
+        mask = process_mask(eeg)
+    else:
+        mask = None
 
     if ax is None:
         _, ax = plt.subplots(1, 1, figsize=(12, 12))
@@ -91,22 +105,22 @@ def plot_eeg(
     num_samples = x.shape[0]
     time = np.linspace(0, total_sec, num_samples)
 
-    offset_y, names = plot_probes(time, pb_ll, ax, offset_y, names, "C0")
+    offset_y, names = plot_probes(x, mask, time, pb_ll, ax, offset_y, names, "C0")
     names.append(" ")
     offset_y += shift
-    offset_y, names = plot_probes(time, pb_rl, ax, offset_y, names, "C1")
+    offset_y, names = plot_probes(x, mask, time, pb_rl, ax, offset_y, names, "C1")
     names.append(" ")
     offset_y += shift
-    offset_y, names = plot_probes(time, pb_lp, ax, offset_y, names, "C0")
+    offset_y, names = plot_probes(x, mask, time, pb_lp, ax, offset_y, names, "C0")
     names.append(" ")
     offset_y += shift
-    offset_y, names = plot_probes(time, pb_rp, ax, offset_y, names, "C1")
+    offset_y, names = plot_probes(x, mask, time, pb_rp, ax, offset_y, names, "C1")
     names.append(" ")
     offset_y += shift
-    offset_y, names = plot_probes(time, pb_z, ax, offset_y, names, "C2")
+    offset_y, names = plot_probes(x, mask, time, pb_z, ax, offset_y, names, "C2")
     names.append(" ")
     offset_y += shift
-    offset_y, names = plot_probes(time, pb_ekg, ax, offset_y, names, "red")
+    offset_y, names = plot_probes(x, None, time, pb_ekg, ax, offset_y, names, "red")
 
     ax.set_yticks(ticks=np.arange(0, offset_y, shift), labels=names)
     ax.invert_yaxis()
