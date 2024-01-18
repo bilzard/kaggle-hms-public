@@ -37,14 +37,14 @@ def normalize_for_image(x, axis=None):
 
 
 def plot_eeg(
-    eeg,
-    offset_sec=0,
+    eeg: pl.DataFrame,
+    offset_sec: float = 0,
     time_zoom: float = 1.0,
     sampling_rate: float = 200,
-    duration_sec=50,
-    shift=100,
+    duration_sec: int = 50,
+    shift: int = 100,
     ax=None,
-    lw=0.8,
+    lw: float = 0.8,
     display_all_series=True,
 ):
     def plot_probes(time, probe_pairs, ax, offset=0, names=[], color="black"):
@@ -128,11 +128,11 @@ def plot_eeg(
 
 
 def plot_spectrogram(
-    spectrogram,
-    offset_sec=0,
+    spectrogram: pl.DataFrame,
+    offset_sec: float = 0,
     axes=None,
     sampling_rate: float = 0.5,
-    duration_sec=600,
+    duration_sec: int = 600,
 ):
     formatter = ticker.FuncFormatter(format_time)
     freqs = [float(col[3:]) for col in spectrogram.columns[1:101]][::-1]
@@ -194,11 +194,11 @@ def plot_spectrogram(
 
 
 def plot_data(
-    metadata,
-    eeg_id,
-    eeg_sub_id,
-    data_dir=Path("../../../input/hms-harmful-brain-activity-classification"),
-    phase="train",
+    metadata: pl.DataFrame,
+    eeg_id: int,
+    eeg_sub_id: int,
+    data_dir: Path = Path("../../../input/hms-harmful-brain-activity-classification"),
+    phase: str = "train",
 ):
     row = metadata.filter(
         pl.col("eeg_id").eq(eeg_id).and_(pl.col("eeg_sub_id").eq(eeg_sub_id))
