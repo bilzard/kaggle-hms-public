@@ -148,6 +148,7 @@ def plot_eeg(
 def plot_spectrogram(
     spectrogram: pl.DataFrame,
     offset_sec: float = 0,
+    fig=None,
     axes=None,
     sampling_rate: float = 0.5,
     duration_sec: int = 600,
@@ -170,11 +171,12 @@ def plot_spectrogram(
 
     categories = ["LL", "RL", "LP", "RP"]
     if axes is None:
-        _, axes = plt.subplots(4, 1, figsize=(12, 12), sharex=True)
+        fig, axes = plt.subplots(4, 1, figsize=(12, 12), sharex=True)
     plt.subplots_adjust(hspace=0.05)
     for ax, x, category in zip(axes, [x_ll, x_rl, x_lp, x_rp], categories):
         ax.xaxis.set_major_formatter(formatter)
-        ax.imshow(x.T, aspect="auto", cmap="jet", extent=extent, vmin=0, vmax=8)
+        cax = ax.imshow(x.T, aspect="auto", cmap="jet", extent=extent, vmin=-40, vmax=0)
+        fig.colorbar(cax, ax=ax)  # type: ignore
         ax.set(ylabel="Freq[Hz]")
         ax.invert_yaxis()
         ax.text(
@@ -265,6 +267,7 @@ def plot_data(
     eeg_offset_sec = row["eeg_label_offset_seconds"][0]
     plot_spectrogram(
         spectrogram,
+        fig=fig,
         axes=[ax1, ax2, ax3, ax4],
         duration_sec=600,
         offset_sec=spectrogram_offset_sec,
