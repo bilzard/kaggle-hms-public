@@ -53,6 +53,8 @@ def plot_eeg(
     lw: float = 0.8,
     display_all_series=True,
     use_mask=False,
+    rolling_frames=15,
+    ekg_rolling_frames=7,
 ):
     def plot_probes(x, mask, time, probe_pairs, ax, offset=0, names=[], color="black"):
         for p1, p2 in probe_pairs:
@@ -91,7 +93,9 @@ def plot_eeg(
     time_end_sec = center_sec + window_sec
     total_sec = eeg.shape[0] / sampling_rate
 
-    x = process_eeg(eeg)
+    x = process_eeg(
+        eeg, rolling_frames=rolling_frames, ekg_rolling_frames=ekg_rolling_frames
+    )
     if use_mask:
         mask = process_mask(eeg)
     else:
