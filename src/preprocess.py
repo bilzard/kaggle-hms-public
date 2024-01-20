@@ -1,5 +1,7 @@
 import numpy as np
 import polars as pl
+import torch
+import torchaudio.functional as AF
 
 from src.constant import EEG_PROBES
 
@@ -17,27 +19,44 @@ def process_spectrogram(spectrogram: pl.DataFrame, eps=1e-4) -> np.ndarray:
     return x
 
 
-def process_eeg(
-    eeg: pl.DataFrame, rolling_frames=5, ekg_rolling_frames=5
-) -> np.ndarray:
+def process_eeg(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
     eeg = (
         eeg.select(EEG_PROBES + ["EKG"])
         .interpolate()
         .with_columns(
             *[
                 pl.col(probe)
-                .rolling_mean(rolling_frames, min_periods=1, center=True)
+                .rolling_mean(down_sampling_rate, min_periods=1, center=True)
                 .fill_null(0)
                 .alias(probe)
                 for probe in EEG_PROBES
             ],
             pl.col("EKG")
-            .rolling_mean(ekg_rolling_frames, min_periods=1, center=True)
+            .rolling_mean(down_sampling_rate, min_periods=1, center=True)
             .fill_null(0)
             .alias("EKG"),
         )
     )
-    return eeg.to_numpy()
+    x = eeg.to_numpy()
+    x = x[down_sampling_rate // 2 :: down_sampling_rate, :]
+
+    return x
+
+
+def do_apply_filter(
+    xa: np.ndarray,
+    sampling_rate: int = 40,
+    cutoff_freqs: tuple[float, float] = (0.5, 50),
+    device="cpu",
+):
+    """
+    x: (n_samples, )
+    """
+    x = torch.from_numpy(xa).float().to(device).unsqueeze(0)
+    x = AF.highpass_biquad(x, sampling_rate, cutoff_freqs[0])
+    x = AF.lowpass_biquad(x, sampling_rate, cutoff_freqs[1])
+    x = x.squeeze(0).detach().cpu().numpy()
+    return x
 
 
 def process_mask(eeg: pl.DataFrame) -> np.ndarray:
