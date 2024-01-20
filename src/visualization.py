@@ -8,6 +8,7 @@ import polars as pl
 
 from src.constant import EEG_PROBE_PAIRS
 from src.preprocess import (
+    do_apply_filter,
     load_eeg,
     load_spectrogram,
     process_eeg,
@@ -46,16 +47,22 @@ def plot_eeg(
     eeg: pl.DataFrame,
     offset_sec: float = 0,
     time_zoom: float = 1.0,
-    sampling_rate: float = 200,
+    sampling_rate: int = 200,
     duration_sec: int = 50,
     shift: int = 100,
     ax=None,
     lw: float = 0.8,
     display_all_series=True,
     use_mask=False,
-    rolling_frames=15,
-    ekg_rolling_frames=7,
+    down_sampling_rate=5,
+    apply_filter=True,
+    cutoff_freqs=(0.5, 50),
+    ref_voltage=1000,
 ):
+    if down_sampling_rate > 1:
+        sampling_rate = sampling_rate // down_sampling_rate
+        print("sampling_rate", sampling_rate)
+
     def plot_probes(x, mask, time, probe_pairs, ax, offset=0, names=[], color="black"):
         for p1, p2 in probe_pairs:
             name = f"{p1}-{p2}" if p2 is not None else p1
@@ -64,12 +71,14 @@ def plot_eeg(
                 if p2 is not None
                 else x[:, probe2idx[p1]]
             )
+            if apply_filter:
+                voltage = do_apply_filter(voltage, sampling_rate, cutoff_freqs)
             if mask is not None:
                 voltage *= mask[:, probe2idx[p1]] * mask[:, probe2idx[p2]]
             if name == "EKG":
                 voltage = mean_std_normalization(voltage) * shift / 10
             else:
-                voltage = mean_normalization(voltage)
+                voltage = mean_normalization(voltage) * ref_voltage
 
             ax.plot(time, voltage + offset, label=f"{p1}-{p2}", color=color, lw=lw)
             offset += shift
@@ -93,8 +102,12 @@ def plot_eeg(
     time_end_sec = center_sec + window_sec
     total_sec = eeg.shape[0] / sampling_rate
 
-    x = process_eeg(
-        eeg, rolling_frames=rolling_frames, ekg_rolling_frames=ekg_rolling_frames
+    x = (
+        process_eeg(
+            eeg,
+            down_sampling_rate=down_sampling_rate,
+        )
+        / ref_voltage
     )
     if use_mask:
         mask = process_mask(eeg)
