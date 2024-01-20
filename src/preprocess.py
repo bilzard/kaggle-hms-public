@@ -3,7 +3,7 @@ import polars as pl
 import torch
 import torchaudio.functional as AF
 
-from src.constant import EEG_PROBES
+from src.constant import EEG_PROBES, PROBES
 
 
 def load_eeg(eeg_id, data_dir, phase="train"):
@@ -21,7 +21,7 @@ def process_spectrogram(spectrogram: pl.DataFrame, eps=1e-4) -> np.ndarray:
 
 def process_eeg(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
     eeg = (
-        eeg.select(EEG_PROBES + ["EKG"])
+        eeg.select(PROBES)
         .interpolate()
         .with_columns(
             *[
@@ -29,18 +29,22 @@ def process_eeg(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
                 .rolling_mean(down_sampling_rate, min_periods=1, center=True)
                 .fill_null(0)
                 .alias(probe)
-                for probe in EEG_PROBES
+                for probe in PROBES
             ],
-            pl.col("EKG")
-            .rolling_mean(down_sampling_rate, min_periods=1, center=True)
-            .fill_null(0)
-            .alias("EKG"),
         )
     )
     x = eeg.to_numpy()
     x = x[down_sampling_rate // 2 :: down_sampling_rate, :]
 
     return x
+
+
+def process_mask(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
+    mask = eeg.select(f"mask-{probe}" for probe in EEG_PROBES).with_columns(
+        pl.col(f"mask-{probe}").cast(pl.UInt8) for probe in EEG_PROBES
+    )
+    mask = mask[down_sampling_rate // 2 :: down_sampling_rate, :]
+    return mask.to_numpy()
 
 
 def do_apply_filter(
@@ -57,10 +61,3 @@ def do_apply_filter(
     x = AF.lowpass_biquad(x, sampling_rate, cutoff_freqs[1])
     x = x.squeeze(0).detach().cpu().numpy()
     return x
-
-
-def process_mask(eeg: pl.DataFrame) -> np.ndarray:
-    mask = eeg.select(f"mask-{probe}" for probe in EEG_PROBES).with_columns(
-        pl.col(f"mask-{probe}").cast(pl.UInt8) for probe in EEG_PROBES
-    )
-    return mask.to_numpy()
