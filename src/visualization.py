@@ -110,7 +110,7 @@ def plot_eeg(
         / ref_voltage
     )
     if use_mask:
-        mask = process_mask(eeg)
+        mask = process_mask(eeg, down_sampling_rate=down_sampling_rate)
     else:
         mask = None
 
