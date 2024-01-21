@@ -96,12 +96,6 @@ def plot_eeg(
     )
     pb_ekg = [("EKG", None)]
 
-    center_sec = offset_sec + duration_sec / 2
-    window_sec = (duration_sec / 2) / time_zoom
-    time_start_sec = center_sec - window_sec
-    time_end_sec = center_sec + window_sec
-    total_sec = eeg.shape[0] / sampling_rate
-
     x = (
         process_eeg(
             eeg,
@@ -118,6 +112,12 @@ def plot_eeg(
         _, ax = plt.subplots(1, 1, figsize=(12, 12))
     names = []
     offset_y = 0
+
+    center_sec = offset_sec + duration_sec / 2
+    window_sec = (duration_sec / 2) / time_zoom
+    time_start_sec = center_sec - window_sec
+    time_end_sec = center_sec + window_sec
+    total_sec = x.shape[0] / sampling_rate
 
     num_samples = x.shape[0]
     time = np.linspace(0, total_sec, num_samples)
