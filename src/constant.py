@@ -1,11 +1,4 @@
-LABELS = [
-    "seizure",
-    "lrd",
-    "grd",
-    "lrda",
-    "grda",
-    "other",
-]
+LABELS = ["seizure", "lpd", "gpd", "lrda", "grda", "other"]
 PROBE2IDX = {
     "Fp1": 0,
     "F3": 1,
