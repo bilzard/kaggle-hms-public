@@ -61,7 +61,6 @@ def plot_eeg(
 ):
     if down_sampling_rate > 1:
         sampling_rate = sampling_rate // down_sampling_rate
-        print("sampling_rate", sampling_rate)
 
     def plot_probes(x, mask, time, probe_pairs, ax, offset=0, names=[], color="black"):
         for p1, p2 in probe_pairs:
