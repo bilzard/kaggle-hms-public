@@ -2,7 +2,9 @@ import numpy as np
 import polars as pl
 import torch
 import torchaudio.functional as AF
+from einops import rearrange
 
+from src.array_util import pad_multiple_of
 from src.constant import EEG_PROBES, PROBES
 
 
@@ -20,21 +22,11 @@ def process_spectrogram(spectrogram: pl.DataFrame, eps=1e-4) -> np.ndarray:
 
 
 def process_eeg(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
-    eeg = (
-        eeg.select(PROBES)
-        .interpolate()
-        .with_columns(
-            *[
-                pl.col(probe)
-                .rolling_mean(down_sampling_rate, min_periods=1, center=True)
-                .fill_null(0)
-                .alias(probe)
-                for probe in PROBES
-            ],
-        )
-    )
+    eeg = eeg.select(PROBES).interpolate().fill_null(0)
     x = eeg.to_numpy()
-    x = x[down_sampling_rate // 2 :: down_sampling_rate, :]
+    x = pad_multiple_of(x, down_sampling_rate)
+    x = rearrange(x, "(n k) c -> n k c", k=down_sampling_rate)
+    x = np.mean(x, axis=1)
 
     return x
 
