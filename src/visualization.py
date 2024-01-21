@@ -6,7 +6,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 import polars as pl
 
-from src.constant import EEG_PROBE_PAIRS
+from src.constant import EEG_PROBE_PAIRS, LABELS
 from src.preprocess import (
     do_apply_filter,
     load_eeg,
@@ -165,6 +165,8 @@ def plot_spectrogram(
     axes=None,
     sampling_rate: float = 0.5,
     duration_sec: int = 600,
+    eeg_duration_sec: int = 50,
+    display_all_series=False,
 ):
     formatter = ticker.FuncFormatter(format_time)
     freqs = [float(col[3:]) for col in spectrogram.columns[1:101]][::-1]
@@ -176,8 +178,11 @@ def plot_spectrogram(
     x_rp = x[:, 301:401]
 
     num_samples = x_ll.shape[0]
-    duration = num_samples / sampling_rate
-    time = np.linspace(0, duration, num_samples)
+    if display_all_series:
+        total_frame_sec = num_samples / sampling_rate
+    else:
+        total_frame_sec = duration_sec
+    time = np.linspace(0, total_frame_sec, num_samples)
     center_sec = offset_sec + duration_sec / 2
 
     extent = (time[0], time[-1], freqs[0], freqs[-1])
@@ -223,7 +228,15 @@ def plot_spectrogram(
             color="white",
             linewidth=1,
         )
-        ax.axvspan(offset_sec, offset_sec + duration_sec, alpha=0.5, color="white")
+        if display_all_series:
+            ax.axvspan(offset_sec, offset_sec + duration_sec, alpha=0.5, color="white")
+        else:
+            ax.axvspan(
+                center_sec - eeg_duration_sec / 2,
+                center_sec + eeg_duration_sec / 2,
+                alpha=0.5,
+                color="white",
+            )
 
 
 def plot_data(
@@ -238,18 +251,10 @@ def plot_data(
     )
     eeg_id, spectrogram_id = row["eeg_id"][0], row["spectrogram_id"][0]
     label_id = row["label_id"][0]
-    labels = [
-        "seizure",
-        "lpd",
-        "gpd",
-        "lrda",
-        "grda",
-        "other",
-    ]
-    vote_columns = [f"{label}_vote" for label in labels]
+    vote_columns = [f"{label}_vote" for label in LABELS]
     label2vote = (
         row.select(vote_columns)
-        .rename({k: v for k, v in zip(vote_columns, labels)})
+        .rename({k: v for k, v in zip(vote_columns, LABELS)})
         .to_pandas()
         .T[0]
         .to_dict()
