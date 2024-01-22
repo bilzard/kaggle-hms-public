@@ -171,16 +171,23 @@ def plot_spectrogram(
     freqs = [float(col[3:]) for col in spectrogram.columns[1:101]][::-1]
 
     x = process_spectrogram(spectrogram)
+    num_samples = x.shape[0]
+    if display_all_series:
+        total_frame_sec = num_samples / sampling_rate
+    else:
+        x = x[
+            int(offset_sec * sampling_rate) : int(
+                (offset_sec + duration_sec) * sampling_rate
+            )
+        ]
+        offset_sec = 0
+        total_frame_sec = duration_sec
+
     x_ll = x[:, 1:101]
     x_rl = x[:, 101:201]
     x_lp = x[:, 201:301]
     x_rp = x[:, 301:401]
 
-    num_samples = x_ll.shape[0]
-    if display_all_series:
-        total_frame_sec = num_samples / sampling_rate
-    else:
-        total_frame_sec = duration_sec
     time = np.linspace(0, total_frame_sec, num_samples)
     center_sec = offset_sec + duration_sec / 2
 
@@ -194,7 +201,7 @@ def plot_spectrogram(
         ax.xaxis.set_major_formatter(formatter)
         cax = ax.imshow(x.T, aspect="auto", cmap="jet", extent=extent, vmin=-40, vmax=0)
         fig.colorbar(cax, ax=ax)  # type: ignore
-        ax.set(ylabel="Freq[Hz]")
+        ax.set(ylabel="Freq[Hz]", xlim=(time[0], time[-1]))
         ax.invert_yaxis()
         ax.text(
             -0.06,
