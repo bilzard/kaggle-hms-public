@@ -16,6 +16,11 @@ class PreprocesssConfig:
 
 
 @dataclass
+class SplitConfig:
+    num_splits: int
+
+
+@dataclass
 class MainConfig:
     job_name: str
     phase: str
@@ -24,3 +29,4 @@ class MainConfig:
     cleanup: bool
     preprocess: PreprocesssConfig
     env: EnvironmentConfig
+    split: SplitConfig
