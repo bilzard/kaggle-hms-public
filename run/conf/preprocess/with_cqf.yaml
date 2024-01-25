@@ -1,5 +1,1 @@
-defaults:
-  - default
-  - _self_
-
 process_cqf: true
