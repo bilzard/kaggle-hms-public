@@ -1,0 +1,23 @@
+hydra:
+  run:
+    dir: ${env.data_dir}/single/${job_name}/${phase}
+  sweep:
+    dir: ${dir.output_dir}/multirun/${job_name}/${phase}
+    subdir: ${hydra.job.override_dirname}
+  job:
+    name: ${job_name}
+    chdir: true
+    config:
+      override_dirname:
+        exclude_keys:
+          - verbose
+          - debug
+
+defaults:
+  - env: local
+  - preprocess: without_cqf
+  - _self_
+
+job_name: ???
+phase: train # train or test
+debug: false
