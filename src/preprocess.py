@@ -1,3 +1,5 @@
+from itertools import product
+
 import numpy as np
 import polars as pl
 import torch
@@ -5,7 +7,7 @@ import torchaudio.functional as AF
 from einops import rearrange
 
 from src.array_util import pad_multiple_of
-from src.constant import EEG_PROBES, PROBES
+from src.constant import EEG_PROBES, LABELS, PROBE2IDX, PROBES
 
 
 def load_eeg(eeg_id, data_dir, phase="train"):
@@ -53,3 +55,176 @@ def do_apply_filter(
     x = AF.lowpass_biquad(x, sampling_rate, cutoff_freqs[1])
     x = x.squeeze(0).detach().cpu().numpy()
     return x
+
+
+def process_cqf(
+    eeg_df: pl.DataFrame,
+    kernel_size: int = 13,
+    top_k: int = 3,
+    eps: float = 1e-4,
+    distance_threshold: float = 10.0,
+    distance_metric: str = "l2",
+    normalize_type: str = "top-k",
+):
+    eeg_df = eeg_df.with_columns(
+        pl.col(probe).alias(f"{probe}-org") for probe in EEG_PROBES
+    ).with_columns(
+        # L2 distance of (p1, p2)
+        pl.col(p1)
+        .sub(pl.col(p2))
+        .pow(2)
+        .ewm_mean(half_life=kernel_size, min_periods=1)
+        .add(eps)
+        .alias(f"l2-dist-{p1}-{p2}")
+        for p1, p2 in product(EEG_PROBES, EEG_PROBES)
+    )
+
+    idxs = []
+    for p1 in EEG_PROBES:
+        rx = eeg_df.select(
+            f"{distance_metric}-dist-{p1}-{p2}" for p2 in EEG_PROBES
+        ).to_numpy()
+        top_k_indices = np.argsort(rx, axis=1)[:, 1 : top_k + 1]
+        top_k_values = np.take_along_axis(rx, top_k_indices, axis=1)
+        top_k_dist = top_k_values.mean(axis=1)
+        eeg_df = eeg_df.with_columns(
+            pl.Series(top_k_dist).alias(f"top-k-dist-{p1}"),
+        )
+        idxs.append(top_k_indices)
+
+    xs = eeg_df.select(f"top-k-dist-{p1}" for p1 in EEG_PROBES).to_numpy()  # (N, 19)
+    global_top_k_indices = np.argsort(xs, axis=1)[:, :top_k]
+    global_top_k_values = np.take_along_axis(xs, global_top_k_indices, axis=1)
+    global_top_k_dist = global_top_k_values.mean(axis=1)
+    global_median_dist = np.median(xs, axis=1)
+    idxs = np.stack(idxs, axis=1)  # (N, 19, top_k)
+
+    for p1 in EEG_PROBES:
+        local_top_k_idxs = idxs[:, PROBE2IDX[p1], :]
+        local_top_k_values = np.take_along_axis(xs, local_top_k_idxs, axis=1)
+        local_top_k_dist = local_top_k_values.mean(axis=1)
+        eeg_df = (
+            eeg_df.with_columns(
+                pl.Series(local_top_k_dist).alias(f"local-top-k-dist-{p1}"),
+                pl.Series(global_top_k_dist).alias(f"global-top-k-dist-{p1}"),
+                pl.Series(global_median_dist).alias(f"global-median-dist-{p1}"),
+            )
+            .with_columns(
+                pl.col(f"top-k-dist-{p1}")
+                .truediv(pl.col(f"local-top-k-dist-{p1}").add(eps))
+                .alias(f"LOF-{p1}"),
+            )
+            .with_columns(
+                pl.col(f"top-k-dist-{p1}")
+                .truediv(pl.col(f"global-{normalize_type}-dist-{p1}").add(eps))
+                .alias(f"GOF-{p1}"),
+            )
+        )
+
+    for p in EEG_PROBES:
+        eeg_df = eeg_df.with_columns(
+            pl.col(f"GOF-{p}").lt(distance_threshold).alias(f"mask-{p}"),
+            pl.lit(1.0)
+            .truediv(pl.col(f"GOF-{p}").clip(0).truediv(distance_threshold).add(1.0))
+            .alias(f"CQF-{p}"),
+        ).with_columns(pl.col(f"{p}-org").mul(pl.col(f"mask-{p}")).alias(p))
+
+    return eeg_df
+
+
+def sigmoid(x: np.ndarray) -> np.ndarray:
+    return 1 / (1 + np.exp(-x))
+
+
+def calc_weight(x: np.ndarray, T: float = 3, alpha: float = 5) -> np.ndarray:
+    assert T > 0.0
+    return sigmoid((x - alpha) / T)
+
+
+def process_label(
+    metadata: pl.DataFrame, T: float = 3, alpha: float = 5
+) -> pl.DataFrame:
+    total_votes = metadata.select(f"{label}_vote" for label in LABELS).fold(
+        lambda s1, s2: s1 + s2
+    )
+    metadata = (
+        metadata.with_columns(
+            pl.Series(total_votes).alias("total_votes"),
+        )
+        .with_columns(
+            pl.col(f"{label}_vote").sum().over("eeg_id").alias(f"{label}_vote_per_eeg")
+            for label in LABELS
+        )
+        .with_columns(
+            pl.col("label_id").count().over("eeg_id").alias("label_count_per_eeg")
+        )
+        .with_columns(
+            pl.col(f"{label}_vote_per_eeg")
+            .truediv(pl.col("label_count_per_eeg"))
+            .alias(f"{label}_vote_per_eeg")
+            for label in LABELS
+        )
+    )
+    total_votes_per_eeg = metadata.select(
+        f"{label}_vote_per_eeg" for label in LABELS
+    ).fold(lambda s1, s2: s1 + s2)
+    metadata = (
+        metadata.with_columns(
+            pl.Series(total_votes_per_eeg).alias("total_votes_per_eeg")
+        )
+        .with_columns(
+            calc_weight(pl.col("total_votes"), T=T, alpha=alpha).alias("weight"),  # type: ignore
+            calc_weight(pl.col("total_votes_per_eeg"), T=T, alpha=alpha).alias(  # type: ignore
+                "weight_per_eeg"
+            ),
+        )
+        .with_columns(
+            pl.col(f"{label}_vote")
+            .truediv(pl.col("total_votes"))
+            .alias(f"{label}_prob")
+            for label in LABELS
+        )
+        .with_columns(
+            pl.col(f"{label}_vote_per_eeg")
+            .truediv(pl.col("total_votes_per_eeg"))
+            .alias(f"{label}_prob_per_eeg")
+            for label in LABELS
+        )
+    )
+    unique_vote_count = (
+        metadata.select("eeg_id", *[f"{label}_vote" for label in LABELS])
+        .unique()
+        .group_by("eeg_id")
+        .agg(pl.count().alias("num_unique_vote_combinations_per_eeg"))
+    )
+    metadata = metadata.join(unique_vote_count, on="eeg_id")
+
+    #
+    metadata = (
+        metadata.with_columns(
+            pl.col("eeg_label_offset_seconds")
+            .max()
+            .over("eeg_id")
+            .add(50)
+            .alias("duration_sec"),
+        )
+        .with_columns(
+            pl.col("duration_sec").truediv(60).alias("duration_min"),
+        )
+        .with_columns(
+            pl.col("label_id").count().over("eeg_id").alias("num_labels_per_eeg"),
+        )
+        .with_columns(
+            pl.col("num_unique_vote_combinations_per_eeg")
+            .truediv(pl.col("num_labels_per_eeg"))
+            .alias("num_unique_vote_combinations_per_label"),
+            pl.col("num_labels_per_eeg")
+            .truediv(pl.col("duration_sec"))
+            .alias("num_labels_per_duration_sec"),
+            pl.col("num_unique_vote_combinations_per_eeg")
+            .truediv(pl.col("duration_sec"))
+            .alias("num_unique_vote_combinations_per_duration_sec"),
+        )
+    )
+
+    return metadata
