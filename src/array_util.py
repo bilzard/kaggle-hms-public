@@ -10,7 +10,7 @@ def find_nearest_multiple(n, m):
 
 
 def pad_multiple_of(
-    xs: np.ndarray, divisor: int, axis: int = 0, pad_value=0
+    xs: np.ndarray, divisor: int, axis: int = 0, pad_value=0, padding_type="left"
 ) -> np.ndarray:
     """Pad a array with zeros so that its length is a multiple of divisor.
     padding is applied to the first dimension of the array.
@@ -26,8 +26,18 @@ def pad_multiple_of(
     """
     length = find_nearest_multiple(xs.shape[axis], divisor)
     pad_size = length - xs.shape[axis]
+
+    if padding_type == "left":
+        left_pad = pad_size
+        right_pad = 0
+    elif padding_type == "both":
+        left_pad = pad_size // 2
+        right_pad = pad_size - left_pad
+    else:
+        raise ValueError(f"Unknown padding type: {padding_type}")
+
     return np.pad(
         xs,
-        [(0, pad_size) if i == axis else (0, 0) for i in range(xs.ndim)],
+        [(left_pad, right_pad) if i == axis else (0, 0) for i in range(xs.ndim)],
         constant_values=pad_value,
     )
