@@ -20,4 +20,5 @@ defaults:
 
 job_name: ???
 phase: train # train or test
+dry_run: false
 debug: false

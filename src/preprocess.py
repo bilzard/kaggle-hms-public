@@ -65,7 +65,7 @@ def process_cqf(
     distance_threshold: float = 10.0,
     distance_metric: str = "l2",
     normalize_type: str = "top-k",
-):
+) -> pl.DataFrame:
     eeg_df = eeg_df.with_columns(
         pl.col(probe).alias(f"{probe}-org") for probe in EEG_PROBES
     ).with_columns(

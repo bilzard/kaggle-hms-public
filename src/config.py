@@ -21,5 +21,6 @@ class MainConfig:
     job_name: str
     phase: str
     debug: bool
+    dry_run: bool
     preprocess: PreprocesssConfig
     env: EnvironmentConfig
