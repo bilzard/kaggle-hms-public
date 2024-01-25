@@ -13,7 +13,6 @@ class EnvironmentConfig:
 @dataclass
 class PreprocesssConfig:
     process_cqf: bool
-    cleanup: bool
 
 
 @dataclass
@@ -22,5 +21,6 @@ class MainConfig:
     phase: str
     debug: bool
     dry_run: bool
+    cleanup: bool
     preprocess: PreprocesssConfig
     env: EnvironmentConfig
