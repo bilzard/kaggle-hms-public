@@ -50,8 +50,7 @@ def main(cfg: MainConfig):
     metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
     output_dir = Path(cfg.env.output_dir)
 
-    # ディレクトリが存在する場合は削除
-    if (cfg.preprocess.cleanup) and (output_dir.exists()):
+    if (not cfg.dry_run) and (cfg.preprocess.cleanup) and (output_dir.exists()):
         shutil.rmtree(output_dir)
         print(f"Removed {cfg.phase} dir: {output_dir}")
 
@@ -69,10 +68,16 @@ def main(cfg: MainConfig):
             eeg_df = pl.DataFrame(
                 {probe: pl.Series(v) for probe, v in zip(PROBES, eeg.T)}
             )
-            save_eeg(eeg_id, eeg_df, Path(cfg.env.output_dir))
 
             if cfg.preprocess.process_cqf:
                 eeg_df = process_cqf(eeg_df)
+
+            if cfg.dry_run:
+                continue
+
+            save_eeg(eeg_id, eeg_df, Path(cfg.env.output_dir))
+
+            if cfg.preprocess.process_cqf:
                 save_cqf(eeg_id, eeg_df, Path(cfg.env.output_dir))
 
 
