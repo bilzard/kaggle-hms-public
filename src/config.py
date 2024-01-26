@@ -13,6 +13,7 @@ class EnvironmentConfig:
 @dataclass
 class PreprocesssConfig:
     process_cqf: bool
+    ref_voltage: float
 
 
 @dataclass
