@@ -23,7 +23,7 @@ def train_valid_split(metadata: pl.DataFrame, fold_split_df: pl.DataFrame, fold:
     return train_df, valid_df
 
 
-def load_eeg(
+def preload_eegs(
     eeg_ids: list[int],
     preprocess_dir: Path,
 ):
