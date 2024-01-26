@@ -65,6 +65,7 @@ def main(cfg: MainConfig):
         for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
             eeg_df = load_eeg(eeg_id, data_dir=data_dir)
             eeg = process_eeg(eeg_df)
+            eeg /= cfg.preprocess.ref_voltage
             eeg_df = pl.DataFrame(
                 {probe: pl.Series(v) for probe, v in zip(PROBES, eeg.T)}
             )
