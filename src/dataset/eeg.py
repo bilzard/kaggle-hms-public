@@ -53,8 +53,9 @@ class PerEegSubsampleDataset(Dataset):
         label = np.array(
             [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
         )
+        data = dict(eeg_id=eeg_id, eeg=eeg, label=label)
 
-        return eeg, label
+        return data
 
 
 class PerLabelDataset(Dataset):
@@ -94,8 +95,9 @@ class PerLabelDataset(Dataset):
         label = np.array(
             [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
         )
+        data = dict(eeg_id=eeg_id, eeg=eeg, label=label)
 
-        return eeg, label
+        return data
 
 
 def get_train_loader(
