@@ -33,3 +33,27 @@ def preload_eegs(
         id2eeg[eeg_id] = eeg
 
     return id2eeg
+
+
+def preload_cqf(
+    eeg_ids: list[int],
+    preprocess_dir: Path,
+):
+    id2cqf = dict()
+    for eeg_id in tqdm(eeg_ids):
+        cqf = np.load(preprocess_dir / str(eeg_id) / "cqf.npy")
+        id2cqf[eeg_id] = cqf
+
+    return id2cqf
+
+
+def preload_mask(
+    eeg_ids: list[int],
+    preprocess_dir: Path,
+):
+    id2mask = dict()
+    for eeg_id in tqdm(eeg_ids):
+        mask = np.load(preprocess_dir / str(eeg_id) / "mask.npy")
+        id2mask[eeg_id] = mask
+
+    return id2mask
