@@ -21,6 +21,13 @@ PROBE2IDX = {
     "O2": 18,
     "EKG": 19,
 }
+PROBE_GROUPS = dict(
+    LL=["Fp1", "F7", "T3", "T5", "O1"],
+    RL=["Fp2", "F8", "T4", "T6", "O2"],
+    LP=["Fp1", "F3", "C3", "P3", "O1"],
+    RP=["Fp2", "F4", "C4", "P4", "O2"],
+    Z=["Fz", "Cz", "Pz"],
+)
 IDX2PROBE = {v: k for k, v in PROBE2IDX.items()}
 PROBES = list(PROBE2IDX.keys())
 EEG_PROBES = PROBES[:-1]
