@@ -11,6 +11,7 @@ class PerEegSubsampleDataset(Dataset):
         self,
         metadata: pl.DataFrame,
         id2eeg: dict[int, np.ndarray],
+        id2cqf: dict[int, np.ndarray] | None = None,
         sampling_rate: float = 40,
         duration_sec: int = 50,
         num_samples_per_eeg: int = 1,
@@ -19,6 +20,7 @@ class PerEegSubsampleDataset(Dataset):
     ):
         self.metadata = metadata.to_pandas()
         self.id2eeg = id2eeg
+        self.id2cqf = id2cqf
         self.sampling_rate = sampling_rate
         self.duration_sec = duration_sec
 
@@ -55,6 +57,13 @@ class PerEegSubsampleDataset(Dataset):
         )
         data = dict(eeg_id=eeg_id, eeg=eeg, label=label)
 
+        if self.id2cqf is not None:
+            cqf = self.id2cqf[eeg_id][start_frame:end_frame].astype(np.float32)
+            cqf = pad_multiple_of(
+                cqf, self.pad_multiple, 0, pad_value=1, padding_type=self.padding_type
+            )
+            data["cqf"] = cqf
+
         return data
 
 
@@ -63,6 +72,7 @@ class PerLabelDataset(Dataset):
         self,
         metadata: pl.DataFrame,
         id2eeg: dict[int, np.ndarray],
+        id2cqf: dict[int, np.ndarray] | None = None,
         sampling_rate: float = 40,
         duration_sec: int = 50,
         pad_multiple: int = 512,
@@ -70,6 +80,7 @@ class PerLabelDataset(Dataset):
     ):
         self.metadata = metadata.to_pandas()
         self.id2eeg = id2eeg
+        self.id2cqf = id2cqf
         self.sampling_rate = sampling_rate
         self.duration_sec = duration_sec
 
@@ -96,29 +107,48 @@ class PerLabelDataset(Dataset):
             [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
         )
         data = dict(eeg_id=eeg_id, eeg=eeg, label=label)
+        if self.id2cqf is not None:
+            cqf = self.id2cqf[eeg_id][start_frame:end_frame].astype(np.float32)
+            cqf = pad_multiple_of(
+                cqf, self.pad_multiple, 0, pad_value=1, padding_type=self.padding_type
+            )
+            data["cqf"] = cqf
 
         return data
 
 
 def get_train_loader(
-    dataset: PerEegSubsampleDataset, batch_size: int, num_workers: int
+    dataset: PerEegSubsampleDataset,
+    batch_size: int,
+    num_workers: int,
+    pin_memory: bool = True,
+    shuffle: bool = True,
+    **kwargs,
 ):
     return DataLoader(
         dataset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=shuffle,
         num_workers=num_workers,
-        pin_memory=True,
+        pin_memory=pin_memory,
         drop_last=True,
+        **kwargs,
     )
 
 
-def get_valid_loader(dataset: PerLabelDataset, batch_size: int, num_workers: int):
+def get_valid_loader(
+    dataset: PerLabelDataset,
+    batch_size: int,
+    num_workers: int,
+    pin_memory: bool = True,
+    **kwargs,
+):
     return DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True,
+        pin_memory=pin_memory,
         drop_last=False,
+        **kwargs,
     )
