@@ -1,0 +1,3 @@
+strategy: single_label
+num_splits: null
+num_validation_patients: 400

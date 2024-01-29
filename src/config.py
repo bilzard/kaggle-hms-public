@@ -18,7 +18,9 @@ class PreprocesssConfig:
 
 @dataclass
 class SplitConfig:
+    strategy: str
     num_splits: int
+    num_validation_patients: int
 
 
 @dataclass
