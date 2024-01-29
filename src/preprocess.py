@@ -194,7 +194,7 @@ def process_label(
     unique_vote_count = (
         metadata.select("eeg_id", *[f"{label}_vote" for label in LABELS])
         .unique()
-        .group_by("eeg_id")
+        .group_by("eeg_id", maintain_order=True)
         .agg(pl.count().alias("num_unique_vote_combinations_per_eeg"))
     )
     metadata = metadata.join(unique_vote_count, on="eeg_id")
