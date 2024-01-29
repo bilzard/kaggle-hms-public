@@ -16,7 +16,7 @@ hydra:
 defaults:
   - env: local
   - preprocess: without_cqf
-  - split: single_label_400
+  - split: gkfold5
   - _self_
 
 job_name: ???
