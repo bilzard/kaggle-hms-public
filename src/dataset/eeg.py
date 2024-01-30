@@ -60,7 +60,7 @@ class PerEegDataset(Dataset):
         if self.id2cqf is not None:
             cqf = self.id2cqf[eeg_id].astype(np.float32)
             cqf = pad_multiple_of(
-                cqf, self.pad_multiple, 0, pad_value=1, padding_type=self.padding_type
+                cqf, self.pad_multiple, 0, pad_value=0, padding_type=self.padding_type
             )
             data["cqf"] = cqf
 
@@ -133,7 +133,7 @@ class PerEegSubsampleDataset(Dataset):
         if self.id2cqf is not None:
             cqf = self.id2cqf[eeg_id][start_frame:end_frame].astype(np.float32)
             cqf = pad_multiple_of(
-                cqf, self.pad_multiple, 0, pad_value=1, padding_type=self.padding_type
+                cqf, self.pad_multiple, 0, pad_value=0, padding_type=self.padding_type
             )
             data["cqf"] = cqf
 
