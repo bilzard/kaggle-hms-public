@@ -225,6 +225,16 @@ def process_label(
             .truediv(pl.col("duration_sec"))
             .alias("num_unique_vote_combinations_per_duration_sec"),
         )
+        .with_columns(
+            pl.col("eeg_label_offset_seconds")
+            .min()
+            .over("eeg_id")
+            .alias("min_eeg_label_offset_sec"),
+            pl.col("eeg_label_offset_seconds")
+            .max()
+            .over("eeg_id")
+            .alias("max_eeg_label_offset_sec"),
+        )
     )
 
     return metadata
