@@ -67,13 +67,16 @@ class Wave2Spectrogram(nn.Module):
         return x
 
     @torch.no_grad
-    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None, threshold=0.5):
+    def forward(
+        self, x: torch.Tensor, mask: torch.Tensor | None = None, apply_mask=True
+    ):
         _, num_frames, _ = x.shape
         spectrograms = []
         signals = []
         probe_pairs = []
         probe_groups = []
         channel_masks = []
+        spec_masks = []
 
         if mask is None:
             mask = torch.ones_like(x)
@@ -92,11 +95,13 @@ class Wave2Spectrogram(nn.Module):
             channel_mask = []
             for p1, p2 in zip(probes[:-1], probes[1:]):
                 x_diff = x[..., PROBE2IDX[p1]] - x[..., PROBE2IDX[p2]]
-                x_diff *= mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]]
+                if apply_mask:
+                    x_diff *= mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]]
                 signal.append(x_diff)
                 channel_mask.append(mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]])
 
             signal = torch.stack(signal, dim=1)
+            channel_mask = torch.stack(channel_mask, dim=1)
 
             if self.cutoff_freqs[0] is not None:
                 signal = AF.highpass_biquad(
@@ -107,18 +112,11 @@ class Wave2Spectrogram(nn.Module):
                     signal, self.sampling_rate, self.cutoff_freqs[1]
                 )
 
-            for i, (p1, p2) in enumerate(zip(probes[:-1], probes[1:])):
-                signals.append(signal[:, i, :])
-                probe_pairs.append((p1, p2))
-                probe_groups.append(probe_group)
-
-            channel_mask = torch.stack(channel_mask, dim=1)
-            channel_mask_org = channel_mask.clone()
-            channel_mask = self.same_padding_waveform(
-                channel_mask, mode="constant", value=1
+            spec_mask = self.same_padding_waveform(
+                channel_mask, mode="constant", value=0
             )
-            channel_mask = self.downsample(channel_mask)
-            channel_mask = channel_mask.unsqueeze(dim=2)
+            spec_mask = self.downsample(spec_mask)
+            spec_mask = spec_mask.unsqueeze(dim=2)
 
             spec = self.same_padding_waveform(signal)
             spec = self.wave2spec(spec)
@@ -133,19 +131,28 @@ class Wave2Spectrogram(nn.Module):
                 + self.db_offset
             )
             B, C, F, T = spec.shape
-            channel_mask = channel_mask[..., :T]
-            BM, CM, FM, TM = channel_mask.shape
-            assert B == BM and C == CM and T == TM, (spec.shape, channel_mask.shape)
+            spec_mask = spec_mask[..., :T]
+            BM, CM, FM, TM = spec_mask.shape
+            assert B == BM and C == CM and T == TM, (spec.shape, spec_mask.shape)
 
-            spec = spec * channel_mask
-            spec = spec.sum(dim=1) / channel_mask.sum(dim=1)
+            # if apply_mask:
+            #    spec = spec * spec_mask
+            #    spec = spec.sum(dim=1) / spec_mask.sum(dim=1)
+            # else:
+            #    spec = spec.mean(dim=1)
 
-            spectrograms.append(spec)
-            channel_masks.append(channel_mask_org)
+            for i, (p1, p2) in enumerate(zip(probes[:-1], probes[1:])):
+                signals.append(signal[:, i, :])
+                channel_masks.append(channel_mask[:, i, :])
+                spectrograms.append(spec[:, i, :])
+                spec_masks.append(spec_mask[:, i, :])
+                probe_pairs.append((p1, p2))
+                probe_groups.append(probe_group)
 
         spectrograms = torch.stack(spectrograms, dim=1)
         signals = torch.stack(signals, dim=1)
-        channel_masks = torch.concat(channel_masks, dim=1)
+        channel_masks = torch.stack(channel_masks, dim=1)
+        spec_masks = torch.stack(spec_masks, dim=1)
         spectrograms = torch.nan_to_num(spectrograms, nan=-self.db_cutoff)
 
         assert (
@@ -155,6 +162,7 @@ class Wave2Spectrogram(nn.Module):
             spectrogram=spectrograms,
             signal=signals,
             channel_mask=channel_masks,
+            spec_mask=spec_masks,
             probe_pairs=probe_pairs,
             probe_groups=probe_groups,
         )
