@@ -30,6 +30,9 @@ def pad_multiple_of(
     if padding_type == "left":
         left_pad = pad_size
         right_pad = 0
+    if padding_type == "right":
+        left_pad = 0
+        right_pad = pad_size
     elif padding_type == "both":
         left_pad = pad_size // 2
         right_pad = pad_size - left_pad
