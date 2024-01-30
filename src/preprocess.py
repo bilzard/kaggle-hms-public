@@ -26,7 +26,7 @@ def process_spectrogram(spectrogram: pl.DataFrame, eps=1e-4) -> np.ndarray:
 def process_eeg(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
     eeg = eeg.select(PROBES).interpolate().fill_null(0)
     x = eeg.to_numpy()
-    x = pad_multiple_of(x, down_sampling_rate)
+    x = pad_multiple_of(x, down_sampling_rate, padding_type="right")
     x = rearrange(x, "(n k) c -> n k c", k=down_sampling_rate)
     x = np.mean(x, axis=1)
 
