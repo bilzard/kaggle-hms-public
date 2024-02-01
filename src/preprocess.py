@@ -6,7 +6,6 @@ import torch
 import torchaudio.functional as AF
 from einops import rearrange
 
-from src.array_util import pad_multiple_of
 from src.constant import EEG_PROBES, LABELS, PROBE2IDX, PROBES
 
 
@@ -23,15 +22,56 @@ def process_spectrogram(spectrogram: pl.DataFrame, eps=1e-4) -> np.ndarray:
     return x
 
 
-def process_eeg(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
-    eeg = eeg.select(PROBES).interpolate()
-    x = eeg.to_numpy()
-    x = pad_multiple_of(x, down_sampling_rate, padding_type="right", pad_value=np.nan)
+def drop_leftmost_nulls_in_array(x: np.ndarray) -> tuple[np.ndarray, int]:
+    is_non_null = ~np.isnan(x).any(axis=1)
+    first_non_null_idx = np.argmax(is_non_null).item()
+    x = x[first_non_null_idx:]
+    return x, first_non_null_idx
+
+
+def drop_rightmost_nulls_in_array(x: np.ndarray) -> tuple[np.ndarray, int]:
+    x, first_non_null_idx = drop_leftmost_nulls_in_array(x[::-1])
+    return x[::-1], first_non_null_idx
+
+
+def clip_val_to_nan(df: pl.DataFrame, clip_val: float) -> pl.DataFrame:
+    return df.with_columns(
+        pl.when(pl.col(col).abs().ge(clip_val))
+        .then(None)
+        .otherwise(pl.col(col))
+        .alias(col)
+        for col in df.columns
+    )
+
+
+def process_eeg(
+    eeg_df: pl.DataFrame,
+    down_sampling_rate=5,
+    minimum_seq_length=2000,
+    clip_val: float = 9999.0,
+    fill_nan_with: float = 0.0,
+) -> tuple[np.ndarray, np.ndarray]:
+    eeg_df = eeg_df.select(PROBES)
+    eeg_df = clip_val_to_nan(eeg_df, clip_val)
+    eeg_df = eeg_df.interpolate()
+    x = eeg_df.to_numpy()
+
+    # subsample
     x = rearrange(x, "(n k) c -> n k c", k=down_sampling_rate)
     x = np.nanmean(x, axis=1)
-    x = np.nan_to_num(x, nan=0.0)
 
-    return x
+    # calc pad mask
+    pad_mask = ~np.isnan(x)
+
+    # drop leftmost and rightmost nulls
+    x, pad_left = drop_leftmost_nulls_in_array(x)
+    x, pad_right = drop_rightmost_nulls_in_array(x)
+    num_frames, _ = x.shape
+    pad_right = max(0, minimum_seq_length - num_frames)
+    x = np.pad(x, ((pad_left, pad_right), (0, 0)), mode="reflect")
+    x = np.nan_to_num(x, nan=fill_nan_with)
+
+    return x, pad_mask
 
 
 def process_mask(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
