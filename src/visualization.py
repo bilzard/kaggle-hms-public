@@ -59,6 +59,7 @@ def plot_eeg(
     cutoff_freqs=(0.5, 50),
     ref_voltage=1000,
     force_zero_padding=False,
+    clip_val: float = 1000,
 ):
     if down_sampling_rate > 1:
         sampling_rate = sampling_rate // down_sampling_rate
@@ -71,6 +72,7 @@ def plot_eeg(
                 if p2 is not None
                 else x[:, probe2idx[p1]]
             )
+            voltage = np.clip(voltage, -clip_val, clip_val)
             if apply_filter:
                 voltage = do_apply_filter(voltage, sampling_rate, cutoff_freqs)
             if mask is not None:
@@ -254,7 +256,8 @@ def plot_data(
     data_dir: Path = Path("../../../input/hms-harmful-brain-activity-classification"),
     phase: str = "train",
     apply_filter: bool = True,
-    cutoff_freqs=(0.5, 50),
+    cutoff_freqs: tuple[float, float] = (0.5, 50),
+    use_mask: bool = False,
 ):
     row = metadata.filter(
         pl.col("eeg_id").eq(eeg_id).and_(pl.col("eeg_sub_id").eq(eeg_sub_id))
@@ -308,8 +311,17 @@ def plot_data(
         display_all_series=False,
         apply_filter=apply_filter,
         cutoff_freqs=cutoff_freqs,
+        use_mask=use_mask,
     )
-    plot_eeg(eeg, ax=ax6, duration_sec=50, offset_sec=eeg_offset_sec)
+    plot_eeg(
+        eeg,
+        ax=ax6,
+        duration_sec=50,
+        offset_sec=eeg_offset_sec,
+        apply_filter=apply_filter,
+        cutoff_freqs=cutoff_freqs,
+        use_mask=use_mask,
+    )
 
     vote_tag = ", ".join(vote_tags)
     fig.suptitle(vote_tag, fontsize=24)
