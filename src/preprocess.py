@@ -108,8 +108,6 @@ def process_cqf(
     normalize_type: str = "top-k",
 ) -> pl.DataFrame:
     eeg_df = eeg_df.with_columns(
-        pl.col(probe).alias(f"{probe}-org") for probe in EEG_PROBES
-    ).with_columns(
         # L2 distance of (p1, p2)
         pl.col(p1)
         .sub(pl.col(p2))
@@ -168,7 +166,7 @@ def process_cqf(
             pl.lit(1.0)
             .truediv(pl.col(f"GOF-{p}").clip(0).truediv(distance_threshold).add(1.0))
             .alias(f"CQF-{p}"),
-        ).with_columns(pl.col(f"{p}-org").mul(pl.col(f"mask-{p}")).alias(p))
+        )
 
     return eeg_df
 
