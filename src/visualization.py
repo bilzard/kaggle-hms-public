@@ -6,24 +6,15 @@ import matplotlib.ticker as ticker
 import numpy as np
 import polars as pl
 
-from src.constant import EEG_PROBE_PAIRS, LABELS
+from src.constant import EEG_PROBE_PAIRS, LABELS, PROBE2IDX
+from src.plot_util import format_time
 from src.preprocess import (
     do_apply_filter,
     load_eeg,
     load_spectrogram,
     process_eeg,
-    process_mask,
     process_spectrogram,
 )
-
-
-def format_time(x, pos):
-    sgn = "-" if x < 0 else ""
-    total_seconds = int(abs(x))
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
-    seconds = total_seconds % 60
-    return f"{sgn}{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
 def mean_std_normalization(x, axis=None, eps=1e-5):
@@ -44,27 +35,28 @@ def normalize_for_image(x, axis=None):
 
 
 def plot_eeg(
-    eeg: pl.DataFrame,
+    x: np.ndarray,
+    mask: np.ndarray | None = None,
     offset_sec: float = 0,
     time_zoom: float = 1.0,
     sampling_rate: int = 200,
     duration_sec: int = 50,
-    shift: int = 100,
+    shift: float = 0.1,
     ax=None,
     lw: float = 0.8,
     display_all_series=True,
-    use_mask=False,
     down_sampling_rate=5,
     apply_filter=True,
     cutoff_freqs=(0.5, 50),
-    ref_voltage=1000,
-    force_zero_padding=False,
     clip_val: float = 1000,
 ):
+    x = x.copy()
     if down_sampling_rate > 1:
         sampling_rate = sampling_rate // down_sampling_rate
 
-    def plot_probes(x, mask, time, probe_pairs, ax, offset=0, names=[], color="black"):
+    def plot_probes(
+        x, mask, time, probe_pairs, ax, offset: float = 0, names=[], color="black"
+    ):
         for p1, p2 in probe_pairs:
             name = f"{p1}-{p2}" if p2 is not None else p1
             voltage = (
@@ -79,16 +71,14 @@ def plot_eeg(
                 voltage *= mask[:, probe2idx[p1]] * mask[:, probe2idx[p2]]
             if name == "EKG":
                 voltage = mean_std_normalization(voltage) * shift / 10
-            else:
-                voltage = mean_normalization(voltage) * ref_voltage
 
             ax.plot(time, voltage + offset, label=f"{p1}-{p2}", color=color, lw=lw)
             offset += shift
             names.append(name)
         return offset, names
 
-    probe2idx = {p: idx for idx, p in enumerate(eeg.columns)}
-    probe_paris = [p.split("-") for p in EEG_PROBE_PAIRS]
+    probe2idx = PROBE2IDX
+    probe_paris = EEG_PROBE_PAIRS
     pb_ll, pb_lp, pb_rl, pb_rp, pb_z = (
         probe_paris[:4],
         probe_paris[4:8],
@@ -97,19 +87,6 @@ def plot_eeg(
         probe_paris[16:18],
     )
     pb_ekg = [("EKG", None)]
-
-    x, pad_mask = process_eeg(
-        eeg,
-        down_sampling_rate=down_sampling_rate,
-    )
-    if force_zero_padding:
-        x *= pad_mask[:, np.newaxis]
-
-    x /= ref_voltage
-    if use_mask:
-        mask = process_mask(eeg, down_sampling_rate=down_sampling_rate)
-    else:
-        mask = None
 
     if ax is None:
         _, ax = plt.subplots(1, 1, figsize=(12, 12))
@@ -142,7 +119,10 @@ def plot_eeg(
     offset_y += shift
     offset_y, names = plot_probes(x, None, time, pb_ekg, ax, offset_y, names, "red")
 
-    ax.set_yticks(ticks=np.arange(0, offset_y, shift), labels=names)
+    num_ticks = len(names)
+    y_ticks = np.linspace(0, offset_y, num_ticks, endpoint=False)
+
+    ax.set_yticks(ticks=y_ticks, labels=names)
     ax.invert_yaxis()
     ax.vlines(
         center_sec, -shift, offset_y, color="gray", linewidth=lw, linestyles="dashed"
@@ -257,7 +237,8 @@ def plot_data(
     phase: str = "train",
     apply_filter: bool = True,
     cutoff_freqs: tuple[float, float] = (0.5, 50),
-    use_mask: bool = False,
+    ref_voltage: float = 1000,
+    force_zero_padding: bool = False,
 ):
     row = metadata.filter(
         pl.col("eeg_id").eq(eeg_id).and_(pl.col("eeg_sub_id").eq(eeg_sub_id))
@@ -291,7 +272,12 @@ def plot_data(
     plt.setp(ax2.get_xticklabels(), visible=False)
     plt.setp(ax3.get_xticklabels(), visible=False)
 
-    eeg = load_eeg(eeg_id, data_dir, phase=phase)
+    eeg_df = load_eeg(eeg_id, data_dir, phase=phase)
+    eeg, pad_mask = process_eeg(eeg_df)
+    if force_zero_padding:
+        eeg *= pad_mask[:, np.newaxis]
+    eeg /= ref_voltage
+
     spectrogram = load_spectrogram(spectrogram_id, data_dir, phase=phase)
 
     spectrogram_offset_sec = row["spectrogram_label_offset_seconds"][0]
@@ -311,7 +297,6 @@ def plot_data(
         display_all_series=False,
         apply_filter=apply_filter,
         cutoff_freqs=cutoff_freqs,
-        use_mask=use_mask,
     )
     plot_eeg(
         eeg,
@@ -320,7 +305,6 @@ def plot_data(
         offset_sec=eeg_offset_sec,
         apply_filter=apply_filter,
         cutoff_freqs=cutoff_freqs,
-        use_mask=use_mask,
     )
 
     vote_tag = ", ".join(vote_tags)
