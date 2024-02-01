@@ -3,6 +3,23 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 
+def format_time(x, pos):
+    sgn = "-" if x < 0 else ""
+    total_seconds = int(abs(x))
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{sgn}{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+def format_min(x, pos):
+    sgn = "-" if x < 0 else ""
+    total_seconds = int(abs(x))
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{sgn}{minutes:02d}:{seconds:02d}"
+
+
 def shift_plot(
     ys: list[ArrayLike],
     shift: float,
