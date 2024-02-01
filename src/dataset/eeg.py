@@ -50,7 +50,9 @@ class PerEegDataset(Dataset):
         row = self.eeg_id2metadata[eeg_id]
 
         eeg = self.id2eeg[eeg_id].astype(np.float32)
-        eeg = pad_multiple_of(eeg, self.pad_multiple, 0, padding_type=self.padding_type)
+        eeg = pad_multiple_of(
+            eeg, self.pad_multiple, 0, padding_type=self.padding_type, mode="reflect"
+        )
         label = np.array(
             [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
         )
@@ -60,7 +62,12 @@ class PerEegDataset(Dataset):
         if self.id2cqf is not None:
             cqf = self.id2cqf[eeg_id].astype(np.float32)
             cqf = pad_multiple_of(
-                cqf, self.pad_multiple, 0, pad_value=0, padding_type=self.padding_type
+                cqf,
+                self.pad_multiple,
+                0,
+                padding_type=self.padding_type,
+                mode="constant",
+                constant_values=0,
             )
             data["cqf"] = cqf
 
@@ -123,7 +130,9 @@ class PerEegSubsampleDataset(Dataset):
         end_frame = start_frame + int(self.duration_sec * self.sampling_rate)
 
         eeg = self.id2eeg[eeg_id][start_frame:end_frame].astype(np.float32)
-        eeg = pad_multiple_of(eeg, self.pad_multiple, 0, padding_type=self.padding_type)
+        eeg = pad_multiple_of(
+            eeg, self.pad_multiple, 0, padding_type=self.padding_type, mode="reflect"
+        )
         label = np.array(
             [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
         )
@@ -133,7 +142,12 @@ class PerEegSubsampleDataset(Dataset):
         if self.id2cqf is not None:
             cqf = self.id2cqf[eeg_id][start_frame:end_frame].astype(np.float32)
             cqf = pad_multiple_of(
-                cqf, self.pad_multiple, 0, pad_value=0, padding_type=self.padding_type
+                cqf,
+                self.pad_multiple,
+                0,
+                padding_type=self.padding_type,
+                mode="constant",
+                constant_values=0,
             )
             data["cqf"] = cqf
 
