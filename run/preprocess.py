@@ -1,5 +1,4 @@
 import shutil
-import warnings
 from pathlib import Path
 
 import hydra
@@ -52,8 +51,6 @@ def save_cqf(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
 
 @hydra.main(config_path="conf", config_name="main", version_base="1.2")
 def main(cfg: MainConfig):
-    warnings.simplefilter("error", RuntimeWarning)
-
     data_dir = Path(cfg.env.data_dir)
     metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
     output_dir = Path(cfg.env.output_dir)
@@ -70,13 +67,9 @@ def main(cfg: MainConfig):
     tag = " (with cqf)" if cfg.preprocess.process_cqf else ""
 
     with trace(f"process eeg{tag}"):
-        warned_eeg_ids = []
         for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
             eeg_df = load_eeg(eeg_id, data_dir=data_dir)
-            try:
-                eeg, pad_mask = process_eeg(eeg_df)
-            except RuntimeWarning:
-                warned_eeg_ids.append(eeg_id)
+            eeg, pad_mask = process_eeg(eeg_df)
 
             eeg /= cfg.preprocess.ref_voltage
             eeg_df = pl.DataFrame(
@@ -92,11 +85,6 @@ def main(cfg: MainConfig):
 
                 if cfg.preprocess.process_cqf:
                     save_cqf(eeg_id, eeg_df, Path(cfg.env.output_dir))
-
-        print(f"#warned_eeg_ids: {len(warned_eeg_ids)}/{len(eeg_ids)}")
-        if not cfg.dry_run and (len(warned_eeg_ids) > 0):
-            warned_eeg_ids = np.array(warned_eeg_ids)
-            np.save(output_dir / "warned_eeg_ids.npy", warned_eeg_ids)
 
 
 if __name__ == "__main__":
