@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 
 from src.constant import LABELS, PROBE2IDX, PROBE_GROUPS
-from src.plot_util import format_time
+from src.plot_util import format_time, shift_plot
 from src.preprocess import (
     do_apply_filter,
     load_eeg,
@@ -54,38 +54,9 @@ def plot_eeg(
     if down_sampling_rate > 1:
         sampling_rate = sampling_rate // down_sampling_rate
 
-    def plot_probes(
-        x, mask, time, probe_pairs, ax, offset: float = 0, names=[], color="black"
-    ):
-        for p1, p2 in probe_pairs:
-            name = f"{p1}-{p2}" if p2 is not None else p1
-            voltage = (
-                x[:, probe2idx[p1]] - x[:, probe2idx[p2]]
-                if p2 is not None
-                else x[:, probe2idx[p1]]
-            )
-            voltage = np.clip(voltage, -clip_val, clip_val)
-            if apply_filter:
-                voltage = do_apply_filter(voltage, sampling_rate, cutoff_freqs)
-            if mask is not None:
-                voltage *= mask[:, probe2idx[p1]] * mask[:, probe2idx[p2]]
-            if name == "EKG":
-                voltage = mean_std_normalization(voltage) * shift / 10
-            else:
-                voltage = mean_normalization(voltage)
-
-            ax.plot(time, voltage + offset, label=f"{p1}-{p2}", color=color, lw=lw)
-            offset -= shift
-            names.append(name)
-        return offset, names
-
-    probe2idx = PROBE2IDX
-    pb_ekg = [("EKG", None)]
-
     if ax is None:
         _, ax = plt.subplots(1, 1, figsize=(12, 12))
     names = []
-    offset_y = 0
 
     center_sec = offset_sec + duration_sec / 2
     window_sec = (duration_sec / 2) / time_zoom
@@ -101,24 +72,44 @@ def plot_eeg(
 
     group2color = dict(LL="C0", RL="C1", LP="C0", RP="C1", Z="C2")
 
+    signals = []
+    names = []
+    masks = []
+    colors = []
     for i, (probe_group, probes) in enumerate(probe_groups.items()):
-        offset_y, names = plot_probes(
-            x,
-            mask,
-            time,
-            zip(probes[:-1], probes[1:]),
-            ax,
-            offset_y,
-            names,
-            group2color[probe_group],
-        )
-        names.append(" ")
-        offset_y -= shift
+        color = group2color[probe_group]
+        for p1, p2 in zip(probes[:-1], probes[1:]):
+            name = f"{p1}-{p2}" if p2 is not None else p1
+            voltage = (
+                x[:, PROBE2IDX[p1]] - x[:, PROBE2IDX[p2]]
+                if p2 is not None
+                else x[:, PROBE2IDX[p1]]
+            )
+            voltage = np.clip(voltage, -clip_val, clip_val)
+            if apply_filter:
+                voltage = do_apply_filter(voltage, sampling_rate, cutoff_freqs)
+            if mask is not None:
+                voltage *= mask[:, PROBE2IDX[p1]] * mask[:, PROBE2IDX[p2]]
+                masks.append(mask[:, PROBE2IDX[p1]] * mask[:, PROBE2IDX[p2]])
+            if name == "EKG":
+                voltage = mean_std_normalization(voltage) * shift / 10
+            else:
+                voltage = mean_normalization(voltage)
 
-    offset_y, names = plot_probes(x, None, time, pb_ekg, ax, offset_y, names, "red")
+            signals.append(voltage)
+            names.append(name)
+            colors.append(color)
 
-    y_min, y_max = offset_y, 0
+    names.append("EKG")
+    signals.append(x[:, PROBE2IDX["EKG"]])
+    colors.append("red")
+
+    shift_plot(
+        signals, shift, names, x=time, ax=ax, area=False, alpha=0.5, colors=colors
+    )
+
     num_ticks = len(names)
+    y_min, y_max = -shift * num_ticks, 0
     y_ticks = np.linspace(y_max, y_min, num_ticks, endpoint=False)
 
     y_lim = (y_min - shift, y_max + 2 * shift)
