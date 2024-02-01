@@ -101,7 +101,7 @@ def plot_eeg(
         down_sampling_rate=down_sampling_rate,
     )
     if force_zero_padding:
-        x *= pad_mask
+        x *= pad_mask[:, np.newaxis]
 
     x /= ref_voltage
     if use_mask:

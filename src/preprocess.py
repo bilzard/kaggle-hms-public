@@ -48,7 +48,7 @@ def process_eeg(
     eeg_df: pl.DataFrame,
     down_sampling_rate=5,
     minimum_seq_length=2000,
-    clip_val: float = 9999.0,
+    clip_val: float = 5000.0,
     fill_nan_with: float = 0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     eeg_df = eeg_df.select(PROBES)
@@ -61,7 +61,7 @@ def process_eeg(
     x = np.nanmean(x, axis=1)
 
     # calc pad mask
-    pad_mask = ~np.isnan(x)
+    pad_mask = ~np.isnan(x).any(axis=1)
 
     # drop leftmost and rightmost nulls
     x, pad_left = drop_leftmost_nulls_in_array(x)
