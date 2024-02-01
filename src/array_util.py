@@ -13,8 +13,8 @@ def pad_multiple_of(
     xs: np.ndarray,
     divisor: int,
     axis: int = 0,
-    pad_value: float = 0,
     padding_type="right",
+    **kwargs,
 ) -> np.ndarray:
     """Pad a array with zeros so that its length is a multiple of divisor.
     padding is applied to the first dimension of the array.
@@ -46,5 +46,5 @@ def pad_multiple_of(
     return np.pad(
         xs,
         [(left_pad, right_pad) if i == axis else (0, 0) for i in range(xs.ndim)],
-        constant_values=pad_value,
+        **kwargs,
     )
