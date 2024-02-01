@@ -26,6 +26,7 @@ def shift_plot(
     names: list[str],
     x: ArrayLike | None = None,
     ax=None,
+    area=False,
     **kwargs,
 ):
     if ax is None:
@@ -34,10 +35,17 @@ def shift_plot(
     for i, (name, y) in enumerate(zip(names, ys)):
         if type(y) is not np.ndarray:
             y = np.asarray(y)
-        if x is None:
-            ax.plot(y + i * -shift, label=name, **kwargs)
+
+        offset = i * -shift
+        if area:
+            if x is None:
+                x = np.arange(len(y))
+            ax.fill_between(x, y1=y + offset, y2=offset, label=name, **kwargs)
         else:
-            ax.plot(x, y + i * -shift, label=name, **kwargs)
+            args = [y + offset]
+            if x is not None:
+                args = [x, *args]
+            ax.plot(*args, label=name, **kwargs)
 
     num_ticks = len(names)
     y_ticks = np.linspace(0, -shift * num_ticks, num_ticks, endpoint=False)
