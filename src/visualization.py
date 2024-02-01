@@ -253,6 +253,8 @@ def plot_data(
     eeg_sub_id: int,
     data_dir: Path = Path("../../../input/hms-harmful-brain-activity-classification"),
     phase: str = "train",
+    apply_filter: bool = True,
+    cutoff_freqs=(0.5, 50),
 ):
     row = metadata.filter(
         pl.col("eeg_id").eq(eeg_id).and_(pl.col("eeg_sub_id").eq(eeg_sub_id))
@@ -304,6 +306,8 @@ def plot_data(
         duration_sec=50,
         offset_sec=eeg_offset_sec,
         display_all_series=False,
+        apply_filter=apply_filter,
+        cutoff_freqs=cutoff_freqs,
     )
     plot_eeg(eeg, ax=ax6, duration_sec=50, offset_sec=eeg_offset_sec)
 
