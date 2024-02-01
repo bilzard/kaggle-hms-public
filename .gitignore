@@ -1,6 +1,6 @@
 data/*
 log/*
 tmp/
-sandbox_*.ipynb
+sandbox*.ipynb
 **/wandb/
 !.gitkeep
