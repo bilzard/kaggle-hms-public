@@ -24,11 +24,12 @@ def process_spectrogram(spectrogram: pl.DataFrame, eps=1e-4) -> np.ndarray:
 
 
 def process_eeg(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
-    eeg = eeg.select(PROBES).interpolate().fill_null(0)
+    eeg = eeg.select(PROBES).interpolate()
     x = eeg.to_numpy()
-    x = pad_multiple_of(x, down_sampling_rate, padding_type="right")
+    x = pad_multiple_of(x, down_sampling_rate, padding_type="right", pad_value=np.nan)
     x = rearrange(x, "(n k) c -> n k c", k=down_sampling_rate)
-    x = np.mean(x, axis=1)
+    x = np.nanmean(x, axis=1)
+    x = np.nan_to_num(x, nan=0.0)
 
     return x
 
