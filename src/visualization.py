@@ -41,7 +41,7 @@ def plot_eeg(
     time_zoom: float = 1.0,
     sampling_rate: int = 200,
     duration_sec: int = 50,
-    shift: float = 0.1,
+    shift: float = 0.5,
     ax=None,
     lw: float = 0.8,
     display_all_series=True,
@@ -106,7 +106,7 @@ def plot_eeg(
         sig.append(signals[i])
 
     names.append("EKG")
-    sig.append(x[:, PROBE2IDX["EKG"]])
+    sig.append(x[:, PROBE2IDX["EKG"]] / 10)
     colors.append("red")
 
     shift_plot(sig, shift, names, x=time, ax=ax, area=False, alpha=0.5, colors=colors)
