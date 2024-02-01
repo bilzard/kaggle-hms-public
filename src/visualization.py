@@ -6,7 +6,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 import polars as pl
 
-from src.constant import EEG_PROBE_PAIRS, LABELS, PROBE2IDX
+from src.constant import LABELS, PROBE2IDX, PROBE_GROUPS
 from src.plot_util import format_time
 from src.preprocess import (
     do_apply_filter,
@@ -71,21 +71,15 @@ def plot_eeg(
                 voltage *= mask[:, probe2idx[p1]] * mask[:, probe2idx[p2]]
             if name == "EKG":
                 voltage = mean_std_normalization(voltage) * shift / 10
+            else:
+                voltage = mean_normalization(voltage)
 
             ax.plot(time, voltage + offset, label=f"{p1}-{p2}", color=color, lw=lw)
-            offset += shift
+            offset -= shift
             names.append(name)
         return offset, names
 
     probe2idx = PROBE2IDX
-    probe_paris = EEG_PROBE_PAIRS
-    pb_ll, pb_lp, pb_rl, pb_rp, pb_z = (
-        probe_paris[:4],
-        probe_paris[4:8],
-        probe_paris[8:12],
-        probe_paris[12:16],
-        probe_paris[16:18],
-    )
     pb_ekg = [("EKG", None)]
 
     if ax is None:
@@ -101,43 +95,55 @@ def plot_eeg(
 
     num_samples = x.shape[0]
     time = np.linspace(0, total_sec, num_samples)
+    probe_groups = dict()
+    for group in ["LL", "RL", "LP", "RP", "Z"]:
+        probe_groups[group] = PROBE_GROUPS[group]
 
-    offset_y, names = plot_probes(x, mask, time, pb_ll, ax, offset_y, names, "C0")
-    names.append(" ")
-    offset_y += shift
-    offset_y, names = plot_probes(x, mask, time, pb_rl, ax, offset_y, names, "C1")
-    names.append(" ")
-    offset_y += shift
-    offset_y, names = plot_probes(x, mask, time, pb_lp, ax, offset_y, names, "C0")
-    names.append(" ")
-    offset_y += shift
-    offset_y, names = plot_probes(x, mask, time, pb_rp, ax, offset_y, names, "C1")
-    names.append(" ")
-    offset_y += shift
-    offset_y, names = plot_probes(x, mask, time, pb_z, ax, offset_y, names, "C2")
-    names.append(" ")
-    offset_y += shift
+    group2color = dict(LL="C0", RL="C1", LP="C0", RP="C1", Z="C2")
+
+    for i, (probe_group, probes) in enumerate(probe_groups.items()):
+        offset_y, names = plot_probes(
+            x,
+            mask,
+            time,
+            zip(probes[:-1], probes[1:]),
+            ax,
+            offset_y,
+            names,
+            group2color[probe_group],
+        )
+        names.append(" ")
+        offset_y -= shift
+
     offset_y, names = plot_probes(x, None, time, pb_ekg, ax, offset_y, names, "red")
 
+    y_min, y_max = offset_y, 0
     num_ticks = len(names)
-    y_ticks = np.linspace(0, offset_y, num_ticks, endpoint=False)
+    y_ticks = np.linspace(y_max, y_min, num_ticks, endpoint=False)
 
+    y_lim = (y_min - shift, y_max + 2 * shift)
     ax.set_yticks(ticks=y_ticks, labels=names)
-    ax.invert_yaxis()
     ax.vlines(
-        center_sec, -shift, offset_y, color="gray", linewidth=lw, linestyles="dashed"
+        center_sec,
+        *y_lim,
+        color="gray",
+        linewidth=lw,
+        linestyles="dashed",
     )
-    ax.vlines(time_start_sec, -shift, offset_y, color="gray", linewidth=lw)
-    ax.vlines(time_end_sec, -shift, offset_y, color="gray", linewidth=lw)
+    ax.vlines(time_start_sec, *y_lim, color="gray", linewidth=lw)
+    ax.vlines(time_end_sec, *y_lim, color="gray", linewidth=lw)
     ax.axvspan(
-        time_start_sec, time_end_sec, -shift, offset_y, alpha=0.5, color="yellow"
+        time_start_sec,
+        time_end_sec,
+        alpha=0.5,
+        color="yellow",
     )
     if not display_all_series:
         ax.set_xlim(time_start_sec, time_end_sec)
 
     formatter = ticker.FuncFormatter(format_time)
     ax.xaxis.set_major_formatter(formatter)
-
+    ax.set_ylim(y_min - shift, y_max + 2 * shift)
     return ax
 
 
