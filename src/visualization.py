@@ -81,16 +81,14 @@ def plot_eeg(
         for p1, p2 in zip(probes[:-1], probes[1:]):
             name = f"{p1}-{p2}" if p2 is not None else p1
             voltage = (
-                x[:, PROBE2IDX[p1]] - x[:, PROBE2IDX[p2]]
+                x[..., PROBE2IDX[p1]] - x[..., PROBE2IDX[p2]]
                 if p2 is not None
                 else x[:, PROBE2IDX[p1]]
             )
             voltage = np.clip(voltage, -clip_val, clip_val)
-            if apply_filter:
-                voltage = do_apply_filter(voltage, sampling_rate, cutoff_freqs)
             if mask is not None:
-                voltage *= mask[:, PROBE2IDX[p1]] * mask[:, PROBE2IDX[p2]]
-                masks.append(mask[:, PROBE2IDX[p1]] * mask[:, PROBE2IDX[p2]])
+                voltage *= mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]]
+                masks.append(mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]])
             if name == "EKG":
                 voltage = mean_std_normalization(voltage) * shift / 10
             else:
@@ -100,13 +98,18 @@ def plot_eeg(
             names.append(name)
             colors.append(color)
 
+    signals = np.stack(signals, axis=0)
+    if apply_filter:
+        signals = do_apply_filter(signals, sampling_rate, cutoff_freqs)
+    sig = []
+    for i in range(signals.shape[0]):
+        sig.append(signals[i])
+
     names.append("EKG")
-    signals.append(x[:, PROBE2IDX["EKG"]])
+    sig.append(x[:, PROBE2IDX["EKG"]])
     colors.append("red")
 
-    shift_plot(
-        signals, shift, names, x=time, ax=ax, area=False, alpha=0.5, colors=colors
-    )
+    shift_plot(sig, shift, names, x=time, ax=ax, area=False, alpha=0.5, colors=colors)
 
     num_ticks = len(names)
     y_min, y_max = -shift * num_ticks, 0
