@@ -58,6 +58,7 @@ def plot_eeg(
     apply_filter=True,
     cutoff_freqs=(0.5, 50),
     ref_voltage=1000,
+    force_zero_padding=False,
 ):
     if down_sampling_rate > 1:
         sampling_rate = sampling_rate // down_sampling_rate
@@ -95,13 +96,14 @@ def plot_eeg(
     )
     pb_ekg = [("EKG", None)]
 
-    x = (
-        process_eeg(
-            eeg,
-            down_sampling_rate=down_sampling_rate,
-        )
-        / ref_voltage
+    x, pad_mask = process_eeg(
+        eeg,
+        down_sampling_rate=down_sampling_rate,
     )
+    if force_zero_padding:
+        x *= pad_mask
+
+    x /= ref_voltage
     if use_mask:
         mask = process_mask(eeg, down_sampling_rate=down_sampling_rate)
     else:

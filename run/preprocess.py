@@ -1,4 +1,5 @@
 import shutil
+import warnings
 from pathlib import Path
 
 import hydra
@@ -24,6 +25,11 @@ def save_eeg(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
     np.save(output_file_path / "eeg.npy", eeg)
 
 
+def save_pad_mask(eeg_id: str, pad_mask: np.ndarray, output_dir: Path):
+    pad_mask = pad_mask.astype(np.uint8)
+    np.save(output_dir / str(eeg_id) / "pad_mask.npy", pad_mask)
+
+
 def save_cqf(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
     cqf = (
         eeg_df.select(f"CQF-{probe}" for probe in EEG_PROBES)
@@ -46,6 +52,8 @@ def save_cqf(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
 
 @hydra.main(config_path="conf", config_name="main", version_base="1.2")
 def main(cfg: MainConfig):
+    warnings.simplefilter("error", RuntimeWarning)
+
     data_dir = Path(cfg.env.data_dir)
     metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
     output_dir = Path(cfg.env.output_dir)
@@ -64,10 +72,14 @@ def main(cfg: MainConfig):
     with trace(f"process eeg{tag}"):
         for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
             eeg_df = load_eeg(eeg_id, data_dir=data_dir)
-            eeg = process_eeg(eeg_df)
+            try:
+                eeg, pad_mask = process_eeg(eeg_df)
+            except RuntimeWarning as e:
+                print(f"RuntimeWarning: {e} (eeg_id: {eeg_id})")
+
             eeg /= cfg.preprocess.ref_voltage
             eeg_df = pl.DataFrame(
-                {probe: pl.Series(v) for probe, v in zip(PROBES, eeg.T)}
+                {probe: pl.Series(v) for probe, v in zip(PROBES, np.transpose(eeg))}
             )
 
             if cfg.preprocess.process_cqf:
@@ -77,6 +89,7 @@ def main(cfg: MainConfig):
                 continue
 
             save_eeg(eeg_id, eeg_df, Path(cfg.env.output_dir))
+            save_pad_mask(eeg_id, pad_mask, Path(cfg.env.output_dir))
 
             if cfg.preprocess.process_cqf:
                 save_cqf(eeg_id, eeg_df, Path(cfg.env.output_dir))
