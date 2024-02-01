@@ -70,12 +70,13 @@ def main(cfg: MainConfig):
     tag = " (with cqf)" if cfg.preprocess.process_cqf else ""
 
     with trace(f"process eeg{tag}"):
+        warned_eeg_ids = []
         for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
             eeg_df = load_eeg(eeg_id, data_dir=data_dir)
             try:
                 eeg, pad_mask = process_eeg(eeg_df)
-            except RuntimeWarning as e:
-                print(f"RuntimeWarning: {e} (eeg_id: {eeg_id})")
+            except RuntimeWarning:
+                warned_eeg_ids.append(eeg_id)
 
             eeg /= cfg.preprocess.ref_voltage
             eeg_df = pl.DataFrame(
@@ -85,14 +86,17 @@ def main(cfg: MainConfig):
             if cfg.preprocess.process_cqf:
                 eeg_df = process_cqf(eeg_df)
 
-            if cfg.dry_run:
-                continue
+            if not cfg.dry_run:
+                save_eeg(eeg_id, eeg_df, Path(cfg.env.output_dir))
+                save_pad_mask(eeg_id, pad_mask, Path(cfg.env.output_dir))
 
-            save_eeg(eeg_id, eeg_df, Path(cfg.env.output_dir))
-            save_pad_mask(eeg_id, pad_mask, Path(cfg.env.output_dir))
+                if cfg.preprocess.process_cqf:
+                    save_cqf(eeg_id, eeg_df, Path(cfg.env.output_dir))
 
-            if cfg.preprocess.process_cqf:
-                save_cqf(eeg_id, eeg_df, Path(cfg.env.output_dir))
+        print(f"#warned_eeg_ids: {len(warned_eeg_ids)}/{len(eeg_ids)}")
+        if not cfg.dry_run and (len(warned_eeg_ids) > 0):
+            warned_eeg_ids = np.array(warned_eeg_ids)
+            np.save(output_dir / "warned_eeg_ids.npy", warned_eeg_ids)
 
 
 if __name__ == "__main__":
