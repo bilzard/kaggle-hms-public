@@ -3,7 +3,7 @@ import torch.nn as nn
 import torchaudio.functional as AF
 from torchaudio.transforms import MelSpectrogram
 
-from src.constant import PROBE2IDX
+from src.constant import PROBE2IDX, PROBE_GROUPS
 from src.model.tensor_util import rolling_mean, same_padding_1d
 
 
@@ -14,11 +14,6 @@ class Wave2Spectrogram(nn.Module):
         n_fft=256,
         win_length=256,
         hop_length=64,
-        probes_ll=["Fp1", "F7", "T3", "T5", "O1"],
-        probes_rl=["Fp2", "F8", "T4", "T6", "O2"],
-        probes_lp=["Fp1", "F3", "C3", "P3", "O1"],
-        probes_rp=["Fp2", "F4", "C4", "P4", "O2"],
-        probes_z=["Fz", "Cz", "Pz"],
         cutoff_freqs=(0.5, 50),
         frequency_lim=(0, 20),
         db_cutoff=60,
@@ -31,11 +26,6 @@ class Wave2Spectrogram(nn.Module):
         super().__init__()
         self.n_fft = n_fft
         self.hop_length = hop_length
-        self.probes_ll = probes_ll
-        self.probes_rl = probes_rl
-        self.probes_lp = probes_lp
-        self.probes_rp = probes_rp
-        self.probes_z = probes_z
         self.cutoff_freqs = cutoff_freqs
         self.db_cutoff = db_cutoff
         self.db_offset = db_offset
@@ -99,16 +89,7 @@ class Wave2Spectrogram(nn.Module):
         if mask is None:
             mask = torch.ones_like(x)
 
-        for probes, probe_group in zip(
-            [
-                self.probes_ll,
-                self.probes_lp,
-                self.probes_z,
-                self.probes_rp,
-                self.probes_rl,
-            ],
-            ["LL", "LP", "Z", "RP", "RL"],
-        ):
+        for probe_group, probes in PROBE_GROUPS.items():
             signal = []
             channel_mask = []
             for p1, p2 in zip(probes[:-1], probes[1:]):
