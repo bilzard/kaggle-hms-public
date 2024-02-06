@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from omegaconf import DictConfig
+
 
 @dataclass
 class EnvironmentConfig:
@@ -24,6 +26,35 @@ class SplitConfig:
 
 
 @dataclass
+class SchedulerConfig:
+    warmup_ratio: float
+
+
+@dataclass
+class DataConfig:
+    target_key: str
+    pred_key: str
+    weight_key: str
+    input_keys: list[str]
+
+
+@dataclass
+class TrainerConfig:
+    epochs: int
+    lr: float
+    data: DataConfig
+    optimizer: DictConfig
+    scheduler: SchedulerConfig
+
+
+@dataclass
+class ArchitectureConfig:
+    in_channels: int
+    out_channels: int
+    model: DictConfig
+
+
+@dataclass
 class MainConfig:
     job_name: str
     phase: str
@@ -33,3 +64,5 @@ class MainConfig:
     preprocess: PreprocesssConfig
     env: EnvironmentConfig
     split: SplitConfig
+    architecture: ArchitectureConfig
+    trainer: TrainerConfig

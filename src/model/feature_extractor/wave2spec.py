@@ -1,3 +1,5 @@
+from importlib import import_module
+
 import torch
 import torch.nn as nn
 import torchaudio.functional as AF
@@ -19,11 +21,13 @@ class Wave2Spectrogram(nn.Module):
         db_cutoff=60,
         db_offset=0,
         n_mels=128,
-        window_fn=torch.hann_window,
+        window_fn="hann_window",
         apply_mask=True,
         downsample_mode="linear",
     ):
         super().__init__()
+        torch_module = import_module("torch")
+
         self.n_fft = n_fft
         self.hop_length = hop_length
         self.cutoff_freqs = cutoff_freqs
@@ -42,7 +46,7 @@ class Wave2Spectrogram(nn.Module):
             f_min=frequency_lim[0],
             f_max=frequency_lim[1],
             center=False,
-            window_fn=window_fn,
+            window_fn=getattr(torch_module, window_fn),
         )
 
     def downsample_mask(self, x: torch.Tensor, mode="nearest") -> torch.Tensor:
@@ -69,7 +73,7 @@ class Wave2Spectrogram(nn.Module):
 
         return x
 
-    @torch.no_grad
+    # @torch.no_grad()
     def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None):
         """
         return:
