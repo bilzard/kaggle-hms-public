@@ -41,7 +41,7 @@ def plot_eeg(
     time_zoom: float = 1.0,
     sampling_rate: int = 200,
     duration_sec: int = 50,
-    shift: float = 0.5,
+    shift: float = 0.1,
     ax=None,
     lw: float = 0.8,
     display_all_series=True,
