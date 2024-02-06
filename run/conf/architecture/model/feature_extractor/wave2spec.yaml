@@ -1,0 +1,13 @@
+_target_: src.model.feature_extractor.wave2spec.Wave2Spectrogram
+sampling_rate: 40
+n_fft: 256
+win_length: 256
+hop_length: 64
+cutoff_freqs: [0.5, 50]
+frequency_lim: [0, 20]
+db_cutoff: 60
+db_offset: 0
+n_mels: 128
+window_fn: hann_window
+apply_mask: True
+downsample_mode: linear

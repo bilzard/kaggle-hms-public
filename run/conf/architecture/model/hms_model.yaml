@@ -1,0 +1,4 @@
+_target_: src.model.hms_model.HMSModel
+feature_extractor: ???
+encoder: ???
+head: ???

@@ -20,7 +20,7 @@ class PerEegDataset(Dataset):
         metadata: pl.DataFrame,
         id2eeg: dict[int, np.ndarray],
         id2cqf: dict[int, np.ndarray] | None = None,
-        pad_multiple: int = 512,
+        pad_multiple: int = 2048,
         padding_type: str = "right",
     ):
         self.metadata = metadata.group_by("eeg_id").agg(
@@ -89,7 +89,7 @@ class PerEegSubsampleDataset(Dataset):
         sampling_rate: float = 40,
         duration_sec: int = 50,
         num_samples_per_eeg: int = 1,
-        pad_multiple: int = 512,
+        pad_multiple: int = 2048,
         padding_type: str = "right",
     ):
         self.metadata = metadata.select(

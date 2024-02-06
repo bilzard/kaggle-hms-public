@@ -5,7 +5,7 @@ def find_nearest_multiple(n, m):
     """
     find the smallest number that is multiple of m and greater than or equal to  n
     """
-    assert n >= m >= 0, (n, m)
+    assert (0 < n) and (0 < m)
     return n + (m - n % m) % m
 
 

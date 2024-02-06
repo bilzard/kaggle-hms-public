@@ -1,0 +1,2 @@
+_target_: src.model.head.simple_head.SimpleHead
+out_channels: ???
