@@ -16,9 +16,9 @@ dependencies = [
     "segmentation_models_pytorch >= 0.3.3",
     "kaggle <= 1.5.16",
     "polars >= 0.20.0",
+    "transformers >= 4.37.2",
 ]
 dynamic = ["version"]
 
 [tool.setuptools.packages]
 find = {}
-
