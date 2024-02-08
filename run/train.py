@@ -9,7 +9,7 @@ from src.callback import MetricsLogger, SaveModelCheckpoint
 from src.config import MainConfig
 from src.data_util import preload_cqf, preload_eegs, train_valid_split
 from src.dataset.eeg import (
-    PerEegSubsampleDataset,
+    SlidingWindowEegDataset,
     UniformSamplingEegDataset,
     get_train_loader,
     get_valid_loader,
@@ -63,12 +63,16 @@ def main(cfg: MainConfig):
                 pin_memory=True,
                 worker_init_fn=seed_worker,
             )
-            valid_dataset = PerEegSubsampleDataset(
-                valid_df, id2eeg, id2cqf=id2cqf, num_samples_per_eeg=1
+            valid_dataset = SlidingWindowEegDataset(
+                valid_df,
+                id2eeg,
+                id2cqf=id2cqf,
+                duration=cfg.trainer.val.duration,
+                stride=cfg.trainer.val.stride,
             )
             valid_loader = get_valid_loader(
                 valid_dataset,
-                batch_size=cfg.trainer.eval_batch_size,
+                batch_size=cfg.trainer.val.batch_size,
                 num_workers=cfg.env.num_workers,
                 pin_memory=True,
             )
@@ -83,7 +87,7 @@ def main(cfg: MainConfig):
                 valid_loader=valid_loader,
                 mixed_precision=True,
                 callbacks=[
-                    MetricsLogger(),
+                    MetricsLogger(aggregation_fn=cfg.trainer.val.aggregation_fn),
                     SaveModelCheckpoint(
                         save_last=cfg.trainer.save_last,
                         save_best=cfg.trainer.save_best,
