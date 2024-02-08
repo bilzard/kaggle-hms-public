@@ -10,6 +10,83 @@ def row_to_dict(row: dict, exclude_keys: list[str]):
     return {key: value for key, value in row.items() if key not in exclude_keys}
 
 
+class SlidingWindowEegDataset(Dataset):
+    def __init__(
+        self,
+        metadata: pl.DataFrame,
+        id2eeg: dict[int, np.ndarray],
+        id2cqf: dict[int, np.ndarray],
+        padding_type: str = "right",
+        duration: int = 2048,
+        stride: int = 2048,
+    ):
+        self.metadata = metadata.group_by("eeg_id").agg(
+            *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
+            pl.col("total_votes_per_eeg").first(),
+            *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
+            pl.col("min_eeg_label_offset_sec").first(),
+            pl.col("max_eeg_label_offset_sec").first(),
+        )
+        self.id2eeg = id2eeg
+        self.id2cqf = id2cqf
+        self.duration = duration
+        self.stride = stride
+
+        self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
+
+        self.eeg_id2metadata = {
+            row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
+            for row in self.metadata.to_dicts()
+        }
+        self.padding_type = padding_type
+        self.chunks = self._generate_chunks()
+
+    def _generate_chunks(self):
+        chunks = []
+        for eeg_id in self.eeg_ids:
+            eeg = self.id2eeg[eeg_id]
+            num_frames = eeg.shape[0]
+            for start_frame in range(0, num_frames - self.duration + 1, self.stride):
+                end_frame = start_frame + self.duration
+                chunks.append((eeg_id, start_frame, end_frame))
+
+        return chunks
+
+    def __len__(self):
+        return len(self.chunks)
+
+    def __getitem__(self, idx):
+        eeg_id, start_frame, end_frame = self.chunks[idx]
+        row = self.eeg_id2metadata[eeg_id]
+
+        eeg = self.id2eeg[eeg_id][start_frame:end_frame].astype(np.float32)
+        cqf = self.id2cqf[eeg_id][start_frame:end_frame].astype(np.float32)
+
+        eeg = pad_multiple_of(
+            eeg,
+            self.duration,
+            0,
+            padding_type=self.padding_type,
+            mode="reflect",
+        )
+        cqf = pad_multiple_of(
+            cqf,
+            self.duration,
+            0,
+            padding_type=self.padding_type,
+            mode="constant",
+            constant_values=0,
+        )
+
+        label = np.array(
+            [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
+        )
+        weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
+        data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
+
+        return data
+
+
 class UniformSamplingEegDataset(Dataset):
     """
     EEGからdurationのchunkをランダムにサンプリングする。
