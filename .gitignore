@@ -4,3 +4,4 @@ tmp/
 sandbox*.ipynb
 **/wandb/
 !.gitkeep
+debug.yaml
