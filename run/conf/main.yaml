@@ -1,6 +1,6 @@
 hydra:
   run:
-    dir: ${env.working_dir}/${job_name}/${phase}
+    dir: ${env.output_dir}
   sweep:
     dir: ${env.working_dir}/multirun/${job_name}/${phase}
     subdir: ${hydra.job.override_dirname}

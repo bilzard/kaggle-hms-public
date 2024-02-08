@@ -53,11 +53,14 @@ def save_cqf(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
 def main(cfg: MainConfig):
     data_dir = Path(cfg.env.data_dir)
     metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
-    output_dir = Path(cfg.env.output_dir)
+    output_dir_eeg = Path("eeg")
 
-    if (not cfg.dry_run) and (cfg.cleanup) and (output_dir.exists()):
-        shutil.rmtree(output_dir)
-        print(f"Removed {cfg.phase} dir: {output_dir}")
+    if (not cfg.dry_run) and (cfg.cleanup) and (output_dir_eeg.exists()):
+        shutil.rmtree(output_dir_eeg)
+        print(f"Removed {cfg.phase} dir: {output_dir_eeg}")
+    else:
+        output_dir_eeg.mkdir(parents=True, exist_ok=True)
+        print(f"Created {cfg.phase} dir: {output_dir_eeg}")
 
     eeg_ids = metadata["eeg_id"].unique().to_numpy()
     if cfg.debug:
@@ -68,7 +71,7 @@ def main(cfg: MainConfig):
 
     with trace(f"process eeg{tag}"):
         for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
-            eeg_df = load_eeg(eeg_id, data_dir=data_dir)
+            eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=cfg.phase)
             eeg, pad_mask = process_eeg(eeg_df)
 
             eeg /= cfg.preprocess.ref_voltage
@@ -80,11 +83,11 @@ def main(cfg: MainConfig):
                 eeg_df = process_cqf(eeg_df)
 
             if not cfg.dry_run:
-                save_eeg(eeg_id, eeg_df, Path(cfg.env.output_dir))
-                save_pad_mask(eeg_id, pad_mask, Path(cfg.env.output_dir))
+                save_eeg(eeg_id, eeg_df, output_dir_eeg)
+                save_pad_mask(eeg_id, pad_mask, output_dir_eeg)
 
                 if cfg.preprocess.process_cqf:
-                    save_cqf(eeg_id, eeg_df, Path(cfg.env.output_dir))
+                    save_cqf(eeg_id, eeg_df, output_dir_eeg)
 
 
 if __name__ == "__main__":
