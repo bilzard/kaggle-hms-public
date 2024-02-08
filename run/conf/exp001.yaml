@@ -1,0 +1,64 @@
+hydra:
+  run:
+    dir: ${env.working_dir}/${job_name}/${exp_name}/fold_${fold}/seed_${seed}
+  sweep:
+    dir: ${env.working_dir}/multirun/${job_name}/${exp_name}/fold_${fold}/seed_${seed}
+    subdir: ${hydra.job.override_dirname}
+  job:
+    name: ${job_name}
+    chdir: true
+    config:
+      override_dirname:
+        exclude_keys:
+          - verbose
+          - debug
+
+defaults:
+  - env: local
+  - preprocess: with_cqf
+  - split: gkfold5
+  - trainer/optimizer: adamw
+  - architecture/model: hms_model
+  - architecture/model/feature_extractor: wave2spec
+  - architecture/model/encoder: timm_encoder
+  - architecture/model/head: simple_head
+  - _self_
+
+trainer:
+  epochs: 4
+  lr: 1e-3
+  batch_size: 32
+  eval_batch_size: 32
+  save_last: true
+  save_best: true
+  scheduler:
+    warmup_ratio: 0.0
+  data:
+    target_key: label
+    pred_key: pred
+    weight_key: weight
+    input_keys: [eeg, cqf]
+
+architecture:
+  model:
+    adaptors:
+      - _target_: src.model.adaptor.mean.Mean
+      - _target_: src.model.adaptor.resize.Resize
+        scale_factor: [2.0, 8.0]
+    encoder:
+      name: efficientnet_b0
+      in_channels: ${architecture.in_channels}
+    head:
+      out_channels: ${architecture.out_channels}
+  in_channels: 5
+  out_channels: 6
+
+
+job_name: ???
+exp_name: exp001
+fold: ???
+seed: ???
+phase: train # train or test
+dry_run: false
+debug: false
+cleanup: true
