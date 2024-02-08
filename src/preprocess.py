@@ -1,4 +1,5 @@
 from itertools import product
+from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -9,11 +10,11 @@ from einops import rearrange
 from src.constant import EEG_PROBES, LABELS, PROBE2IDX, PROBES
 
 
-def load_eeg(eeg_id, data_dir, phase="train"):
+def load_eeg(eeg_id: int, data_dir: Path, phase: str):
     return pl.read_parquet(data_dir / f"{phase}_eegs/{eeg_id}.parquet")
 
 
-def load_spectrogram(eeg_id, data_dir, phase="train"):
+def load_spectrogram(eeg_id: int, data_dir: Path, phase: str):
     return pl.read_parquet(data_dir / f"{phase}_spectrograms/{eeg_id}.parquet")
 
 
