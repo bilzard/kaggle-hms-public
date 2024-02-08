@@ -28,9 +28,14 @@ trainer:
   epochs: 4
   lr: 1e-3
   batch_size: 32
-  eval_batch_size: 32
   save_last: true
   save_best: true
+  duration: 2048
+  val:
+    batch_size: 32
+    duration: 2048
+    stride: 1024
+    aggregation_fn: max
   scheduler:
     warmup_ratio: 0.0
   data:

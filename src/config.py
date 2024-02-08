@@ -39,17 +39,25 @@ class DataConfig:
 
 
 @dataclass
+class EvalConfig:
+    batch_size: int
+    aggregation_fn: str
+    duration: int
+    stride: int
+
+
+@dataclass
 class TrainerConfig:
     epochs: int
     lr: float
     batch_size: int
-    eval_batch_size: int
     save_last: bool
     save_best: bool
     duration: int
     data: DataConfig
     optimizer: DictConfig
     scheduler: SchedulerConfig
+    val: EvalConfig
 
 
 @dataclass
