@@ -10,6 +10,79 @@ def row_to_dict(row: dict, exclude_keys: list[str]):
     return {key: value for key, value in row.items() if key not in exclude_keys}
 
 
+class UniformSamplingEegDataset(Dataset):
+    """
+    EEGからdurationのchunkをランダムにサンプリングする。
+    """
+
+    def __init__(
+        self,
+        metadata: pl.DataFrame,
+        id2eeg: dict[int, np.ndarray],
+        id2cqf: dict[int, np.ndarray],
+        padding_type: str = "right",
+        duration: int = 2048,
+    ):
+        self.metadata = metadata.group_by("eeg_id").agg(
+            *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
+            pl.col("total_votes_per_eeg").first(),
+            *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
+            pl.col("min_eeg_label_offset_sec").first(),
+            pl.col("max_eeg_label_offset_sec").first(),
+        )
+        self.id2eeg = id2eeg
+        self.id2cqf = id2cqf
+        self.duration = duration
+
+        self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
+
+        self.eeg_id2metadata = {
+            row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
+            for row in self.metadata.to_dicts()
+        }
+        self.padding_type = padding_type
+
+    def __len__(self):
+        return len(self.eeg_ids)
+
+    def __getitem__(self, idx):
+        eeg_id = self.eeg_ids[idx]
+        row = self.eeg_id2metadata[eeg_id]
+
+        eeg = self.id2eeg[eeg_id].astype(np.float32)
+        cqf = self.id2cqf[eeg_id].astype(np.float32)
+        num_frames = eeg.shape[0]
+
+        if num_frames < self.duration:
+            eeg = pad_multiple_of(
+                eeg,
+                self.duration,
+                0,
+                padding_type=self.padding_type,
+                mode="reflect",
+            )
+            cqf = pad_multiple_of(
+                cqf,
+                self.duration,
+                0,
+                padding_type=self.padding_type,
+                mode="constant",
+                constant_values=0,
+            )
+        else:
+            start_frame = np.random.randint(num_frames - self.duration + 1)
+            eeg = eeg[start_frame : start_frame + self.duration]
+            cqf = cqf[start_frame : start_frame + self.duration]
+
+        label = np.array(
+            [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
+        )
+        weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
+        data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
+
+        return data
+
+
 class PerEegDataset(Dataset):
     """
     EEG全体を1つずつロードする。

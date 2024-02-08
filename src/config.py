@@ -46,6 +46,7 @@ class TrainerConfig:
     eval_batch_size: int
     save_last: bool
     save_best: bool
+    duration: int
     data: DataConfig
     optimizer: DictConfig
     scheduler: SchedulerConfig
