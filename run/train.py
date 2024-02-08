@@ -10,6 +10,7 @@ from src.config import MainConfig
 from src.data_util import preload_cqf, preload_eegs, train_valid_split
 from src.dataset.eeg import (
     PerEegSubsampleDataset,
+    UniformSamplingEegDataset,
     get_train_loader,
     get_valid_loader,
 )
@@ -52,8 +53,8 @@ def main(cfg: MainConfig):
             name=f"{cfg.exp_name}_fold{cfg.fold}_seed{cfg.seed:04d}",
             config=cfg_dict,  # type: ignore
         ):
-            train_dataset = PerEegSubsampleDataset(
-                train_df, id2eeg, id2cqf=id2cqf, num_samples_per_eeg=1
+            train_dataset = UniformSamplingEegDataset(
+                train_df, id2eeg, id2cqf=id2cqf, duration=cfg.trainer.duration
             )
             train_loader = get_train_loader(
                 train_dataset,
