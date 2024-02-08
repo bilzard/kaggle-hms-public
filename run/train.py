@@ -26,7 +26,7 @@ from src.trainer import Trainer
 def main(cfg: MainConfig):
     data_dir = Path(cfg.env.data_dir)
     working_dir = Path(cfg.env.working_dir)
-    preprocess_dir = Path(working_dir / "preprocess" / cfg.phase)
+    preprocess_dir = Path(working_dir / "preprocess" / cfg.phase / "eeg")
 
     metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
     metadata = process_label(metadata)
