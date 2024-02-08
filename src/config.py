@@ -42,6 +42,10 @@ class DataConfig:
 class TrainerConfig:
     epochs: int
     lr: float
+    batch_size: int
+    eval_batch_size: int
+    save_last: bool
+    save_best: bool
     data: DataConfig
     optimizer: DictConfig
     scheduler: SchedulerConfig
@@ -57,7 +61,10 @@ class ArchitectureConfig:
 @dataclass
 class MainConfig:
     job_name: str
+    exp_name: str
     phase: str
+    fold: int
+    seed: int
     debug: bool
     dry_run: bool
     cleanup: bool
