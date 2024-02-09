@@ -169,9 +169,10 @@ class PerEegDataset(Dataset):
         self,
         metadata: pl.DataFrame,
         id2eeg: dict[int, np.ndarray],
-        id2cqf: dict[int, np.ndarray] | None = None,
-        pad_multiple: int = 2048,
+        id2cqf: dict[int, np.ndarray],
+        duration: int = 2048,
         padding_type: str = "right",
+        is_test: bool = False,
     ):
         self.metadata = metadata.group_by("eeg_id").agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
@@ -182,6 +183,7 @@ class PerEegDataset(Dataset):
         )
         self.id2eeg = id2eeg
         self.id2cqf = id2cqf
+        self.is_test = is_test
 
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
 
@@ -189,7 +191,7 @@ class PerEegDataset(Dataset):
             row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
             for row in self.metadata.to_dicts()
         }
-        self.pad_multiple = pad_multiple
+        self.duration = duration
         self.padding_type = padding_type
 
     def __len__(self):
@@ -199,27 +201,26 @@ class PerEegDataset(Dataset):
         eeg_id = self.eeg_ids[idx]
         row = self.eeg_id2metadata[eeg_id]
 
-        eeg = self.id2eeg[eeg_id].astype(np.float32)
+        eeg = self.id2eeg[eeg_id][: self.duration].astype(np.float32)
         eeg = pad_multiple_of(
-            eeg, self.pad_multiple, 0, padding_type=self.padding_type, mode="reflect"
+            eeg, self.duration, 0, padding_type=self.padding_type, mode="reflect"
         )
-        label = np.array(
-            [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
+        cqf = self.id2cqf[eeg_id][: self.duration].astype(np.float32)
+        cqf = pad_multiple_of(
+            cqf,
+            self.duration,
+            0,
+            padding_type=self.padding_type,
+            mode="constant",
+            constant_values=0,
         )
-        weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
-        data = dict(eeg_id=eeg_id, eeg=eeg, label=label, weight=weight)
-
-        if self.id2cqf is not None:
-            cqf = self.id2cqf[eeg_id].astype(np.float32)
-            cqf = pad_multiple_of(
-                cqf,
-                self.pad_multiple,
-                0,
-                padding_type=self.padding_type,
-                mode="constant",
-                constant_values=0,
+        data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf)
+        if not self.is_test:
+            label = np.array(
+                [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
             )
-            data["cqf"] = cqf
+            weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
+            data |= dict(label=label, weight=weight)
 
         return data
 
