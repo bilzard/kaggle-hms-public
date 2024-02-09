@@ -79,6 +79,7 @@ class InferConfig:
 class MainConfig:
     job_name: str
     exp_name: str
+    description: str
     phase: str
     fold: int
     seed: int
