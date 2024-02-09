@@ -67,7 +67,7 @@ def make_submission(model: nn.Module, test_loader: DataLoader, device: str = "cu
     return submission_df
 
 
-@hydra.main(config_path="conf", config_name="main", version_base="1.2")
+@hydra.main(config_path="conf", config_name="baseline", version_base="1.2")
 def main(cfg: MainConfig):
     data_dir = Path(cfg.env.data_dir)
     working_dir = Path(cfg.env.working_dir)
