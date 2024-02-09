@@ -12,12 +12,13 @@ class HmsModel(nn.Module):
         feature_key: str = "eeg",
         pred_key: str = "pred",
         mask_key: str = "cqf",
+        pretrained: bool = True,
     ):
         super().__init__()
 
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
         self.adaptors = [instantiate(adaptor) for adaptor in cfg.model.adaptors]
-        self.encoder = instantiate(cfg.model.encoder)
+        self.encoder = instantiate(cfg.model.encoder, pretrained=pretrained)
         self.head = instantiate(
             cfg.model.head, in_channels=self.encoder.out_channels[-1]
         )
