@@ -15,7 +15,7 @@ pip install --editable .
 ### Pre-process data
 
 ```bash
-python -m run.preprocess job_name=preprocess phase=train,test
+python -m run.preprocess job_name=preprocess phase=train
 ```
 
 ### Fold-split
@@ -28,6 +28,12 @@ python -m run.fold_split job_name=fold_split phase=train
 
 ```bash
 python -m run.train --config-name=exp001 job_name=train fold=0 seed=42
+```
+
+### Inference
+
+```bash
+python -m run.infer --config-name=exp001 job_name=infer fold=0 seed=42
 ```
 
 ## Result
