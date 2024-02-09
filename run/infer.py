@@ -103,8 +103,11 @@ def main(cfg: MainConfig):
         load_checkpoint(model, weight_path)
         submission_df = make_submission(model, test_loader)
         submission_dir = Path(cfg.env.submission_dir)
-        submission_df.write_csv(submission_dir / "submission.csv")
-        print(pl.read_csv(submission_dir / "submission.csv"))
+
+        submission_df.write_parquet(f"pred_{cfg.phase}.pqt")
+        if cfg.final_submission:
+            submission_df.write_csv(submission_dir / "submission.csv")
+            print(pl.read_csv(submission_dir / "submission.csv"))
 
 
 if __name__ == "__main__":
