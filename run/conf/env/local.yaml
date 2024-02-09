@@ -3,3 +3,5 @@ num_workers: 24
 data_dir: /ml-docker/input/hms-harmful-brain-activity-classification
 working_dir: /ml-docker/working/kaggle-hms-bilzard/data
 output_dir: ${env.working_dir}/${job_name}/${phase}
+checkpoint_dir: ${env.working_dir}/train
+submission_dir: .
