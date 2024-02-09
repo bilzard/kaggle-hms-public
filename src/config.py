@@ -73,6 +73,7 @@ class ArchitectureConfig:
 class InferConfig:
     batch_size: int
     num_samples: int
+    model_choice: str
 
 
 @dataclass
