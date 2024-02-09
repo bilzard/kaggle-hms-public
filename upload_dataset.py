@@ -22,7 +22,7 @@ def copy_files_with_globs(
 
             print(f"Try to copy {source_path} to {dest_path}...")
             if not dry_run:
-                dest_path.mkdir(parents=True, exist_ok=True)
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source_path, dest_path)
 
     # copy dummy data
