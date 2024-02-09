@@ -182,8 +182,15 @@ def calc_weight(x: np.ndarray, T: float = 3, alpha: float = 5) -> np.ndarray:
 
 
 def process_label(
-    metadata: pl.DataFrame, T: float = 3, alpha: float = 5
+    metadata: pl.DataFrame, T: float = 3, alpha: float = 5, is_test=False
 ) -> pl.DataFrame:
+    if is_test:
+        metadata = metadata.with_columns(
+            *[pl.lit(1).alias(f"{label}_vote") for label in LABELS],
+            pl.col("eeg_id").alias("label_id"),
+            pl.lit(0).alias("eeg_label_offset_seconds"),
+        )
+
     total_votes = metadata.select(f"{label}_vote" for label in LABELS).fold(
         lambda s1, s2: s1 + s2
     )
