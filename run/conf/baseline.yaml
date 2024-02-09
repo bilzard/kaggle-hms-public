@@ -62,6 +62,7 @@ architecture:
 infer:
   batch_size: 32
   num_samples: 2640
+  model_choice: last
 
 job_name: ???
 exp_name: ???

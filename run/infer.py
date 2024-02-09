@@ -98,7 +98,7 @@ def main(cfg: MainConfig):
             / f"fold_{cfg.fold}"
             / f"seed_{cfg.seed}"
             / "model"
-            / "last_model.pth"
+            / f"{cfg.infer.model_choice}_model.pth"
         )
         load_checkpoint(model, weight_path)
         submission_df = make_submission(model, test_loader)
