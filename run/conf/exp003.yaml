@@ -1,0 +1,19 @@
+defaults:
+  - baseline
+
+exp_name: exp003
+description: input image size 512x512
+
+architecture:
+  model:
+    adaptors:
+      - _target_: src.model.adaptor.mean.Mean
+      - _target_: src.model.adaptor.resize.Resize
+        scale_factor: [4.0, 16.0] # 512x512
+    encoder:
+      name: efficientnet_b0
+      in_channels: ${architecture.in_channels}
+    head:
+      out_channels: ${architecture.out_channels}
+  in_channels: 5
+  out_channels: 6
