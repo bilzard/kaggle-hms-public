@@ -10,6 +10,8 @@ class EnvironmentConfig:
     data_dir: str
     working_dir: str
     output_dir: str
+    checkpoint_dir: str
+    submission_dir: str
 
 
 @dataclass
@@ -68,6 +70,12 @@ class ArchitectureConfig:
 
 
 @dataclass
+class InferConfig:
+    batch_size: int
+    num_samples: int
+
+
+@dataclass
 class MainConfig:
     job_name: str
     exp_name: str
@@ -82,3 +90,4 @@ class MainConfig:
     split: SplitConfig
     architecture: ArchitectureConfig
     trainer: TrainerConfig
+    infer: InferConfig
