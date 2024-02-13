@@ -1,5 +1,6 @@
 defaults:
   - baseline
+  - _self_
 
 exp_name: exp002
 description: input all 18 channels without mean

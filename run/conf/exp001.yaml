@@ -1,5 +1,6 @@
 defaults:
   - baseline
+  - _self_
 
 exp_name: exp001
 description: baseline
