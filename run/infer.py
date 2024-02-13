@@ -5,6 +5,7 @@ import numpy as np
 import polars as pl
 import torch
 import torch.nn as nn
+from scipy.special import softmax
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
@@ -92,30 +93,36 @@ def get_loader(
             raise ValueError(f"Invalid phase: {cfg.phase}")
 
 
-def make_submission(model: nn.Module, test_loader: DataLoader, device: str = "cuda"):
+def predict(
+    model: nn.Module, test_loader: DataLoader, device: str = "cuda"
+) -> tuple[np.ndarray, np.ndarray]:
     model.eval()
     model.to(device=device)
 
-    test_eeg_ids = []
-    test_predictions = []
+    eeg_ids = []
+    logits = []
 
     for batch in tqdm(test_loader, unit="step"):
         eeg = batch["eeg"].to(device=device)
         cqf = batch["cqf"].to(device=device)
         eeg_id = batch["eeg_id"].detach().cpu().numpy().tolist()
         output = model(dict(eeg=eeg, cqf=cqf))
-        pred = output["pred"].softmax(dim=1).detach().cpu().numpy().tolist()
-        test_eeg_ids.extend(eeg_id)
-        test_predictions.extend(pred)
+        logit = output["pred"].detach().cpu().numpy().tolist()
+        eeg_ids.extend(eeg_id)
+        logits.extend(logit)
 
-    test_eeg_ids = np.array(test_eeg_ids)
-    test_predictions = np.array(test_predictions)
+    eeg_ids = np.array(eeg_ids)
+    logits = np.array(logits)
+    return eeg_ids, logits
 
+
+def make_submission(eeg_ids, predictions, apply_softmax=True):
+    if apply_softmax:
+        predictions = softmax(predictions, axis=1)
     submission_df = pl.DataFrame(
-        dict(eeg_id=test_eeg_ids)
-        | {f"{label}_vote": test_predictions[:, i] for i, label in enumerate(LABELS)}
+        dict(eeg_id=eeg_ids)
+        | {f"{label}_vote": predictions[:, i] for i, label in enumerate(LABELS)}
     )
-
     return submission_df
 
 
@@ -152,7 +159,7 @@ def main(cfg: MainConfig):
         match cfg.phase:
             case "train":
                 evaluator = Evaluator(aggregation_fn=cfg.trainer.val.aggregation_fn)
-                val_loss, val_loss_per_label, submission_df = evaluator.evaluate(
+                val_loss, val_loss_per_label, eeg_ids, logits = evaluator.evaluate(
                     model, data_loader
                 )
                 print(f"val_loss: {val_loss:.4f}")
@@ -160,13 +167,16 @@ def main(cfg: MainConfig):
                     ", ".join([f"{k}={v:.4f}" for k, v in val_loss_per_label.items()])
                 )
             case "test":
-                submission_df = make_submission(model, data_loader)
+                eeg_ids, logits = predict(model, data_loader)
             case _:
                 raise ValueError(f"Invalid phase: {cfg.phase}")
 
-        submission_dir = Path(cfg.env.submission_dir)
-        submission_df.write_parquet(f"pred_{cfg.phase}.pqt")
+        prediction_df = make_submission(eeg_ids, logits, apply_softmax=False)
+        prediction_df.write_parquet(f"pred_{cfg.phase}.pqt")
+
         if cfg.final_submission:
+            submission_df = make_submission(eeg_ids, logits, apply_softmax=True)
+            submission_dir = Path(cfg.env.submission_dir)
             submission_df.write_csv(submission_dir / "submission.csv")
             print(pl.read_csv(submission_dir / "submission.csv"))
 

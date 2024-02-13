@@ -1,7 +1,6 @@
 from collections import defaultdict
 
 import numpy as np
-import polars as pl
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -15,7 +14,7 @@ class Evaluator:
         self,
         aggregation_fn: str = "max",
     ):
-        self._valid_preds = defaultdict(list)
+        self._valid_logits = defaultdict(list)
         self._valid_label = dict()
         self._valid_weight = dict()
 
@@ -28,7 +27,7 @@ class Evaluator:
     @torch.no_grad()
     def evaluate(
         self, model: nn.Module, valid_loader: DataLoader, device: str = "cuda"
-    ) -> tuple[float, dict[str, float], pl.DataFrame]:
+    ) -> tuple[float, dict[str, float], np.ndarray, np.ndarray]:
         model.eval()
         model.to(device=device)
 
@@ -47,39 +46,39 @@ class Evaluator:
         batch: dict[str, torch.Tensor],
         output: dict[str, torch.Tensor],
     ):
-        pred = output[self.pred_key]
+        logit = output[self.pred_key]
         label = batch[self.target_key]
         weight = batch[self.weight_key]
         eeg_ids = batch["eeg_id"].detach().cpu().numpy().tolist()
 
         for i, eeg_id in enumerate(eeg_ids):
-            self._valid_preds[eeg_id].append(pred[i].detach().cpu())
+            self._valid_logits[eeg_id].append(logit[i].detach().cpu())
             self._valid_label[eeg_id] = label[i].detach().cpu()
             self._valid_weight[eeg_id] = weight[i].detach().cpu()
 
     @torch.no_grad()
-    def aggregate(self) -> tuple[float, dict[str, float], pl.DataFrame]:
+    def aggregate(self) -> tuple[float, dict[str, float], np.ndarray, np.ndarray]:
         val_loss_per_label = np.zeros(len(LABELS), dtype=np.float32)
         val_count = 0.0
 
-        preds_per_eeg = []
+        logits_per_eeg = []
         eeg_ids = []
 
-        for eeg_id, preds in tqdm(self._valid_preds.items()):
-            preds = torch.stack(preds, dim=0)  # (B, C)
+        for eeg_id, logits in tqdm(self._valid_logits.items()):
+            logits = torch.stack(logits, dim=0)  # (B, C)
             label = self._valid_label[eeg_id]  # (C)
             weight = self._valid_weight[eeg_id].item()
 
             if self.aggregation_fn == "max":
-                pred = torch.max(preds, dim=0)[0]
+                logit = torch.max(logits, dim=0)[0]
             elif self.aggregation_fn == "mean":
-                pred = preds.mean(dim=0)
+                logit = logits.mean(dim=0)
             else:
                 raise ValueError(f"Invalid aggregation_fn: {self.aggregation_fn}")
 
             # lossの計算
             val_loss_per_label += (
-                (self.criterion(torch.log_softmax(pred, dim=0), label) * weight)
+                (self.criterion(torch.log_softmax(logit, dim=0), label) * weight)
                 .detach()
                 .cpu()
                 .numpy()
@@ -88,26 +87,17 @@ class Evaluator:
 
             # eegごとの予測値
             eeg_ids.append(eeg_id)
-            preds_per_eeg.append(pred.detach().cpu().numpy())  # (C)
+            logits_per_eeg.append(logit.detach().cpu().numpy())  # (C)
 
         # lossの正規化
         val_loss_per_label /= val_count
         val_loss = val_loss_per_label.sum()
 
-        self._valid_preds.clear()
+        self._valid_logits.clear()
 
         # eegごとの予測値をDataFrameに変換
-        preds_per_eeg = np.stack(preds_per_eeg, axis=0)
+        logits_per_eeg = np.stack(logits_per_eeg, axis=0)
         eeg_ids = np.array(eeg_ids)
-        pred_df = pl.DataFrame(
-            {
-                "eeg_id": eeg_ids,
-                **{
-                    f"{label}_vote": preds_per_eeg[:, i]
-                    for i, label in enumerate(LABELS)
-                },
-            }
-        )
         val_loss_per_label = dict(zip(LABELS, val_loss_per_label.tolist()))
 
-        return val_loss, val_loss_per_label, pred_df
+        return val_loss, val_loss_per_label, eeg_ids, logits_per_eeg
