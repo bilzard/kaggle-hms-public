@@ -5,49 +5,16 @@ import numpy as np
 import polars as pl
 import torch
 import torch.nn as nn
-from scipy.special import softmax
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 from src.config import MainConfig
-from src.constant import LABELS
 from src.data_util import preload_cqf, preload_eegs
 from src.dataset.eeg import PerEegDataset, SlidingWindowEegDataset, get_valid_loader
 from src.evaluator import Evaluator
+from src.infer_util import load_metadata, make_submission
 from src.model.hms_model import HmsModel, check_model
-from src.preprocess import process_label
 from src.proc_util import trace
-
-
-def load_metadata(
-    data_dir: Path, phase: str, num_samples: int, fold_split_dir: Path, fold: int = -1
-) -> pl.DataFrame:
-    """
-    phaseに応じてmetadataをロードする
-    train:
-        - validationのeegのみをロード
-        - eeg_idは重複あり
-    test:
-        - 全てのeegをロード
-        - eeg_idは重複なし
-    """
-    match phase:
-        case "train":
-            fold_split_df = pl.read_parquet(fold_split_dir / "fold_split.pqt")
-            eeg_ids = (
-                fold_split_df.filter(pl.col("fold").eq(fold)).select("eeg_id").unique()
-            )
-            metadata = pl.read_csv(data_dir / "train.csv")
-            metadata = metadata.join(eeg_ids, on="eeg_id")
-            metadata = process_label(metadata)
-
-            return metadata
-        case "test":
-            metadata = pl.read_csv(data_dir / "test.csv")
-            metadata = process_label(metadata, is_test=True)
-            return metadata
-        case _:
-            raise ValueError(f"Invalid phase: {phase}")
 
 
 def load_checkpoint(
@@ -116,16 +83,6 @@ def predict(
     return eeg_ids, logits
 
 
-def make_submission(eeg_ids, predictions, apply_softmax=True):
-    if apply_softmax:
-        predictions = softmax(predictions, axis=1)
-    submission_df = pl.DataFrame(
-        dict(eeg_id=eeg_ids)
-        | {f"{label}_vote": predictions[:, i] for i, label in enumerate(LABELS)}
-    )
-    return submission_df
-
-
 @hydra.main(config_path="conf", config_name="baseline", version_base="1.2")
 def main(cfg: MainConfig):
     data_dir = Path(cfg.env.data_dir)
@@ -133,9 +90,7 @@ def main(cfg: MainConfig):
     preprocess_dir = Path(working_dir / "preprocess" / cfg.phase / "eeg")
     fold_split_dir = Path(working_dir / "fold_split" / cfg.phase)
 
-    metadata = load_metadata(
-        data_dir, cfg.phase, cfg.infer.num_samples, fold_split_dir, cfg.fold
-    )
+    metadata = load_metadata(data_dir, cfg.phase, fold_split_dir, cfg.fold)
 
     with trace("load eeg"):
         eeg_ids = metadata["eeg_id"].unique().to_list()
