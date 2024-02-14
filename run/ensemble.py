@@ -85,7 +85,7 @@ def main(cfg: EnsembleMainConfig):
                     )
                 loss = loss_per_label.sum()
                 loss_per_label = dict(zip(LABELS, loss_per_label.tolist()))
-                print("loss:", loss)
+                print(f"loss: {loss:.4f}")
                 print(
                     "loss_per_label:",
                     ", ".join([f"{k}={v:.4f}" for k, v in loss_per_label.items()]),
