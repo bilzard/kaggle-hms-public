@@ -94,3 +94,32 @@ class MainConfig:
     architecture: ArchitectureConfig
     trainer: TrainerConfig
     infer: InferConfig
+
+
+@dataclass
+class EnsembleFoldConfig:
+    split: int
+    seeds: list[int]
+
+
+@dataclass
+class EnsembleExperimentConfig:
+    exp_name: str
+    folds: list[EnsembleFoldConfig]
+
+
+@dataclass
+class EnsembleEntityConfig:
+    name: str
+    experiments: list[EnsembleExperimentConfig]
+
+
+@dataclass
+class EnsembleMainConfig:
+    ensemble_entity: EnsembleEntityConfig
+    phase: str
+    dry_run: bool
+    debug: bool
+    cleanup: bool
+    final_submission: bool
+    env: EnvironmentConfig

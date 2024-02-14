@@ -9,7 +9,11 @@ from src.preprocess import process_label
 
 
 def load_metadata(
-    data_dir: Path, phase: str, fold_split_dir: Path, fold: int = -1
+    data_dir: Path,
+    phase: str,
+    fold_split_dir: Path,
+    fold: int = -1,
+    group_by_eeg: bool = False,
 ) -> pl.DataFrame:
     """
     phaseに応じてmetadataをロードする
@@ -23,12 +27,33 @@ def load_metadata(
     match phase:
         case "train":
             fold_split_df = pl.read_parquet(fold_split_dir / "fold_split.pqt")
-            eeg_ids = (
-                fold_split_df.filter(pl.col("fold").eq(fold)).select("eeg_id").unique()
-            )
+            if fold >= 0:
+                fold_split_df = fold_split_df.filter(pl.col("fold").eq(fold))
+            eeg_ids = fold_split_df.select("eeg_id").unique()
             metadata = pl.read_csv(data_dir / "train.csv")
             metadata = metadata.join(eeg_ids, on="eeg_id")
             metadata = process_label(metadata)
+            if group_by_eeg:
+                metadata = metadata.with_columns(
+                    pl.col(f"{label}_prob").mul(pl.col("weight")).alias(f"{label}_prob")
+                    for label in LABELS
+                )
+                metadata = (
+                    metadata.groupby("eeg_id", maintain_order=True)
+                    .agg(
+                        pl.col("spectrogram_id").first(),
+                        pl.col("label_id").first(),
+                        pl.col("weight").mean(),
+                        pl.col("weight").sum().alias("weight_sum"),
+                        *[pl.col(f"{label}_prob").sum() for label in LABELS],
+                    )
+                    .with_columns(
+                        pl.col(f"{label}_prob")
+                        .truediv(pl.col("weight_sum"))
+                        .alias(f"{label}_prob")
+                        for label in LABELS
+                    )
+                )
 
             return metadata
         case "test":
