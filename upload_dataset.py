@@ -1,4 +1,5 @@
 import json
+import math
 import shutil
 from pathlib import Path
 from typing import Any
@@ -7,23 +8,44 @@ import click
 from kaggle.api.kaggle_api_extended import KaggleApi
 
 
+def convert_size(size_bytes, num_dicimal_place=2):
+    """
+    バイト単位のサイズを人間が読みやすい形式に変換する関数
+    """
+    if size_bytes == 0:
+        return "0B"
+    size_names = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = int(math.floor(math.log(size_bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(size_bytes / p, num_dicimal_place)
+    return f"{s} {size_names[i]}"
+
+
 def copy_files_with_globs(
     source_dir: Path, dest_dir: Path, glob_patterns: list[str], dry_run: bool
 ):
     """
     automatically copy files with the specified glob patterns in the source directory to the destination directory
     """
+    source_paths = []
+    total_size = 0
     for glob_pattern in glob_patterns:
         for source_path in source_dir.rglob(glob_pattern):
             if "debug" in source_path.parts:
                 continue
-            relative_path = source_path.relative_to(source_dir)
-            dest_path = dest_dir / relative_path
+            source_paths.append(source_path)
+            total_size += source_path.stat().st_size
 
-            print(f"Try to copy {source_path} to {dest_path}...")
-            if not dry_run:
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source_path, dest_path)
+    print(f"* Total files: {len(source_paths)}")
+    print(f"* Total size: {convert_size(total_size)}")
+    for source_path in source_paths:
+        relative_path = source_path.relative_to(source_dir)
+        dest_path = dest_dir / relative_path
+
+        print(f"Try to copy {source_path} to {dest_path}...")
+        if not dry_run:
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, dest_path)
 
     # copy dummy data
     dummy_path = dest_dir / "dummy"
