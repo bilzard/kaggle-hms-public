@@ -56,7 +56,9 @@ def main(cfg: EnsembleMainConfig):
                 )
                 eval_df = metadata.join(predictions, on="eeg_id")
 
-                gts = eval_df.select(f"{label}_prob" for label in LABELS).to_numpy()
+                gts = eval_df.select(
+                    f"{label}_prob_per_eeg" for label in LABELS
+                ).to_numpy()
                 preds = eval_df.select(f"{label}_vote" for label in LABELS).to_numpy()
                 weights = eval_df["weight"].to_numpy()
 

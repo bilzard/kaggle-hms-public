@@ -34,25 +34,11 @@ def load_metadata(
             metadata = metadata.join(eeg_ids, on="eeg_id")
             metadata = process_label(metadata)
             if group_by_eeg:
-                metadata = metadata.with_columns(
-                    pl.col(f"{label}_prob").mul(pl.col("weight")).alias(f"{label}_prob")
-                    for label in LABELS
-                )
-                metadata = (
-                    metadata.groupby("eeg_id", maintain_order=True)
-                    .agg(
-                        pl.col("spectrogram_id").first(),
-                        pl.col("label_id").first(),
-                        pl.col("weight").mean(),
-                        pl.col("weight").sum().alias("weight_sum"),
-                        *[pl.col(f"{label}_prob").sum() for label in LABELS],
-                    )
-                    .with_columns(
-                        pl.col(f"{label}_prob")
-                        .truediv(pl.col("weight_sum"))
-                        .alias(f"{label}_prob")
-                        for label in LABELS
-                    )
+                metadata = metadata.groupby("eeg_id", maintain_order=True).agg(
+                    pl.col("spectrogram_id").first(),
+                    pl.col("label_id").first(),
+                    pl.col("total_votes_per_eeg").first().alias("weight"),
+                    *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
                 )
 
             return metadata
