@@ -44,6 +44,7 @@ trainer:
     pred_key: pred
     weight_key: weight
     input_keys: [eeg, cqf]
+  transform: null
 
 architecture:
   model:

@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from src.array_util import pad_multiple_of
 from src.constant import LABELS
+from src.transform import BaseTransform
 
 
 def row_to_dict(row: dict, exclude_keys: list[str]):
@@ -99,6 +100,7 @@ class UniformSamplingEegDataset(Dataset):
         id2cqf: dict[int, np.ndarray],
         padding_type: str = "right",
         duration: int = 2048,
+        transform: BaseTransform | None = None,
     ):
         self.metadata = metadata.group_by("eeg_id").agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
@@ -110,6 +112,8 @@ class UniformSamplingEegDataset(Dataset):
         self.id2eeg = id2eeg
         self.id2cqf = id2cqf
         self.duration = duration
+        self.transform = transform
+        print(f"transform: {transform}")
 
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
 
@@ -155,6 +159,10 @@ class UniformSamplingEegDataset(Dataset):
             [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
         )
         weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
+
+        if self.transform is not None:
+            eeg, cqf = self.transform(eeg, cqf)
+
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
 
         return data
