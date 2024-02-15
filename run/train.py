@@ -49,9 +49,10 @@ def main(cfg: MainConfig):
         cfg_dict = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
 
         with wandb.init(
-            project="kaggle-hms",
+            project=cfg.wandb.project,
             name=f"{cfg.exp_name}_fold{cfg.fold}_seed{cfg.seed:04d}",
             config=cfg_dict,  # type: ignore
+            mode=cfg.wandb.mode,
         ):
             train_dataset = UniformSamplingEegDataset(
                 train_df, id2eeg, id2cqf=id2cqf, duration=cfg.trainer.duration
