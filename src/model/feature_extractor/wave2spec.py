@@ -73,7 +73,7 @@ class Wave2Spectrogram(nn.Module):
 
         return x
 
-    # @torch.no_grad()
+    @torch.no_grad()
     def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None):
         """
         return:
@@ -85,8 +85,6 @@ class Wave2Spectrogram(nn.Module):
         _, num_frames, _ = x.shape
         spectrograms = []
         signals = []
-        probe_pairs = []
-        probe_groups = []
         channel_masks = []
         spec_masks = []
 
@@ -137,19 +135,11 @@ class Wave2Spectrogram(nn.Module):
             BM, CM, FM, TM = spec_mask.shape
             assert B == BM and C == CM and T == TM, (spec.shape, spec_mask.shape)
 
-            # if apply_mask:
-            #    spec = spec * spec_mask
-            #    spec = spec.sum(dim=1) / spec_mask.sum(dim=1)
-            # else:
-            #    spec = spec.mean(dim=1)
-
             for i, (p1, p2) in enumerate(zip(probes[:-1], probes[1:])):
                 signals.append(signal[:, i, :])
                 channel_masks.append(channel_mask[:, i, :])
                 spectrograms.append(spec[:, i, :])
                 spec_masks.append(spec_mask[:, i, :])
-                probe_pairs.append((p1, p2))
-                probe_groups.append(probe_group)
 
         spectrograms = torch.stack(spectrograms, dim=1)
         signals = torch.stack(signals, dim=1)
@@ -165,7 +155,5 @@ class Wave2Spectrogram(nn.Module):
             signal=signals,
             channel_mask=channel_masks,
             spec_mask=spec_masks,
-            probe_pairs=probe_pairs,
-            probe_groups=probe_groups,
         )
         return output
