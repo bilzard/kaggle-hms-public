@@ -17,7 +17,7 @@ class HmsModel(nn.Module):
         super().__init__()
 
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
-        self.adaptors = [instantiate(adaptor) for adaptor in cfg.model.adaptors]
+        self.adapters = [instantiate(adapter) for adapter in cfg.model.adapters]
         self.encoder = instantiate(cfg.model.encoder, pretrained=pretrained)
         self.head = instantiate(
             cfg.model.head, in_channels=self.encoder.out_channels[-1]
@@ -32,8 +32,8 @@ class HmsModel(nn.Module):
             output = self.feature_extractor(batch[self.feature_key], mask)
             spec = output["spectrogram"]
             spec_mask = output["spec_mask"]
-            for adaptor in self.adaptors:
-                spec, spec_mask = adaptor(spec, spec_mask)
+            for adapter in self.adapters:
+                spec, spec_mask = adapter(spec, spec_mask)
 
         features = self.encoder(spec)
         x = self.head(features[-1])
@@ -65,12 +65,12 @@ def check_model(
         "Feature Extractor", {k: v for k, v in output.items() if k in feature_keys}
     )
 
-    for i, adaptor in enumerate(model.adaptors):
-        output["spectrogram"], output["spec_mask"] = adaptor(
+    for i, adapter in enumerate(model.adapters):
+        output["spectrogram"], output["spec_mask"] = adapter(
             output["spectrogram"], output["spec_mask"]
         )
         print_shapes(
-            f"Adaptor[{i}]", {k: v for k, v in output.items() if k in feature_keys}
+            f"Adapter[{i}]", {k: v for k, v in output.items() if k in feature_keys}
         )
 
     features = model.encoder(output["spectrogram"])
