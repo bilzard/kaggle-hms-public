@@ -1,0 +1,12 @@
+defaults:
+  - baseline
+  - override architecture/model/head: label_aligned_head_v2
+  - _self_
+
+exp_name: exp007
+description: label-aligned head v2
+
+architecture:
+  model:
+    head:
+      hidden_channels: 64
