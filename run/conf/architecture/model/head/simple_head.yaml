@@ -1,2 +1,3 @@
 _target_: src.model.head.simple_head.SimpleHead
 out_channels: ???
+drop_rate: 0.0
