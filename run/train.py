@@ -86,6 +86,7 @@ def main(cfg: MainConfig):
             )
             model = HmsModel(cfg.architecture)
             check_model(model)
+            print(model)
             model.to(device="cuda")
             trainer = Trainer(
                 cfg.trainer,
