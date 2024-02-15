@@ -37,7 +37,7 @@ def main(cfg: EnsembleMainConfig):
 
         predictions = []
         for path in prediction_paths:
-            assert path.exists()
+            assert path.exists(), f"file not found: {path}"
             print(path)
             predictions.append(pl.read_parquet(path))
 
