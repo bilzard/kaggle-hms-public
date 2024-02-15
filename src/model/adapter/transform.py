@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class Resize(nn.Module):
+class ResizeTransform(nn.Module):
     def __init__(self, scale_factor: tuple[float, float], mode: str = "bilinear"):
         super().__init__()
         self.scale_factor = (scale_factor[0], scale_factor[1])

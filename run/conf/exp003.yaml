@@ -7,9 +7,9 @@ description: input image size 512x512
 
 architecture:
   model:
-    adaptors:
-      - _target_: src.model.adaptor.mean.Mean
-      - _target_: src.model.adaptor.resize.Resize
+    adapters:
+      - _target_: src.model.adapter.WeightedMeanAggregator
+      - _target_: src.model.adapter.ResizeTransform
         scale_factor: [4.0, 16.0] # 512x512
     encoder:
       name: efficientnet_b0
