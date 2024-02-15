@@ -53,11 +53,14 @@ class MetricsLogger(Callback):
                 {
                     "epoch/val_loss": val_loss,
                     "epoch/val_loss_per_chunk": loss,
-                    "epoch/val_loss_per_label": wandb.Table(
-                        columns=list(val_loss_per_label.keys()),
-                        data=[
-                            list(val_loss_per_label.values()),
-                        ],
+                    "epoch/table_val_loss_per_label": wandb.Table(
+                        columns=["label", "loss"],
+                        data=list(
+                            zip(
+                                list(val_loss_per_label.keys()),
+                                list(val_loss_per_label.values()),
+                            ),
+                        ),
                     ),
                     **{
                         f"epoch/val_loss_{label}": loss
