@@ -17,6 +17,8 @@ dependencies = [
     "kaggle <= 1.5.16",
     "polars >= 0.20.0",
     "transformers >= 4.37.2",
+    "dictknife[command] >= 0.14.0",
+    "PyYAML >= 0.18.6",
 ]
 dynamic = ["version"]
 
