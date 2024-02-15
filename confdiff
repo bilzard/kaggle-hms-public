@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+import shutil
+import subprocess
+from pathlib import Path
+
+import click
+import yaml
+from hydra import compose, initialize
+from hydra.core.global_hydra import GlobalHydra
+from omegaconf import OmegaConf
+
+
+@click.command()
+@click.argument("left", type=str)
+@click.argument("right", type=str)
+@click.option("--config_path", "-c", type=click.Path(exists=True), default="./run/conf")
+@click.option("--tmp_path", "-t", type=click.Path(), default="./tmp")
+def main(left: str, right: str, config_path: str, tmp_path: str):
+    tmp_path_ = Path(tmp_path)
+    if not tmp_path_.exists():
+        tmp_path_.mkdir(parents=True)
+
+    cfgs = []
+    for config_name in [left, right]:
+        GlobalHydra.instance().clear()
+        initialize(config_path=config_path, version_base="1.2")
+        cfg = compose(
+            config_name=config_name,
+            overrides=[
+                "job_name=dummy",
+                "fold=-1",
+                "seed=-1",
+                "exp_name=dummy",
+                "description=dummy",
+            ],
+        )
+        cfg_dict = OmegaConf.to_container(cfg, resolve=True)
+        with open(f"./tmp/{config_name}.yaml", "w+") as f:
+            yaml.dump(cfg_dict, f, default_flow_style=False)
+        cfgs.append(cfg)
+
+    subprocess.run(f"dictknife diff ./tmp/{left}.yaml ./tmp/{right}.yaml", shell=True)
+    shutil.rmtree(tmp_path_)
+
+
+if __name__ == "__main__":
+    main()
