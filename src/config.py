@@ -49,6 +49,12 @@ class EvalConfig:
 
 
 @dataclass
+class WandbConfig:
+    project: str
+    mode: str  # offline, online, disabled
+
+
+@dataclass
 class TrainerConfig:
     epochs: int
     lr: float
@@ -94,6 +100,7 @@ class MainConfig:
     architecture: ArchitectureConfig
     trainer: TrainerConfig
     infer: InferConfig
+    wandb: WandbConfig
 
 
 @dataclass

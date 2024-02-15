@@ -64,6 +64,10 @@ infer:
   num_samples: 2640
   model_choice: last
 
+wandb:
+  project: kaggle-hms
+  mode: online
+
 job_name: ???
 exp_name: ???
 description: ???
