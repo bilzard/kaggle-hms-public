@@ -6,10 +6,10 @@ from src.model.model_util import GeMPool2d
 
 
 class SimpleHead(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, drop_rate: float = 0.0):
+    def __init__(self, in_channels: int, drop_rate: float = 0.0):
         super().__init__()
         self.conv = nn.Conv2d(
-            in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=True
+            in_channels, 6, kernel_size=1, stride=1, padding=0, bias=True
         )
         self.pool = GeMPool2d()
         self.drop_rate = drop_rate

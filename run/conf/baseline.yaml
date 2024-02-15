@@ -55,8 +55,6 @@ architecture:
     encoder:
       name: efficientnet_b0
       in_channels: ${architecture.in_channels}
-    head:
-      out_channels: ${architecture.out_channels}
   in_channels: 5
   out_channels: 6
 
