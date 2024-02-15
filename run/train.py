@@ -3,6 +3,7 @@ from pathlib import Path
 import hydra
 import polars as pl
 import wandb
+from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
 from src.callback import MetricsLogger, SaveModelCheckpoint
@@ -55,7 +56,13 @@ def main(cfg: MainConfig):
             mode=cfg.wandb.mode,
         ):
             train_dataset = UniformSamplingEegDataset(
-                train_df, id2eeg, id2cqf=id2cqf, duration=cfg.trainer.duration
+                train_df,
+                id2eeg,
+                id2cqf=id2cqf,
+                duration=cfg.trainer.duration,
+                transform=instantiate(cfg.trainer.transform)
+                if cfg.trainer.transform is not None
+                else None,
             )
             train_loader = get_train_loader(
                 train_dataset,

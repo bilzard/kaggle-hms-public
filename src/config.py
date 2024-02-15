@@ -62,6 +62,7 @@ class TrainerConfig:
     save_last: bool
     save_best: bool
     duration: int
+    transform: DictConfig | None
     data: DataConfig
     optimizer: DictConfig
     scheduler: SchedulerConfig
