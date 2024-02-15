@@ -1,0 +1,14 @@
+defaults:
+  - baseline
+  - override architecture/model/head: label_aligned_head_v2
+  - _self_
+
+exp_name: exp008
+description: label-aligned head v2 + lr swap
+
+trainer:
+  transform:
+    _target_: src.transform.Compose
+    transforms:
+      - _target_: src.transform.SwapLr
+        p: 0.5
