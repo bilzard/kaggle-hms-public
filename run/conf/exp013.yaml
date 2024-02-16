@@ -1,0 +1,8 @@
+defaults:
+  - baseline
+  - architecture/model/decoder: unet_v3
+  - override architecture/model/head: label_aligned_head_v3
+  - _self_
+
+exp_name: exp013
+description: unet decoder v3 + label_aligned_head_v3
