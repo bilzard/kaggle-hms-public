@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 
-from src.model.model_util import GeMPool2d, InverseSoftmax
+from src.model.basic_block import GeMPool2d
+from src.model.model_util import InverseSoftmax
 
 
 class LabelAlignedHead(nn.Module):
