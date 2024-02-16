@@ -72,18 +72,32 @@ class LabelAlignedHeadV2(nn.Module):
         in_channels: int,
         hidden_channels: int = 256,
         drop_rate: float = 0.0,
-        eps: float = 1e-4,
-        C: float = 3.0,
+        nonlinearity: bool = True,
+        kernel_size: int = 1,
     ):
         super().__init__()
-        self.feat = nn.Conv2d(
-            in_channels, hidden_channels, kernel_size=1, stride=1, padding=0, bias=True
+        feat_modules = []
+        feat_modules.append(
+            nn.Conv2d(
+                in_channels,
+                hidden_channels,
+                kernel_size=kernel_size,
+                stride=1,
+                padding="same",
+                bias=True,
+            )
         )
+        if nonlinearity:
+            feat_modules.append(nn.BatchNorm2d(hidden_channels))
+            feat_modules.append(nn.ReLU(inplace=True))
+
+        self.feat = nn.Sequential(*feat_modules)
+
         self.laterality = nn.Conv2d(
-            hidden_channels, 1, kernel_size=1, stride=1, padding=0, bias=True
+            hidden_channels, 1, kernel_size=1, stride=1, padding="same", bias=True
         )  # -: general, +: lateral
         self.seizure_type = nn.Conv2d(
-            hidden_channels, 4, kernel_size=1, stride=1, padding=0, bias=True
+            hidden_channels, 4, kernel_size=1, stride=1, padding="same", bias=True
         )  # 0: seizure, 1: PD, 2: RDA, 3: others
         self.pool = GeMPool2d()
         self.drop_rate = drop_rate
