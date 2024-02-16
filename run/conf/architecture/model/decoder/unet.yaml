@@ -1,0 +1,7 @@
+_target_: src.model.decoder.Unet
+encoder_depth: 4
+hidden_size: 64
+kernel_sizes: [4, 4, 4]
+strides: [2, 2, 2]
+se_ratio: 4
+num_res_blocks: 1
