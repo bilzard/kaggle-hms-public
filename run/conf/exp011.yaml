@@ -1,0 +1,14 @@
+defaults:
+  - baseline
+  - architecture/model/decoder: unet_v2
+  - override architecture/model/head: label_aligned_head_v2
+  - _self_
+
+exp_name: exp011
+description: unet decoder v2
+
+architecture:
+  model:
+    head:
+      nonlinearity: True
+      kernel_size: 3
