@@ -1,3 +1,4 @@
 _target_: src.model.head.LabelAlignedHeadV3
 hidden_channels: 32
 drop_rate: 0.0
+kernel_size: 3

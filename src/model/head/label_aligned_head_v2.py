@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 
-from src.model.model_util import GeMPool2d
+from src.model.basic_block import GeMPool2d
 
 
 class LabelAlignedHeadV2(nn.Module):
