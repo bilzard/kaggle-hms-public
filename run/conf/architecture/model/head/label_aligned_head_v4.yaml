@@ -1,0 +1,4 @@
+_target_: src.model.head.LabelAlignedHeadV4
+hidden_channels: 32
+drop_rate: 0.0
+nonlinearity: True
