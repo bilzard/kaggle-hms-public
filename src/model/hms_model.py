@@ -16,12 +16,14 @@ class HmsModel(nn.Module):
     ):
         super().__init__()
 
+        self.sample_collator = instantiate(cfg.model.sample_collator)
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
         self.adapters = [instantiate(adapter) for adapter in cfg.model.adapters]
         self.encoder = instantiate(cfg.model.encoder, pretrained=pretrained)
         self.decoder = instantiate(
             cfg.model.decoder, encoder_channels=self.encoder.out_channels
         )
+        self.sample_aggregator = instantiate(cfg.model.sample_aggregator)
         self.head = instantiate(cfg.model.head, in_channels=self.decoder.output_size)
         self.feature_key = feature_key
         self.pred_key = pred_key
@@ -29,8 +31,16 @@ class HmsModel(nn.Module):
 
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         mask = batch[self.mask_key]
+        feature = batch[self.feature_key]
+
+        if len(feature.shape) == 3:
+            feature = feature.unsqueeze(1)
+            mask = mask.unsqueeze(1)
+
+        B, S, T, C = feature.shape
         with torch.autocast(device_type="cuda", enabled=False), torch.no_grad():
-            output = self.feature_extractor(batch[self.feature_key], mask)
+            feature, mask = self.sample_collator(feature, mask)
+            output = self.feature_extractor(feature, mask)
             spec = output["spectrogram"]
             spec_mask = output["spec_mask"]
             for adapter in self.adapters:
@@ -38,6 +48,7 @@ class HmsModel(nn.Module):
 
         features = self.encoder(spec)
         x = self.decoder(features)
+        x = self.sample_aggregator(x, num_samples=S)
         x = self.head(x)
 
         output = {self.pred_key: x}
@@ -58,10 +69,16 @@ def check_model(
     feature_keys=["signal", "channel_mask", "spectrogram", "spec_mask"],
 ):
     model = model.to(device)
-    eeg = torch.randn(2, 2048, 19)
-    cqf = torch.randn(2, 2048, 19)
+    eeg = torch.randn(2, 2, 2048, 19)
+    cqf = torch.randn(2, 2, 2048, 19)
+
+    B, S, T, C = eeg.shape
 
     print_shapes("Input", {"eeg": eeg, "cqf": cqf})
+
+    cqf, eeg = model.sample_collator(cqf, eeg)
+    print_shapes("SampleCollator", {"eeg": eeg, "cqf": cqf})
+
     output = model.feature_extractor(eeg, cqf)
     print_shapes(
         "Feature Extractor", {k: v for k, v in output.items() if k in feature_keys}
@@ -80,7 +97,10 @@ def check_model(
         "Encoder", {f"feature[{i}]": feature for i, feature in enumerate(features)}
     )
     x = model.decoder(features)
-    print_shapes("Decoder", {"pred": x})
+    print_shapes("Decoder", {"x": x})
+
+    x = model.sample_aggregator(x, num_samples=S)
+    print_shapes("SampleAggregator", {"x": x})
 
     x = model.head(x)
-    print_shapes("Head", {"pred": x})
+    print_shapes("Head", {"x": x})
