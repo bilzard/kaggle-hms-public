@@ -44,17 +44,21 @@ def main(cfg: MainConfig):
         id2eeg = preload_eegs(eeg_ids, preprocess_dir)
         id2cqf = preload_cqf(eeg_ids, preprocess_dir)
 
-    with trace("train model"):
-        seed_everything(cfg.seed)
+    cfg_dict = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    with wandb.init(
+        project=cfg.wandb.project,
+        name=f"{cfg.exp_name}_fold{cfg.fold}_seed{cfg.seed:04d}",
+        config=cfg_dict,  # type: ignore
+        mode=cfg.wandb.mode,
+    ):
+        with trace("check model"):
+            model = HmsModel(cfg.architecture)
+            check_model(model)
+            print(model)
+            del model
 
-        cfg_dict = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
-
-        with wandb.init(
-            project=cfg.wandb.project,
-            name=f"{cfg.exp_name}_fold{cfg.fold}_seed{cfg.seed:04d}",
-            config=cfg_dict,  # type: ignore
-            mode=cfg.wandb.mode,
-        ):
+        with trace("train model"):
+            seed_everything(cfg.seed)
             train_dataset = UniformSamplingEegDataset(
                 train_df,
                 id2eeg,
@@ -85,8 +89,6 @@ def main(cfg: MainConfig):
                 pin_memory=True,
             )
             model = HmsModel(cfg.architecture)
-            check_model(model)
-            print(model)
             model.to(device="cuda")
             trainer = Trainer(
                 cfg.trainer,
