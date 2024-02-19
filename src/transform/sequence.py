@@ -8,10 +8,10 @@ def reverse_sequence(
     mask: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    feature: (num_frames, num_features)
+    feature: (num_samples, num_frames, num_features)
     """
-    feature = feature[::-1, :].copy()
-    mask = mask[::-1, :].copy()
+    feature = feature[..., ::-1, :].copy()
+    mask = mask[..., ::-1, :].copy()
 
     return feature, mask
 
@@ -24,11 +24,11 @@ def cutout_1d(
     cutout_mask: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    feature: (num_frames, num_features)
+    feature: (n_samples, num_frames, num_features)
     """
     feature, mask = feature.copy(), mask.copy()
 
-    num_steps = feature.shape[0]
+    num_steps = feature.shape[-2]
     for _ in range(num_cutouts):
         length = np.random.randint(0, max_length + 1)
         length = min(length, num_steps)
@@ -36,9 +36,9 @@ def cutout_1d(
         start = np.random.randint(0, num_steps - length)
         end = start + length
 
-        feature[start:end] = 0
+        feature[..., start:end, :] = 0
         if cutout_mask:
-            mask[start:end] = 0
+            mask[..., start:end, :] = 0
 
     return feature, mask
 
@@ -88,10 +88,10 @@ if __name__ == "__main__":
 
         num_channels = 5
         num_frames = 50
-        feat = np.arange(num_frames).reshape(-1, 1).repeat(num_channels, axis=1)
+        feat = np.arange(num_frames).reshape(1, -1, 1).repeat(num_channels, axis=-1)
         mask = np.ones_like(feat)
         for i in range(num_channels):
-            mask[i * 10 : (i + 1) * 10, i] = 0.0
+            mask[..., i * 10 : (i + 1) * 10, i] = 0.0
         feat_aug, mask_aug = transform(feat, mask)
         print(feat.shape)
         print("** feature **")

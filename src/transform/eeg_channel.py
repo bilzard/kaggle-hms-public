@@ -32,13 +32,13 @@ def _swap_channels(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     対応するチャネルを入れ替える
-    feature: (num_frames, num_features)
+    feature: (num_samples, num_frames, num_features)
     """
     feature, mask = feature.copy(), mask.copy()
     for src, dst in correspondences:
         src_idx, dst_idx = PROBE2IDX[src], PROBE2IDX[dst]
-        feature[:, [src_idx, dst_idx]] = feature[:, [dst_idx, src_idx]]
-        mask[:, [src_idx, dst_idx]] = mask[:, [dst_idx, src_idx]]
+        feature[..., [src_idx, dst_idx]] = feature[..., [dst_idx, src_idx]]
+        mask[..., [src_idx, dst_idx]] = mask[..., [dst_idx, src_idx]]
 
     return feature, mask
 
@@ -49,7 +49,7 @@ def swap_lr(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     左右のチャネルを入れ替える
-    feature: (num_frames, num_features)
+    feature: (num_samples, num_frames, num_features)
     """
     return _swap_channels(feature, mask, LR_CORRESPONDENCE)
 
@@ -60,7 +60,7 @@ def swap_fr(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     前頭側と後頭側のチャネルの順番を入れ替える
-    feature: (num_frames, num_features)
+    feature: (num_samples, num_frames, num_features)
     """
     return _swap_channels(feature, mask, FR_CORRESPONDENCE)
 
@@ -71,7 +71,7 @@ def channel_permutation(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     チャンネルの順番をランダムに入れ替える
-    feature: (num_frames, num_features)
+    feature: (num_samples, num_frames, num_features)
     """
     feature, mask = feature.copy(), mask.copy()
     left_idxs, right_idxs = [], []
@@ -85,15 +85,15 @@ def channel_permutation(
 
     perm = np.random.permutation(len(left_idxs))
 
-    feature[:, left_idxs] = feature[:, left_idxs[perm]]
-    feature[:, right_idxs] = feature[:, right_idxs[perm]]
-    mask[:, left_idxs] = mask[:, left_idxs[perm]]
-    mask[:, right_idxs] = mask[:, right_idxs[perm]]
+    feature[..., left_idxs] = feature[..., left_idxs[perm]]
+    feature[..., right_idxs] = feature[..., right_idxs[perm]]
+    mask[..., left_idxs] = mask[..., left_idxs[perm]]
+    mask[..., right_idxs] = mask[..., right_idxs[perm]]
 
     central_idxs = np.array([PROBE2IDX[ch] for ch in CENTRAL_CHANNELS])
     perm = np.random.permutation(len(central_idxs))
-    feature[:, central_idxs] = feature[:, central_idxs[perm]]
-    mask[:, central_idxs] = mask[:, central_idxs[perm]]
+    feature[..., central_idxs] = feature[..., central_idxs[perm]]
+    mask[..., central_idxs] = mask[..., central_idxs[perm]]
 
     return feature, mask
 
@@ -152,14 +152,14 @@ if __name__ == "__main__":
         print(f"** {transform_cls.__name__} **")
         print("*" * 40)
         transform = transform_cls(p=1.0)
-        feat = np.array(list(PROBE2IDX.keys()))[np.newaxis, :]
-        mask = np.array(list(PROBE2IDX.keys()))[np.newaxis, :]
-        mask = np.array(list(PROBE2IDX.keys()))[np.newaxis, :]
+        feat = np.array(list(PROBE2IDX.keys()))[np.newaxis, np.newaxis, :]
+        mask = np.array(list(PROBE2IDX.keys()))[np.newaxis, np.newaxis, :]
+        mask = np.array(list(PROBE2IDX.keys()))[np.newaxis, np.newaxis, :]
 
         feat_aug, mask_aug = transform(feat, mask)
         print(feat.shape)
         print("* feature *")
-        for ch in range(feat.shape[1]):
-            print(f"{feat[:, ch].item()} -> {feat_aug[:, ch].item()}")
+        for ch in range(feat.shape[-1]):
+            print(f"{feat[..., ch].item()} -> {feat_aug[..., ch].item()}")
 
         assert (mask_aug == feat_aug).all()
