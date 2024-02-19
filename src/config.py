@@ -67,6 +67,7 @@ class TrainerConfig:
     optimizer: DictConfig
     scheduler: SchedulerConfig
     val: EvalConfig
+    num_samples_per_eeg: int
 
 
 @dataclass

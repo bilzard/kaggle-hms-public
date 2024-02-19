@@ -20,9 +20,11 @@ defaults:
   - split: gkfold5
   - trainer/optimizer: adamw
   - architecture/model: hms_model
+  - architecture/model/sample_collator: simple_collator
   - architecture/model/feature_extractor: wave2spec
   - architecture/model/encoder: timm_encoder
   - architecture/model/decoder: pick_last
+  - architecture/model/sample_aggregator: mean_aggregator
   - architecture/model/head: simple_head
   - _self_
 
@@ -46,6 +48,7 @@ trainer:
     weight_key: weight
     input_keys: [eeg, cqf]
   transform: null
+  num_samples_per_eeg: 1
 
 architecture:
   model:

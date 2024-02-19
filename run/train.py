@@ -67,6 +67,7 @@ def main(cfg: MainConfig):
                 transform=instantiate(cfg.trainer.transform)
                 if cfg.trainer.transform is not None
                 else None,
+                num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
             )
             train_loader = get_train_loader(
                 train_dataset,

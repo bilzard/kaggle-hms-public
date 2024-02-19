@@ -146,6 +146,7 @@ class UniformSamplingEegDataset(Dataset):
         padding_type: str = "right",
         duration: int = 2048,
         transform: BaseTransform | None = None,
+        num_samples_per_eeg: int = 1,
     ):
         self.metadata = metadata.group_by("eeg_id").agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
@@ -167,6 +168,7 @@ class UniformSamplingEegDataset(Dataset):
             for row in self.metadata.to_dicts()
         }
         self.padding_type = padding_type
+        self.num_samples_per_eeg = num_samples_per_eeg
 
     def __len__(self):
         return len(self.eeg_ids)
@@ -178,8 +180,9 @@ class UniformSamplingEegDataset(Dataset):
         eeg = self.id2eeg[eeg_id].astype(np.float32)
         cqf = self.id2cqf[eeg_id].astype(np.float32)
 
-        eeg, cqf = sample_eeg(eeg, cqf, self.duration, self.padding_type, 1)
-        eeg, cqf = eeg[0], cqf[0]
+        eeg, cqf = sample_eeg(
+            eeg, cqf, self.duration, self.padding_type, self.num_samples_per_eeg
+        )
 
         label = np.array(
             [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
