@@ -63,15 +63,17 @@ class Trainer:
         self.configure_optimizers()
 
     def configure_optimizers(self):
+        cfg = self.cfg
         max_steps = len(self.train_loader) * self.epochs
         self.optimizer = instantiate(
             self.cfg.optimizer,
             params=self.model.parameters(),
+            lr=cfg.lr * (cfg.batch_size * cfg.num_samples_per_eeg) / 32.0,
         )
         self.scheduler = get_cosine_schedule_with_warmup(
             self.optimizer,
             num_training_steps=max_steps,
-            num_warmup_steps=int(max_steps * self.cfg.scheduler.warmup_ratio),
+            num_warmup_steps=int(max_steps * cfg.scheduler.warmup_ratio),
             num_cycles=0.5,
         )
         print(f"Optimizer: {self.optimizer}")
