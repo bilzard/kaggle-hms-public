@@ -33,37 +33,41 @@ def pad_eeg(
 
 
 def sample_eeg(
-    eeg: np.ndarray, cqf: np.ndarray, duration: int, padding_type: str, num_samples: int
+    eeg: np.ndarray,
+    mask: np.ndarray,
+    duration: int,
+    padding_type: str,
+    num_samples: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     eeg: (num_frames, num_channels)
-    cqf: (num_frames, num_channels)
+    mask: (num_frames, num_channels)
 
     return
     ------
     eeg: (num_samples, duration, num_channels)
-    cqf: (num_samples, duration, num_channels)
+    mask: (num_samples, duration, num_channels)
     """
+    eeg_org, mask_org = eeg, mask
     num_frames = eeg.shape[0]
 
     eegs = []
     cqfs = []
-
     for _ in range(num_samples):
         if num_frames < duration:
-            eeg, cqf = pad_eeg(eeg, cqf, duration, padding_type)
+            eeg, cqf = pad_eeg(eeg_org, mask_org, duration, padding_type)
         else:
             start_frame = np.random.randint(num_frames - duration + 1)
-            eeg = eeg[start_frame : start_frame + duration]
-            cqf = cqf[start_frame : start_frame + duration]
+            eeg = eeg_org[start_frame : start_frame + duration]
+            cqf = mask_org[start_frame : start_frame + duration]
 
-        eegs.append(eeg)
-        cqfs.append(cqf)
+        eegs.append(eeg.copy())
+        cqfs.append(cqf.copy())
 
     eeg = np.stack(eegs, axis=0)  # S, T, C
-    cqf = np.stack(cqfs, axis=0)  # S, T, C
+    mask = np.stack(cqfs, axis=0)  # S, T, C
 
-    return eeg, cqf
+    return eeg, mask
 
 
 class SlidingWindowEegDataset(Dataset):
