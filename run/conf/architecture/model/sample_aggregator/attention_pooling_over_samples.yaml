@@ -1,0 +1,2 @@
+_target_: src.model.sample_aggregator.AttentionPoolingOverSamples
+hidden_size: 64
