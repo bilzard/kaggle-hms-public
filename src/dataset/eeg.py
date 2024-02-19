@@ -70,6 +70,68 @@ def sample_eeg(
     return eeg, mask
 
 
+class SlidingWindowPerEegDataset(Dataset):
+    def __init__(
+        self,
+        metadata: pl.DataFrame,
+        id2eeg: dict[int, np.ndarray],
+        id2cqf: dict[int, np.ndarray],
+        padding_type: str = "right",
+        duration: int = 2048,
+        stride: int = 2048,
+    ):
+        self.metadata = metadata.group_by("eeg_id").agg(
+            *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
+            pl.col("total_votes_per_eeg").first(),
+            *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
+            pl.col("min_eeg_label_offset_sec").first(),
+            pl.col("max_eeg_label_offset_sec").first(),
+        )
+        self.id2eeg = id2eeg
+        self.id2cqf = id2cqf
+        self.duration = duration
+        self.stride = stride
+
+        self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
+
+        self.eeg_id2metadata = {
+            row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
+            for row in self.metadata.to_dicts()
+        }
+        self.padding_type = padding_type
+
+    def __len__(self):
+        return len(self.eeg_ids)
+
+    def __getitem__(self, idx):
+        eeg_id = self.eeg_ids[idx]
+        eegs, cqfs = [], []
+
+        eeg_org = self.id2eeg[eeg_id].astype(np.float32)
+        cqf_org = self.id2cqf[eeg_id].astype(np.float32)
+        eeg_org, cqf_org = pad_eeg(eeg_org, cqf_org, self.duration, self.padding_type)
+
+        num_frames = eeg_org.shape[0]
+        row = self.eeg_id2metadata[eeg_id]
+        for start_frame in range(0, num_frames - self.duration + 1, self.stride):
+            end_frame = start_frame + self.duration
+            eeg = eeg_org[start_frame:end_frame]
+            cqf = cqf_org[start_frame:end_frame]
+            eegs.append(eeg.copy())
+            cqfs.append(cqf.copy())
+
+        eeg = np.stack(eegs, axis=0)
+        cqf = np.stack(cqfs, axis=0)
+
+        label = np.array(
+            [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
+        )
+        weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
+        data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
+
+        return data
+
+
 class SlidingWindowEegDataset(Dataset):
     def __init__(
         self,
