@@ -11,6 +11,61 @@ def row_to_dict(row: dict, exclude_keys: list[str]):
     return {key: value for key, value in row.items() if key not in exclude_keys}
 
 
+def pad_eeg(
+    eeg: np.ndarray, cqf: np.ndarray, duration: int, padding_type: str
+) -> tuple[np.ndarray, np.ndarray]:
+    eeg = pad_multiple_of(
+        eeg,
+        duration,
+        0,
+        padding_type=padding_type,
+        mode="reflect",
+    )
+    cqf = pad_multiple_of(
+        cqf,
+        duration,
+        0,
+        padding_type=padding_type,
+        mode="constant",
+        constant_values=0,
+    )
+    return eeg, cqf
+
+
+def sample_eeg(
+    eeg: np.ndarray, cqf: np.ndarray, duration: int, padding_type: str, num_samples: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    eeg: (num_frames, num_channels)
+    cqf: (num_frames, num_channels)
+
+    return
+    ------
+    eeg: (num_samples, duration, num_channels)
+    cqf: (num_samples, duration, num_channels)
+    """
+    num_frames = eeg.shape[0]
+
+    eegs = []
+    cqfs = []
+
+    for _ in range(num_samples):
+        if num_frames < duration:
+            eeg, cqf = pad_eeg(eeg, cqf, duration, padding_type)
+        else:
+            start_frame = np.random.randint(num_frames - duration + 1)
+            eeg = eeg[start_frame : start_frame + duration]
+            cqf = cqf[start_frame : start_frame + duration]
+
+        eegs.append(eeg)
+        cqfs.append(cqf)
+
+    eeg = np.stack(eegs, axis=0)  # S, T, C
+    cqf = np.stack(cqfs, axis=0)  # S, T, C
+
+    return eeg, cqf
+
+
 class SlidingWindowEegDataset(Dataset):
     def __init__(
         self,
@@ -63,21 +118,7 @@ class SlidingWindowEegDataset(Dataset):
         eeg = self.id2eeg[eeg_id][start_frame:end_frame].astype(np.float32)
         cqf = self.id2cqf[eeg_id][start_frame:end_frame].astype(np.float32)
 
-        eeg = pad_multiple_of(
-            eeg,
-            self.duration,
-            0,
-            padding_type=self.padding_type,
-            mode="reflect",
-        )
-        cqf = pad_multiple_of(
-            cqf,
-            self.duration,
-            0,
-            padding_type=self.padding_type,
-            mode="constant",
-            constant_values=0,
-        )
+        eeg, cqf = pad_eeg(eeg, cqf, self.duration, self.padding_type)
 
         label = np.array(
             [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
@@ -132,28 +173,9 @@ class UniformSamplingEegDataset(Dataset):
 
         eeg = self.id2eeg[eeg_id].astype(np.float32)
         cqf = self.id2cqf[eeg_id].astype(np.float32)
-        num_frames = eeg.shape[0]
 
-        if num_frames < self.duration:
-            eeg = pad_multiple_of(
-                eeg,
-                self.duration,
-                0,
-                padding_type=self.padding_type,
-                mode="reflect",
-            )
-            cqf = pad_multiple_of(
-                cqf,
-                self.duration,
-                0,
-                padding_type=self.padding_type,
-                mode="constant",
-                constant_values=0,
-            )
-        else:
-            start_frame = np.random.randint(num_frames - self.duration + 1)
-            eeg = eeg[start_frame : start_frame + self.duration]
-            cqf = cqf[start_frame : start_frame + self.duration]
+        eeg, cqf = sample_eeg(eeg, cqf, self.duration, self.padding_type, 1)
+        eeg, cqf = eeg[0], cqf[0]
 
         label = np.array(
             [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
@@ -210,18 +232,9 @@ class PerEegDataset(Dataset):
         row = self.eeg_id2metadata[eeg_id]
 
         eeg = self.id2eeg[eeg_id][: self.duration].astype(np.float32)
-        eeg = pad_multiple_of(
-            eeg, self.duration, 0, padding_type=self.padding_type, mode="reflect"
-        )
         cqf = self.id2cqf[eeg_id][: self.duration].astype(np.float32)
-        cqf = pad_multiple_of(
-            cqf,
-            self.duration,
-            0,
-            padding_type=self.padding_type,
-            mode="constant",
-            constant_values=0,
-        )
+
+        eeg, cqf = pad_eeg(eeg, cqf, self.duration, self.padding_type)
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf)
         if not self.is_test:
             label = np.array(
@@ -244,7 +257,7 @@ class PerEegSubsampleDataset(Dataset):
         self,
         metadata: pl.DataFrame,
         id2eeg: dict[int, np.ndarray],
-        id2cqf: dict[int, np.ndarray] | None = None,
+        id2cqf: dict[int, np.ndarray],
         sampling_rate: float = 40,
         duration_sec: int = 50,
         num_samples_per_eeg: int = 1,
@@ -289,26 +302,20 @@ class PerEegSubsampleDataset(Dataset):
         end_frame = start_frame + int(self.duration_sec * self.sampling_rate)
 
         eeg = self.id2eeg[eeg_id][start_frame:end_frame].astype(np.float32)
-        eeg = pad_multiple_of(
-            eeg, self.pad_multiple, 0, padding_type=self.padding_type, mode="reflect"
-        )
+        cqf = self.id2cqf[eeg_id][start_frame:end_frame].astype(np.float32)
+
         label = np.array(
             [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
         )
         weight = np.array([row[self.key2idx["total_votes"]]], dtype=np.float32)
-        data = dict(eeg_id=eeg_id, eeg=eeg, label=label, weight=weight)
 
-        if self.id2cqf is not None:
-            cqf = self.id2cqf[eeg_id][start_frame:end_frame].astype(np.float32)
-            cqf = pad_multiple_of(
-                cqf,
-                self.pad_multiple,
-                0,
-                padding_type=self.padding_type,
-                mode="constant",
-                constant_values=0,
-            )
-            data["cqf"] = cqf
+        eeg, cqf = pad_eeg(
+            eeg,
+            cqf,
+            self.pad_multiple,
+            self.padding_type,
+        )
+        data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
 
         return data
 
