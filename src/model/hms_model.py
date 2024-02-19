@@ -23,8 +23,12 @@ class HmsModel(nn.Module):
         self.decoder = instantiate(
             cfg.model.decoder, encoder_channels=self.encoder.out_channels
         )
-        self.sample_aggregator = instantiate(cfg.model.sample_aggregator)
-        self.head = instantiate(cfg.model.head, in_channels=self.decoder.output_size)
+        self.sample_aggregator = instantiate(
+            cfg.model.sample_aggregator, input_channels=self.decoder.output_size
+        )
+        self.head = instantiate(
+            cfg.model.head, in_channels=self.sample_aggregator.output_size
+        )
         self.feature_key = feature_key
         self.pred_key = pred_key
         self.mask_key = mask_key
