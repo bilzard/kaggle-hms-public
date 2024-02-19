@@ -22,6 +22,7 @@ defaults:
   - architecture/model: hms_model
   - architecture/model/feature_extractor: wave2spec
   - architecture/model/encoder: timm_encoder
+  - architecture/model/decoder: pick_last
   - architecture/model/head: simple_head
   - _self_
 

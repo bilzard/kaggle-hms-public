@@ -19,17 +19,10 @@ class HmsModel(nn.Module):
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
         self.adapters = [instantiate(adapter) for adapter in cfg.model.adapters]
         self.encoder = instantiate(cfg.model.encoder, pretrained=pretrained)
-        self.decoder = (
-            instantiate(cfg.model.decoder, encoder_channels=self.encoder.out_channels)
-            if hasattr(cfg.model, "decoder")
-            else None
+        self.decoder = instantiate(
+            cfg.model.decoder, encoder_channels=self.encoder.out_channels
         )
-        self.head = instantiate(
-            cfg.model.head,
-            in_channels=cfg.model.decoder.hidden_size
-            if hasattr(cfg.model, "decoder") and cfg.model.decoder is not None
-            else self.encoder.out_channels[-1],
-        )
+        self.head = instantiate(cfg.model.head, in_channels=self.decoder.output_size)
         self.feature_key = feature_key
         self.pred_key = pred_key
         self.mask_key = mask_key
@@ -44,10 +37,7 @@ class HmsModel(nn.Module):
                 spec, spec_mask = adapter(spec, spec_mask)
 
         features = self.encoder(spec)
-        if self.decoder is not None:
-            x = self.decoder(features)
-        else:
-            x = features[-1]
+        x = self.decoder(features)
         x = self.head(x)
 
         output = {self.pred_key: x}
@@ -89,11 +79,8 @@ def check_model(
     print_shapes(
         "Encoder", {f"feature[{i}]": feature for i, feature in enumerate(features)}
     )
-    if hasattr(model, "decoder") and model.decoder is not None:
-        x = model.decoder(features)
-        print_shapes("Decoder", {"pred": x})
-    else:
-        x = features[-1]
+    x = model.decoder(features)
+    print_shapes("Decoder", {"pred": x})
 
     x = model.head(x)
     print_shapes("Head", {"pred": x})
