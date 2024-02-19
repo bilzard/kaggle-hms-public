@@ -26,6 +26,7 @@ class LabelAlignedHeadV3(nn.Module):
                 in_channels,
                 hidden_channels,
                 kernel_size=kernel_size,
+                padding="same",
                 bias=True,
             )
         )
