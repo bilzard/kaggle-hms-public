@@ -130,6 +130,11 @@ class UnetV2(nn.Module):
                 strides,
             )
         )
+        self._output_size = hidden_size
+
+    @property
+    def output_size(self) -> int:
+        return self._output_size
 
     def forward(self, features: list[Tensor]) -> Tensor:
         features = features[-self.encoder_depth :][::-1]  # C5, C4, C3, C2

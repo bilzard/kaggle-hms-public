@@ -165,6 +165,11 @@ class UnetV3(nn.Module):
                 encoder_channels[1:],  # C4, C3, C2
             )
         )
+        self._output_size = hidden_size
+
+    @property
+    def output_size(self):
+        return self._output_size
 
     def forward(self, features: list[Tensor]) -> Tensor:
         features = features[-self.encoder_depth :][::-1]  # C5, C4, C3, C2
