@@ -34,7 +34,7 @@ class GatedMilAttention(nn.Module):
             nn.BatchNorm1d(hidden_size),
             nn.Tanh(),
         )
-        self.map_score = nn.Conv2d(hidden_size, 1, kernel_size=1)
+        self.map_score = nn.Conv1d(hidden_size, 1, kernel_size=1)
 
     def forward(self, x: Tensor) -> Tensor:
         """
