@@ -8,7 +8,13 @@ from tqdm import tqdm
 
 from src.config import MainConfig
 from src.constant import EEG_PROBES, PROBES
-from src.preprocess import load_eeg, process_cqf, process_eeg
+from src.preprocess import (
+    load_eeg,
+    process_cqf,
+    process_eeg,
+    process_label,
+    select_develop_samples,
+)
 from src.proc_util import trace
 
 
@@ -51,8 +57,17 @@ def save_cqf(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
 
 @hydra.main(config_path="conf", config_name="main", version_base="1.2")
 def main(cfg: MainConfig):
+    real_phase = cfg.phase if cfg.phase != "develop" else "train"
+
     data_dir = Path(cfg.env.data_dir)
-    metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
+
+    metadata = pl.read_csv(data_dir / f"{real_phase}.csv")
+    if cfg.phase == "develop":
+        columns_org = metadata.columns
+        metadata = process_label(metadata)
+        metadata = select_develop_samples(metadata)
+        metadata = metadata.select(columns_org)
+
     output_dir_eeg = Path("eeg")
 
     if (not cfg.dry_run) and (cfg.cleanup) and (output_dir_eeg.exists()):
@@ -71,7 +86,7 @@ def main(cfg: MainConfig):
 
     with trace(f"process eeg{tag}"):
         for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
-            eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=cfg.phase)
+            eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=real_phase)
             eeg, pad_mask = process_eeg(eeg_df)
 
             eeg /= cfg.preprocess.ref_voltage
