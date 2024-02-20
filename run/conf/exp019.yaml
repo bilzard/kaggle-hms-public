@@ -1,0 +1,24 @@
+defaults:
+  - baseline
+  - override architecture/model/head: label_aligned_head_v2
+  - _self_
+
+exp_name: exp019
+description: exp018 + dual model
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.DualTilingAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [2.0, 8.0] # 256 x 256
+
+  in_channels: 3
+  is_dual: true
+
+trainer:
+  transform:
+    _target_: src.transform.Compose
+    transforms:
+      - _target_: src.transform.ReverseSequence
+        p: 0.5
