@@ -1,0 +1,3 @@
+_target_: src.model.sample_aggregator.AttentionPoolingOverSpec
+hidden_size: 64
+attend_to_frequency_dim: false
