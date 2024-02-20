@@ -1,0 +1,28 @@
+defaults:
+  - baseline
+  - override architecture/model/head: label_aligned_head_v2
+  - _self_
+
+exp_name: exp020
+description: weighted mean aggregator + dual model
+
+trainer:
+  transform:
+    _target_: src.transform.Compose
+    transforms:
+      - _target_: src.transform.SwapLr
+        p: 0.5
+      - _target_: src.transform.ReverseSequence
+        p: 0.5
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.DualWeightedMeanAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [2.0, 8.0] # 256 x 256
+    head:
+      hidden_channels: 32
+      drop_rate: 0.0
+  in_channels: 3
+  is_dual: true
