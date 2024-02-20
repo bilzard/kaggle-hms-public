@@ -1,5 +1,6 @@
 from .aggregate import (
     DualTilingAggregator,
+    DualWeightedMeanAggregator,
     FlatTilingAggregator,
     TilingAggregator,
     WeightedMeanAggregator,
@@ -12,4 +13,5 @@ __all__ = [
     "TilingAggregator",
     "FlatTilingAggregator",
     "DualTilingAggregator",
+    "DualWeightedMeanAggregator",
 ]
