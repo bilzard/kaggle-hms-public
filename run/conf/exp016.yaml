@@ -1,0 +1,14 @@
+defaults:
+  - baseline
+  - override architecture/model/head: label_aligned_head_v2
+  - _self_
+
+exp_name: exp016
+description: stack spectrograms in filter bank domain
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.TilingAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [2.0, 8.0] # 256 x 256
