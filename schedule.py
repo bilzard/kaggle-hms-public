@@ -23,11 +23,14 @@ def parse_multi_vars(ctx, param, value):
 @click.option("--seeds", callback=parse_multi_vars, default="42")
 @click.option("--env", default="local")
 @click.option("--dry_run", is_flag=True)
-def run_experiments(job_name, phase, exp_names, folds, seeds, env, dry_run):
+@click.option("--checkpointing", default="false")
+def run_experiments(
+    job_name, phase, exp_names, folds, seeds, env, dry_run, checkpointing
+):
     for exp_name in exp_names:
         for fold in folds:
             for seed in seeds:
-                cmd = f"python -m run.{job_name} --config-name={exp_name} phase={phase} job_name={job_name} fold={fold} seed={seed} env={env}"
+                cmd = f"python -m run.{job_name} --config-name={exp_name} phase={phase} job_name={job_name} fold={fold} seed={seed} env={env} architecture.model.encoder.grad_checkpointing={checkpointing}"
                 print(cmd)
                 if not dry_run:
                     subprocess.run(cmd, shell=True)
