@@ -73,3 +73,23 @@ class TilingAggregator(nn.Module):
         masks = torch.stack(tiled_masks, dim=1)
 
         return specs, masks
+
+
+class FlatTilingAggregator(nn.Module):
+    """
+    周波数方向にspetrogramを積み上げる
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(
+        self, spec: torch.Tensor, mask: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        B, C, F, T = spec.shape
+        spec = rearrange(spec, "b c f t -> b 1 (c f) t")
+
+        mask = mask.expand(B, C, F, T)
+        mask = rearrange(mask, "b c f t -> b 1 (c f) t")
+
+        return spec, mask
