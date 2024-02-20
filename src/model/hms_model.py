@@ -1,8 +1,23 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from einops import rearrange
 from hydra.utils import instantiate
+from torch import Tensor
 
 from src.config import ArchitectureConfig
+
+
+def calc_similarity(x: Tensor, y: Tensor, channel_dim: int = 1, eps=1e-4) -> Tensor:
+    """
+    x: (B, C, F, T)
+    y: (B, C, F, T)
+
+    Returns:
+    similarity: (B, 1, F, T)
+    """
+
+    return F.cosine_similarity(x, y, dim=channel_dim, eps=eps).unsqueeze(channel_dim)
 
 
 class HmsModel(nn.Module):
@@ -16,6 +31,8 @@ class HmsModel(nn.Module):
     ):
         super().__init__()
 
+        self.is_dual = cfg.is_dual
+
         self.sample_collator = instantiate(cfg.model.sample_collator)
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
         self.adapters = [instantiate(adapter) for adapter in cfg.model.adapters]
@@ -23,8 +40,14 @@ class HmsModel(nn.Module):
         self.decoder = instantiate(
             cfg.model.decoder, encoder_channels=self.encoder.out_channels
         )
+        agg_input_channel_size = (
+            2 * self.decoder.output_size + 1
+            if self.is_dual
+            else self.decoder.output_size
+        )
         self.sample_aggregator = instantiate(
-            cfg.model.sample_aggregator, input_channels=self.decoder.output_size
+            cfg.model.sample_aggregator,
+            input_channels=agg_input_channel_size,
         )
         self.head = instantiate(
             cfg.model.head, in_channels=self.sample_aggregator.output_size
@@ -52,11 +75,22 @@ class HmsModel(nn.Module):
 
         features = self.encoder(spec)
         x = self.decoder(features)
+        if self.is_dual:
+            x = self.recover_dual(x)
+
         x = self.sample_aggregator(x, num_samples=S)
         x = self.head(x)
 
         output = {self.pred_key: x}
         return output
+
+    def recover_dual(self, x: Tensor) -> Tensor:
+        x = rearrange(x, "(d b) c f t -> d b c f t", d=2)
+        x_left = x[0]
+        x_right = x[1]
+        sim = calc_similarity(x_left, x_right)
+        x = torch.cat([x_left, x_right, sim], dim=1)
+        return x
 
 
 def print_shapes(title: str, data: dict):
@@ -102,6 +136,10 @@ def check_model(
     )
     x = model.decoder(features)
     print_shapes("Decoder", {"x": x})
+
+    if model.is_dual:
+        x = model.recover_dual(x)
+        print_shapes("recover dual", {"x": x})
 
     x = model.sample_aggregator(x, num_samples=S)
     print_shapes("SampleAggregator", {"x": x})

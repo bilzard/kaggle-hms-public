@@ -74,6 +74,7 @@ class TrainerConfig:
 class ArchitectureConfig:
     in_channels: int
     out_channels: int
+    is_dual: bool
     model: DictConfig
 
 

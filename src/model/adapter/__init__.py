@@ -1,4 +1,9 @@
-from .aggregate import FlatTilingAggregator, TilingAggregator, WeightedMeanAggregator
+from .aggregate import (
+    DualTilingAggregator,
+    FlatTilingAggregator,
+    TilingAggregator,
+    WeightedMeanAggregator,
+)
 from .transform import ResizeTransform
 
 __all__ = [
@@ -6,4 +11,5 @@ __all__ = [
     "ResizeTransform",
     "TilingAggregator",
     "FlatTilingAggregator",
+    "DualTilingAggregator",
 ]
