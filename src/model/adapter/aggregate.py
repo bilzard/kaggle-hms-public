@@ -75,6 +75,36 @@ class TilingAggregator(nn.Module):
         return specs, masks
 
 
+class DualTilingAggregator(TilingAggregator):
+    """
+    左右のchannelをbatch方向に積み上げる
+    Zチャネルは左右両方に入力する
+
+    spec: (B, C, F, T)
+    mask: (B, C, F, T)
+
+    Return:
+    spec: (2 * B, C, F, T)
+    mask: (2 * B, C, F, T)
+    """
+
+    def forward(
+        self, spec: torch.Tensor, mask: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        spec, mask = super().forward(spec, mask)
+        spec_left = spec[:, [0, 1, 2], ...]
+        spec_right = spec[:, [-1, -2, -3], ...]
+        spec = torch.cat([spec_left, spec_right], dim=0)
+        spec = spec.clone()
+
+        mask_left = mask[:, [0, 1, 2], ...]
+        mask_right = mask[:, [-1, -2, -3], ...]
+        mask = torch.cat([mask_left, mask_right], dim=0)
+        mask = mask.clone()
+
+        return spec, mask
+
+
 class FlatTilingAggregator(nn.Module):
     """
     周波数方向にspetrogramを積み上げる
