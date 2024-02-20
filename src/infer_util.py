@@ -14,6 +14,7 @@ def load_metadata(
     fold_split_dir: Path,
     fold: int = -1,
     group_by_eeg: bool = False,
+    num_samples: int = 2640,
 ) -> pl.DataFrame:
     """
     phaseに応じてmetadataをロードする
@@ -45,7 +46,14 @@ def load_metadata(
         case "test":
             metadata = pl.read_csv(data_dir / "test.csv")
             metadata = process_label(metadata, is_test=True)
+
             return metadata
+        case "develop":
+            metadata = pl.read_csv(data_dir / "train.csv")
+            metadata = process_label(metadata)
+            return metadata.filter(pl.col("duration_sec").eq(50)).sample(
+                num_samples, with_replacement=False, seed=42
+            )
         case _:
             raise ValueError(f"Invalid phase: {phase}")
 
