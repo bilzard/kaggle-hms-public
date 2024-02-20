@@ -1,3 +1,4 @@
 _target_: src.model.encoder.timm_encoder.TimmEncoder
 name: ???
 in_channels: ???
+grad_checkpointing: false

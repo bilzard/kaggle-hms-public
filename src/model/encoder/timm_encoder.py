@@ -9,6 +9,7 @@ class TimmEncoder(nn.Module):
         pretrained: bool = True,
         in_channels: int = 3,
         depth: int = 5,
+        grad_checkpointing: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -27,6 +28,19 @@ class TimmEncoder(nn.Module):
             in_channels,
         ] + self.model.feature_info.channels()
         self._depth = depth
+        self.grad_checkpointing = grad_checkpointing
+
+    def train(self, mode=True):
+        super().train(mode)
+        if self.grad_checkpointing and hasattr(self.model, "set_grad_checkpointing"):
+            self.model.set_grad_checkpointing(True)
+            print("grad_checkpointing: True")
+
+    def eval(self, mode=True):
+        super().eval()
+        if self.grad_checkpointing and hasattr(self.model, "set_grad_checkpointing"):
+            self.model.set_grad_checkpointing(False)
+            print("grad_checkpointing: False")
 
     def forward(self, x):
         features = self.model(x)
