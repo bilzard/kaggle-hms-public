@@ -285,3 +285,11 @@ def process_label(
     )
 
     return metadata
+
+
+def select_develop_samples(
+    metadata: pl.DataFrame, num_samples: int = 2640, duration_sec: int = 50, seed=42
+) -> pl.DataFrame:
+    return metadata.filter(pl.col("duration_sec").eq(duration_sec)).sample(
+        num_samples, with_replacement=False, seed=seed
+    )

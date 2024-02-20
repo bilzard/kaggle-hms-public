@@ -85,11 +85,10 @@ def predict(
 
 @hydra.main(config_path="conf", config_name="baseline", version_base="1.2")
 def main(cfg: MainConfig):
-    phase = cfg.phase if cfg.phase != "develop" else "train"
     data_dir = Path(cfg.env.data_dir)
     working_dir = Path(cfg.env.working_dir)
-    preprocess_dir = Path(working_dir / "preprocess" / phase / "eeg")
-    fold_split_dir = Path(working_dir / "fold_split" / phase)
+    preprocess_dir = Path(working_dir / "preprocess" / cfg.phase / "eeg")
+    fold_split_dir = Path(working_dir / "fold_split" / cfg.phase)
 
     metadata = load_metadata(data_dir, cfg.phase, fold_split_dir, cfg.fold)
 

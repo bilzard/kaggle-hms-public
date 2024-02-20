@@ -5,7 +5,7 @@ import polars as pl
 from scipy.special import softmax
 
 from src.constant import LABELS
-from src.preprocess import process_label
+from src.preprocess import process_label, select_develop_samples
 
 
 def load_metadata(
@@ -14,7 +14,6 @@ def load_metadata(
     fold_split_dir: Path,
     fold: int = -1,
     group_by_eeg: bool = False,
-    num_samples: int = 2640,
 ) -> pl.DataFrame:
     """
     phaseに応じてmetadataをロードする
@@ -51,9 +50,7 @@ def load_metadata(
         case "develop":
             metadata = pl.read_csv(data_dir / "train.csv")
             metadata = process_label(metadata)
-            return metadata.filter(pl.col("duration_sec").eq(50)).sample(
-                num_samples, with_replacement=False, seed=42
-            )
+            return select_develop_samples(metadata)
         case _:
             raise ValueError(f"Invalid phase: {phase}")
 
