@@ -47,7 +47,7 @@ def get_loader(
                 pin_memory=True,
             )
             return valid_loader
-        case "test":
+        case "test" | "develop":
             test_dataset = PerEegDataset(metadata, id2eeg, id2cqf=id2cqf, is_test=True)
             test_loader = get_valid_loader(
                 test_dataset,
@@ -85,10 +85,11 @@ def predict(
 
 @hydra.main(config_path="conf", config_name="baseline", version_base="1.2")
 def main(cfg: MainConfig):
+    phase = cfg.phase if cfg.phase != "develop" else "train"
     data_dir = Path(cfg.env.data_dir)
     working_dir = Path(cfg.env.working_dir)
-    preprocess_dir = Path(working_dir / "preprocess" / cfg.phase / "eeg")
-    fold_split_dir = Path(working_dir / "fold_split" / cfg.phase)
+    preprocess_dir = Path(working_dir / "preprocess" / phase / "eeg")
+    fold_split_dir = Path(working_dir / "fold_split" / phase)
 
     metadata = load_metadata(data_dir, cfg.phase, fold_split_dir, cfg.fold)
 
@@ -121,7 +122,7 @@ def main(cfg: MainConfig):
                 print(
                     ", ".join([f"{k}={v:.4f}" for k, v in val_loss_per_label.items()])
                 )
-            case "test":
+            case "test" | "develop":
                 eeg_ids, logits = predict(model, data_loader)
             case _:
                 raise ValueError(f"Invalid phase: {cfg.phase}")
