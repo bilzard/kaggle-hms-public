@@ -11,6 +11,14 @@ class WeightedMeanAggregator(nn.Module):
     def forward(
         self, spec: torch.Tensor, mask: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        spec: (B, 20, H, W)
+        mask: (B, 19, H, W)
+
+        return:
+        specs: (B, 5, H, W)
+        masks: (B, 5, H, W)
+        """
         sum_specs = []
         sum_masks = []
         ranges = [0, 4, 8, 10, 14, 18]
@@ -31,29 +39,33 @@ class WeightedMeanAggregator(nn.Module):
 
 
 class TilingAggregator(nn.Module):
+    """
+    周波数方向にspetrogramを積み上げる
+    """
+
     def __init__(self):
         super().__init__()
 
-    # TODO: 積む方向は時間方向でなく周波数方向にする(時間方向は可変にしたい)
     def forward(
         self, spec: torch.Tensor, mask: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         tiled_specs = []
         tiled_masks = []
         ranges = [0, 4, 8, 10, 14, 18]
-        B, C, H, W = spec.shape
+        B, C, F, T = spec.shape
         for i, (start, end) in zip(range(C), zip(ranges[:-1], ranges[1:])):
             ch = end - start
-            pad_size = W * (4 - ch)
-            tile = rearrange(spec[:, start:end], "b c h w -> b h (w c)", c=ch)
+            pad_size = F * (4 - ch)
+            tile = rearrange(spec[:, start:end], "b c f t -> b (c f) t", c=ch)
             tile = torch.nn.functional.pad(
-                tile, (0, pad_size), mode="constant", value=0
+                tile, (0, 0, 0, pad_size), mode="constant", value=0
             )
             tiled_specs.append(tile)
 
-            tiled_mask = rearrange(mask[:, start:end], "b c h w -> b h (w c)", c=ch)
+            mask = mask.expand(B, C, F, T)
+            tiled_mask = rearrange(mask[:, start:end], "b c f t -> b (c f) t", c=ch)
             tiled_mask = torch.nn.functional.pad(
-                tiled_mask, (0, pad_size), mode="constant", value=0
+                tiled_mask, (0, 0, 0, pad_size), mode="constant", value=0
             )
             tiled_masks.append(tiled_mask)
 
