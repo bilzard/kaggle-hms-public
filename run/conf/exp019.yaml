@@ -20,5 +20,7 @@ trainer:
   transform:
     _target_: src.transform.Compose
     transforms:
+      - _target_: src.transform.SwapLr
+        p: 0.5
       - _target_: src.transform.ReverseSequence
         p: 0.5
