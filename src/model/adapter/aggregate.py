@@ -19,14 +19,12 @@ def collate_lr_channels(spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
     assert spec.shape[1] == 5
 
     spec_left = spec[:, [0, 1, 2], ...]
-    spec_right = spec[:, [-1, -2, -3], ...]
+    spec_right = spec[:, [4, 3, 2], ...]
     spec = torch.cat([spec_left, spec_right], dim=0)
-    spec = spec.clone()
 
     mask_left = mask[:, [0, 1, 2], ...]
-    mask_right = mask[:, [-1, -2, -3], ...]
+    mask_right = mask[:, [4, 3, 2], ...]
     mask = torch.cat([mask_left, mask_right], dim=0)
-    mask = mask.clone()
 
     return spec, mask
 
