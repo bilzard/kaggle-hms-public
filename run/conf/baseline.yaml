@@ -61,6 +61,7 @@ architecture:
       in_channels: ${architecture.in_channels}
   in_channels: 5
   out_channels: 6
+  is_dual: false
 
 infer:
   batch_size: 32
