@@ -1,6 +1,34 @@
 import torch
 import torch.nn as nn
 from einops import rearrange
+from torch import Tensor
+
+
+def collate_lr_channels(spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
+    """
+    左右のchannelをbatch方向に積み上げる
+    Zチャネルは左右両方に入力する
+
+    spec: (B, C, F, T)
+    mask: (B, C, F, T)
+
+    Return:
+    spec: (2 * B, C, F, T)
+    mask: (2 * B, C, F, T)
+    """
+    assert spec.shape[1] == 5
+
+    spec_left = spec[:, [0, 1, 2], ...]
+    spec_right = spec[:, [-1, -2, -3], ...]
+    spec = torch.cat([spec_left, spec_right], dim=0)
+    spec = spec.clone()
+
+    mask_left = mask[:, [0, 1, 2], ...]
+    mask_right = mask[:, [-1, -2, -3], ...]
+    mask = torch.cat([mask_left, mask_right], dim=0)
+    mask = mask.clone()
+
+    return spec, mask
 
 
 class WeightedMeanAggregator(nn.Module):
@@ -36,6 +64,15 @@ class WeightedMeanAggregator(nn.Module):
         masks = torch.concat(sum_masks, dim=1)
 
         return specs, masks
+
+
+class DualWeightedMeanAggregator(WeightedMeanAggregator):
+    def forward(
+        self, spec: torch.Tensor, mask: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        spec, mask = super().forward(spec, mask)
+
+        return collate_lr_channels(spec, mask)
 
 
 class TilingAggregator(nn.Module):
@@ -76,33 +113,12 @@ class TilingAggregator(nn.Module):
 
 
 class DualTilingAggregator(TilingAggregator):
-    """
-    左右のchannelをbatch方向に積み上げる
-    Zチャネルは左右両方に入力する
-
-    spec: (B, C, F, T)
-    mask: (B, C, F, T)
-
-    Return:
-    spec: (2 * B, C, F, T)
-    mask: (2 * B, C, F, T)
-    """
-
     def forward(
         self, spec: torch.Tensor, mask: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         spec, mask = super().forward(spec, mask)
-        spec_left = spec[:, [0, 1, 2], ...]
-        spec_right = spec[:, [-1, -2, -3], ...]
-        spec = torch.cat([spec_left, spec_right], dim=0)
-        spec = spec.clone()
 
-        mask_left = mask[:, [0, 1, 2], ...]
-        mask_right = mask[:, [-1, -2, -3], ...]
-        mask = torch.cat([mask_left, mask_right], dim=0)
-        mask = mask.clone()
-
-        return spec, mask
+        return collate_lr_channels(spec, mask)
 
 
 class FlatTilingAggregator(nn.Module):
