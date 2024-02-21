@@ -82,7 +82,7 @@ class SlidingWindowPerEegDataset(Dataset):
         weight_key: str = "weight_per_eeg",
     ):
         self.weight_key = weight_key
-        self.metadata = metadata.group_by("eeg_id").agg(
+        self.metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
             pl.col(self.weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
@@ -146,7 +146,7 @@ class SlidingWindowEegDataset(Dataset):
         weight_key: str = "weight_per_eeg",
     ):
         self.weight_key = weight_key
-        self.metadata = metadata.group_by("eeg_id").agg(
+        self.metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
             pl.col(self.weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
@@ -216,7 +216,7 @@ class UniformSamplingEegDataset(Dataset):
         weight_key: str = "weight_per_eeg",
     ):
         self.weight_key = weight_key
-        self.metadata = metadata.group_by("eeg_id").agg(
+        self.metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
             pl.col(self.weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
@@ -281,7 +281,7 @@ class PerEegDataset(Dataset):
         weight_key: str = "weight_per_eeg",
     ):
         self.weight_key = weight_key
-        self.metadata = metadata.group_by("eeg_id").agg(
+        self.metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
             pl.col(self.weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
