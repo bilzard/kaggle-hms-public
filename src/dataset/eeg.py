@@ -222,6 +222,7 @@ class UniformSamplingEegDataset(Dataset):
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
+            pl.col("loss").first(),
         )
         self.id2eeg = id2eeg
         self.id2cqf = id2cqf

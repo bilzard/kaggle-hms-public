@@ -1,0 +1,4 @@
+enabled: true
+max_drop_ratio: ???
+teacher_ensemble_name: ???
+saturated_epochs: ???

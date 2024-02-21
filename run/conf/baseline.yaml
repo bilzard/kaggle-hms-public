@@ -19,6 +19,7 @@ defaults:
   - preprocess: with_cqf
   - split: gkfold5
   - trainer/optimizer: adamw
+  - trainer/pseudo_label: without_pl
   - architecture/model: hms_model
   - architecture/model/sample_collator: simple_collator
   - architecture/model/feature_extractor: wave2spec

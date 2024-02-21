@@ -21,6 +21,7 @@ from src.preprocess import (
 )
 from src.proc_util import trace
 from src.random_util import seed_everything, seed_worker
+from src.sampler import LossBasedSampler
 from src.trainer import Trainer
 
 
@@ -32,6 +33,16 @@ def main(cfg: MainConfig):
 
     metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
     metadata = process_label(metadata)
+
+    if cfg.trainer.pseudo_label.enabled:
+        teacher_ensemble_name = cfg.trainer.pseudo_label.teacher_ensemble_name
+        print(f"* pseudo label {teacher_ensemble_name}")
+        loss_df = pl.read_parquet(
+            working_dir / "ensemble" / teacher_ensemble_name / "losses.pqt"
+        )
+        metadata = metadata.join(loss_df, on="eeg_id")
+    else:
+        metadata = metadata.with_columns(pl.lit(0.0).alias("loss"))
 
     fold_dir = Path(working_dir / "fold_split" / cfg.phase)
     fold_split_df = pl.read_parquet(fold_dir / "fold_split.pqt")
@@ -69,12 +80,25 @@ def main(cfg: MainConfig):
                 else None,
                 num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
             )
+            train_sampler = (
+                LossBasedSampler(
+                    train_dataset.metadata["loss"].to_numpy(),
+                    saturated_epochs=cfg.trainer.pseudo_label.saturated_epochs,
+                    initial_sampling_rate=1.0,
+                    final_sampling_rate=1 - cfg.trainer.pseudo_label.max_drop_ratio,
+                    shuffle=True,
+                )
+                if cfg.trainer.pseudo_label.enabled
+                else None
+            )
             train_loader = get_train_loader(
                 train_dataset,
                 batch_size=cfg.trainer.batch_size,
                 num_workers=cfg.env.num_workers,
                 pin_memory=True,
                 worker_init_fn=seed_worker,
+                sampler=train_sampler,
+                shuffle=not cfg.trainer.pseudo_label.enabled,
             )
             valid_dataset = SlidingWindowEegDataset(
                 valid_df,

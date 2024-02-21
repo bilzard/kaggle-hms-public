@@ -55,6 +55,14 @@ class WandbConfig:
 
 
 @dataclass
+class PseudoLabelConfig:
+    enabled: bool
+    teacher_ensemble_name: str
+    max_drop_ratio: float
+    saturated_epochs: int
+
+
+@dataclass
 class TrainerConfig:
     epochs: int
     lr: float
@@ -68,6 +76,7 @@ class TrainerConfig:
     scheduler: SchedulerConfig
     val: EvalConfig
     num_samples_per_eeg: int
+    pseudo_label: PseudoLabelConfig
 
 
 @dataclass
