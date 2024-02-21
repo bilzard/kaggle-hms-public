@@ -63,6 +63,7 @@ class LossBasedSampler(Sampler):
         selected_indices = self.sorted_indices[: self._num_samples]
         if self.shuffle:
             selected_indices = np.random.permutation(selected_indices)
+            print(selected_indices[:10])
 
         yield from selected_indices.tolist()
 
