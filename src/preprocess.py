@@ -220,10 +220,8 @@ def process_label(
             pl.Series(total_votes_per_eeg).alias("total_votes_per_eeg")
         )
         .with_columns(
-            calc_weight(pl.col("total_votes"), T=T, alpha=alpha).alias("weight"),  # type: ignore
-            calc_weight(pl.col("total_votes_per_eeg"), T=T, alpha=alpha).alias(  # type: ignore
-                "weight_per_eeg"
-            ),
+            pl.col("total_votes").truediv(10).alias("weight"),
+            pl.col("total_votes_per_eeg").truediv(10).alias("weight_per_eeg"),
         )
         .with_columns(
             pl.col(f"{label}_vote")

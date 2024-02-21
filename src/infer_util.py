@@ -14,6 +14,7 @@ def load_metadata(
     fold_split_dir: Path,
     fold: int = -1,
     group_by_eeg: bool = False,
+    weight_key: str = "weight_per_eeg",
 ) -> pl.DataFrame:
     """
     phaseに応じてmetadataをロードする
@@ -37,7 +38,7 @@ def load_metadata(
                 metadata = metadata.groupby("eeg_id", maintain_order=True).agg(
                     pl.col("spectrogram_id").first(),
                     pl.col("label_id").first(),
-                    pl.col("total_votes_per_eeg").first().alias("weight"),
+                    pl.col(weight_key).first().alias("weight"),
                     *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
                 )
 

@@ -79,10 +79,12 @@ class SlidingWindowPerEegDataset(Dataset):
         padding_type: str = "right",
         duration: int = 2048,
         stride: int = 2048,
+        weight_key: str = "weight_per_eeg",
     ):
+        self.weight_key = weight_key
         self.metadata = metadata.group_by("eeg_id").agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
-            pl.col("total_votes_per_eeg").first(),
+            pl.col(self.weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
@@ -126,7 +128,7 @@ class SlidingWindowPerEegDataset(Dataset):
         label = np.array(
             [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
         )
-        weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
+        weight = np.array([row[self.weight_key]], dtype=np.float32)
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
 
         return data
@@ -141,10 +143,12 @@ class SlidingWindowEegDataset(Dataset):
         padding_type: str = "right",
         duration: int = 2048,
         stride: int = 2048,
+        weight_key: str = "weight_per_eeg",
     ):
+        self.weight_key = weight_key
         self.metadata = metadata.group_by("eeg_id").agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
-            pl.col("total_votes_per_eeg").first(),
+            pl.col(self.weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
@@ -189,7 +193,7 @@ class SlidingWindowEegDataset(Dataset):
         label = np.array(
             [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
         )
-        weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
+        weight = np.array([row[self.weight_key]], dtype=np.float32)
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
 
         return data
@@ -209,10 +213,12 @@ class UniformSamplingEegDataset(Dataset):
         duration: int = 2048,
         transform: BaseTransform | None = None,
         num_samples_per_eeg: int = 1,
+        weight_key: str = "weight_per_eeg",
     ):
+        self.weight_key = weight_key
         self.metadata = metadata.group_by("eeg_id").agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
-            pl.col("total_votes_per_eeg").first(),
+            pl.col(self.weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
@@ -249,7 +255,7 @@ class UniformSamplingEegDataset(Dataset):
         label = np.array(
             [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
         )
-        weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
+        weight = np.array([row[self.weight_key]], dtype=np.float32)
 
         if self.transform is not None:
             eeg, cqf = self.transform(eeg, cqf)
@@ -272,10 +278,12 @@ class PerEegDataset(Dataset):
         duration: int = 2048,
         padding_type: str = "right",
         is_test: bool = False,
+        weight_key: str = "weight_per_eeg",
     ):
+        self.weight_key = weight_key
         self.metadata = metadata.group_by("eeg_id").agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
-            pl.col("total_votes_per_eeg").first(),
+            pl.col(self.weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
@@ -309,7 +317,7 @@ class PerEegDataset(Dataset):
             label = np.array(
                 [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
             )
-            weight = np.array([row["total_votes_per_eeg"]], dtype=np.float32)
+            weight = np.array([row[self.weight_key]], dtype=np.float32)
             data |= dict(label=label, weight=weight)
 
         return data
@@ -332,11 +340,13 @@ class PerEegSubsampleDataset(Dataset):
         num_samples_per_eeg: int = 1,
         pad_multiple: int = 2048,
         padding_type: str = "right",
+        weight_key: str = "weight",
     ):
+        self.weight_key = weight_key
         self.metadata = metadata.select(
             "eeg_id",
             *[f"{label}_prob" for label in LABELS],
-            "total_votes",
+            self.weight_key,
             "eeg_label_offset_seconds",
         ).to_pandas()
         self.id2eeg = id2eeg
@@ -376,7 +386,7 @@ class PerEegSubsampleDataset(Dataset):
         label = np.array(
             [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
         )
-        weight = np.array([row[self.key2idx["total_votes"]]], dtype=np.float32)
+        weight = np.array([row[self.key2idx[self.weight_key]]], dtype=np.float32)
 
         eeg, cqf = pad_eeg(
             eeg,
