@@ -5,6 +5,12 @@ from .aggregate import (
     TilingAggregator,
     WeightedMeanAggregator,
 )
+from .normalize import (
+    BatchNormalizer,
+    ConstantNormalizer,
+    InstanceNormalizer,
+    LayerNormalizer,
+)
 from .transform import ResizeTransform
 
 __all__ = [
@@ -14,4 +20,8 @@ __all__ = [
     "FlatTilingAggregator",
     "DualTilingAggregator",
     "DualWeightedMeanAggregator",
+    "ConstantNormalizer",
+    "LayerNormalizer",
+    "BatchNormalizer",
+    "InstanceNormalizer",
 ]
