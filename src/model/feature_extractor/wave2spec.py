@@ -24,6 +24,7 @@ class Wave2Spectrogram(nn.Module):
         window_fn="hann_window",
         apply_mask=True,
         downsample_mode="linear",
+        expand_mask=True,
     ):
         super().__init__()
         torch_module = import_module("torch")
@@ -48,6 +49,7 @@ class Wave2Spectrogram(nn.Module):
             center=False,
             window_fn=getattr(torch_module, window_fn),
         )
+        self.expand_mask = True
 
     def downsample_mask(self, x: torch.Tensor, mode="nearest") -> torch.Tensor:
         """
@@ -146,6 +148,10 @@ class Wave2Spectrogram(nn.Module):
         channel_masks = torch.stack(channel_masks, dim=1)
         spec_masks = torch.stack(spec_masks, dim=1)
         spectrograms = torch.nan_to_num(spectrograms, nan=-self.db_cutoff)
+
+        if self.expand_mask:
+            F = spectrograms.shape[2]
+            spec_masks = spec_masks.expand(-1, -1, F, -1)
 
         assert (
             spectrograms.shape[-1] == num_frames // self.hop_length
