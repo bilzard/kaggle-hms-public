@@ -63,6 +63,9 @@ architecture:
   in_channels: 5
   out_channels: 6
   is_dual: false
+  map_similarity: false
+  hidden_dim: 64
+  merge_type: cat
 
 infer:
   batch_size: 32
