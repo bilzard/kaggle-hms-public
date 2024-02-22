@@ -30,6 +30,7 @@ class HmsModel(nn.Module):
         pretrained: bool = True,
     ):
         super().__init__()
+        self.cfg = cfg
 
         self.is_dual = cfg.is_dual
 
@@ -40,11 +41,30 @@ class HmsModel(nn.Module):
         self.decoder = instantiate(
             cfg.model.decoder, encoder_channels=self.encoder.out_channels
         )
-        agg_input_channel_size = (
-            2 * self.decoder.output_size + 1
-            if self.is_dual
-            else self.decoder.output_size
-        )
+
+        match cfg.merge_type, cfg.map_similarity:
+            case "cat", _:
+                similarity_dim = cfg.hidden_dim if cfg.map_similarity else 1
+                agg_input_channel_size = (
+                    2 * self.decoder.output_size + similarity_dim
+                    if self.is_dual
+                    else self.decoder.output_size
+                )
+            case "add", True:
+                similarity_dim = self.decoder.output_size
+                agg_input_channel_size = (
+                    similarity_dim if self.is_dual else self.decoder.output_size
+                )
+            case _:
+                raise ValueError(f"Invalid merge_type: {self.merge_type}")
+
+        if cfg.map_similarity:
+            self.similarity_encoder = nn.Sequential(
+                nn.Conv2d(1, similarity_dim, kernel_size=1, bias=False),
+                nn.BatchNorm2d(similarity_dim),
+                nn.PReLU(),
+            )
+
         self.sample_aggregator = instantiate(
             cfg.model.sample_aggregator,
             input_channels=agg_input_channel_size,
@@ -89,7 +109,17 @@ class HmsModel(nn.Module):
         x_left = x[0]
         x_right = x[1]
         sim = calc_similarity(x_left, x_right)
-        x = torch.cat([x_left, x_right, sim], dim=1)
+
+        if self.cfg.map_similarity:
+            sim = self.similarity_encoder(sim)
+
+        match self.cfg.merge_type:
+            case "add":
+                x = x_left + x_right + sim
+            case "cat":
+                x = torch.cat([x_left, x_right, sim], dim=1)
+            case _:
+                raise ValueError(f"Invalid merge_type: {self.merge_type}")
         return x
 
 

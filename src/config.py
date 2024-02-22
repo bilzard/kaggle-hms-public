@@ -84,6 +84,9 @@ class ArchitectureConfig:
     in_channels: int
     out_channels: int
     is_dual: bool
+    map_similarity: bool
+    hidden_dim: int
+    merge_type: str
     model: DictConfig
 
 
