@@ -1,8 +1,12 @@
 from .aggregate import (
+    CanvasAggregator,
+    DualCanvasAggregator,
     DualTilingAggregator,
+    DualTransposedCanvasAggregator,
     DualWeightedMeanAggregator,
     FlatTilingAggregator,
     TilingAggregator,
+    TransposedCanvasAggregator,
     WeightedMeanAggregator,
 )
 from .normalize import (
@@ -24,4 +28,8 @@ __all__ = [
     "LayerNormalizer",
     "BatchNormalizer",
     "InstanceNormalizer",
+    "DualCanvasAggregator",
+    "DualTransposedCanvasAggregator",
+    "CanvasAggregator",
+    "TransposedCanvasAggregator",
 ]
