@@ -37,7 +37,12 @@ class HmsModel(nn.Module):
         self.sample_collator = instantiate(cfg.model.sample_collator)
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
         self.adapters = [instantiate(adapter) for adapter in cfg.model.adapters]
-        self.encoder = instantiate(cfg.model.encoder, pretrained=pretrained)
+
+        self.encoder = instantiate(
+            cfg.model.encoder,
+            pretrained=pretrained,
+            in_channels=cfg.in_channels,
+        )
         self.decoder = instantiate(
             cfg.model.decoder, encoder_channels=self.encoder.out_channels
         )

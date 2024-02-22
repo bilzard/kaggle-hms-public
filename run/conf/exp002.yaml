@@ -12,5 +12,4 @@ architecture:
         scale_factor: [2.0, 8.0]
     encoder:
       name: efficientnet_b0
-      in_channels: ${architecture.in_channels}
   in_channels: 18
