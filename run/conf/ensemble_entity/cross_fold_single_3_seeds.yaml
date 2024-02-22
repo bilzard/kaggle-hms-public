@@ -1,0 +1,14 @@
+name: ???
+experiments:
+  - exp_name: ${ensemble_entity.name}
+    folds:
+      - split: 0
+        seeds: [0, 1, 42]
+      - split: 1
+        seeds: [0, 1, 42]
+      - split: 2
+        seeds: [0, 1, 42]
+      - split: 3
+        seeds: [0, 1, 42]
+      - split: 4
+        seeds: [0, 1, 42]
