@@ -1,6 +1,0 @@
-name: exp001_fold0_seed42
-experiments:
-  - exp_name: exp001
-    folds:
-      - split: 0
-        seeds: [42]
