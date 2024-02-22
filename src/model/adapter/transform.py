@@ -10,7 +10,7 @@ class ResizeTransform(nn.Module):
             scale_factor=self.scale_factor, mode=mode, align_corners=False
         )
         self.resize_mask = nn.Upsample(
-            scale_factor=(1, self.scale_factor[1]), mode=mode, align_corners=False
+            scale_factor=self.scale_factor, mode=mode, align_corners=False
         )
 
     def forward(
