@@ -1,0 +1,4 @@
+_target_: src.model.decoder.SimpleFpn
+kernel_size: 3
+hidden_dim: 64
+depth: 3
