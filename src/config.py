@@ -87,6 +87,7 @@ class ArchitectureConfig:
     map_similarity: bool
     hidden_dim: int
     merge_type: str
+    input_mask: bool
     model: DictConfig
 
 

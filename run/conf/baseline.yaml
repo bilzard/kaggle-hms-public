@@ -65,6 +65,7 @@ architecture:
   map_similarity: false
   hidden_dim: 64
   merge_type: cat
+  input_mask: false
 
 infer:
   batch_size: 32

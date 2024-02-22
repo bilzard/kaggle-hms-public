@@ -98,6 +98,9 @@ class HmsModel(nn.Module):
             for adapter in self.adapters:
                 spec, spec_mask = adapter(spec, spec_mask)
 
+        if self.cfg.input_mask:
+            spec = self.merge_spec_mask(spec, spec_mask)
+
         features = self.encoder(spec)
         x = self.decoder(features)
         if self.is_dual:
@@ -126,6 +129,11 @@ class HmsModel(nn.Module):
             case _:
                 raise ValueError(f"Invalid merge_type: {self.merge_type}")
         return x
+
+    def merge_spec_mask(self, spec: Tensor, spec_mask: Tensor) -> Tensor:
+        B, C, F, T = spec.shape
+        spec_mask = spec_mask.expand(B, C, F, T)
+        return torch.cat([spec, spec_mask], dim=1)
 
 
 def print_shapes(title: str, data: dict):
@@ -165,7 +173,11 @@ def check_model(
             f"Adapter[{i}]", {k: v for k, v in output.items() if k in feature_keys}
         )
 
-    features = model.encoder(output["spectrogram"])
+    spec = output["spectrogram"]
+    spec_mask = output["spec_mask"]
+    if model.cfg.input_mask:
+        spec = model.merge_spec_mask(spec, spec_mask)
+    features = model.encoder(spec)
     print_shapes(
         "Encoder", {f"feature[{i}]": feature for i, feature in enumerate(features)}
     )
