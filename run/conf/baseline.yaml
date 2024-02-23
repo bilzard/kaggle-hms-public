@@ -22,7 +22,7 @@ defaults:
   - trainer/pseudo_label: without_pl
   - architecture/model: hms_model
   - architecture/model/sample_collator: simple_collator
-  - architecture/model/feature_extractor: wave2spec
+  - architecture/model/feature_extractor: wave2spec_128x32
   - architecture/model/encoder: timm_encoder
   - architecture/model/decoder: pick_last
   - architecture/model/sample_aggregator: mean_aggregator
