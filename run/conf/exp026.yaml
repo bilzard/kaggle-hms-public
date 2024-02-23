@@ -1,0 +1,25 @@
+defaults:
+  - baseline
+  - override architecture/model/head: label_aligned_head_v2
+  - override architecture/model/decoder: pool_fpn
+  - _self_
+
+exp_name: exp026
+description: exp024 + per-label dataset
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.DualTilingAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 8.0]
+
+  in_channels: 6
+  is_dual: true
+  map_similarity: true
+  hidden_dim: 64
+  input_mask: true
+
+trainer:
+  train_dataset:
+    _target_: src.dataset.eeg.PerEegSubsampleDataset
