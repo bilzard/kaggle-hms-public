@@ -339,6 +339,7 @@ class PerEegSubsampleDataset(Dataset):
         duration_sec: int = 50,
         num_samples_per_eeg: int = 1,
         pad_multiple: int = 2048,
+        transform: BaseTransform | None = None,
         padding_type: str = "right",
         weight_key: str = "weight",
     ):
@@ -363,6 +364,7 @@ class PerEegSubsampleDataset(Dataset):
         self.key2idx = {key: idx for idx, key in enumerate(self.metadata.columns)}
         self.pad_multiple = pad_multiple
         self.padding_type = padding_type
+        self.transform = transform
 
     def __len__(self):
         return len(self.eeg_ids) * self.num_samples_per_eeg
@@ -383,17 +385,21 @@ class PerEegSubsampleDataset(Dataset):
         eeg = self.id2eeg[eeg_id][start_frame:end_frame].astype(np.float32)
         cqf = self.id2cqf[eeg_id][start_frame:end_frame].astype(np.float32)
 
-        label = np.array(
-            [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
-        )
-        weight = np.array([row[self.key2idx[self.weight_key]]], dtype=np.float32)
-
         eeg, cqf = pad_eeg(
             eeg,
             cqf,
             self.pad_multiple,
             self.padding_type,
         )
+
+        label = np.array(
+            [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
+        )
+        weight = np.array([row[self.key2idx[self.weight_key]]], dtype=np.float32)
+
+        if self.transform is not None:
+            eeg, cqf = self.transform(eeg, cqf)
+
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
 
         return data
