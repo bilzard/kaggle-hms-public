@@ -172,6 +172,13 @@ def process_cqf(
     return eeg_df
 
 
+def process_spectrogram(spectrogram: pl.DataFrame, null_value=0) -> np.ndarray:
+    spec = spectrogram.drop("time").fill_null(null_value).to_numpy()
+    spec = rearrange(spec, "t (c f) -> f t c", c=4)
+    spec = map_log_scale(spec)
+    return spec
+
+
 def sigmoid(x: np.ndarray) -> np.ndarray:
     return 1 / (1 + np.exp(-x))
 
