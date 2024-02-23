@@ -10,24 +10,38 @@ from src.config import MainConfig
 from src.constant import EEG_PROBES, PROBES
 from src.preprocess import (
     load_eeg,
+    load_spectrogram,
     process_cqf,
     process_eeg,
     process_label,
+    process_spectrogram,
     select_develop_samples,
 )
 from src.proc_util import trace
 
 
+def mkdir_if_not_exists(dir_path: Path):
+    if not dir_path.exists():
+        dir_path.mkdir(parents=True, exist_ok=True)
+
+
 def save_eeg(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
     eeg = eeg_df.select(PROBES).to_numpy()
-
     output_file_path = output_dir / str(eeg_id)
-    if not output_file_path.exists():
-        output_file_path.mkdir(parents=True)
+    mkdir_if_not_exists(output_file_path)
 
     info = np.finfo(np.float16)
     eeg = eeg.clip(info.min, info.max).astype(np.float16)
     np.save(output_file_path / "eeg.npy", eeg)
+
+
+def save_spectrogram(
+    spectrogram_id: str, spec: np.ndarray, output_dir: Path, dtype=np.float16
+):
+    output_file_path = output_dir / str(spectrogram_id)
+    mkdir_if_not_exists(output_file_path)
+    spec = spec.astype(dtype)
+    np.save(output_dir / str(spectrogram_id) / "spectrogram.npy", spec)
 
 
 def save_pad_mask(eeg_id: str, pad_mask: np.ndarray, output_dir: Path):
@@ -55,6 +69,15 @@ def save_cqf(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
     np.save(output_file_path / "mask.npy", mask)
 
 
+def clean_and_make_directory(cfg: MainConfig, output_dir: Path):
+    if (not cfg.dry_run) and (cfg.cleanup) and (output_dir.exists()):
+        shutil.rmtree(output_dir)
+        print(f"Removed {cfg.phase} dir: {output_dir}")
+    else:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Created {cfg.phase} dir: {output_dir}")
+
+
 @hydra.main(config_path="conf", config_name="main", version_base="1.2")
 def main(cfg: MainConfig):
     real_phase = cfg.phase if cfg.phase != "develop" else "train"
@@ -69,22 +92,14 @@ def main(cfg: MainConfig):
         metadata = metadata.select(columns_org)
 
     output_dir_eeg = Path("eeg")
+    output_dir_spectrogram = Path("spectrogram")
 
-    if (not cfg.dry_run) and (cfg.cleanup) and (output_dir_eeg.exists()):
-        shutil.rmtree(output_dir_eeg)
-        print(f"Removed {cfg.phase} dir: {output_dir_eeg}")
-    else:
-        output_dir_eeg.mkdir(parents=True, exist_ok=True)
-        print(f"Created {cfg.phase} dir: {output_dir_eeg}")
-
-    eeg_ids = metadata["eeg_id"].unique().to_numpy()
-    if cfg.debug:
-        num_samples = 100
-        eeg_ids = eeg_ids[: min(len(eeg_ids), num_samples)]
+    clean_and_make_directory(cfg, output_dir_eeg)
+    clean_and_make_directory(cfg, output_dir_spectrogram)
 
     tag = " (with cqf)" if cfg.preprocess.process_cqf else ""
-
     with trace(f"process eeg{tag}"):
+        eeg_ids = metadata["eeg_id"].unique().to_numpy()
         for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
             eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=real_phase)
             eeg, pad_mask = process_eeg(eeg_df)
@@ -93,7 +108,6 @@ def main(cfg: MainConfig):
             eeg_df = pl.DataFrame(
                 {probe: pl.Series(v) for probe, v in zip(PROBES, np.transpose(eeg))}
             )
-
             if cfg.preprocess.process_cqf:
                 eeg_df = process_cqf(eeg_df)
 
@@ -103,6 +117,19 @@ def main(cfg: MainConfig):
 
                 if cfg.preprocess.process_cqf:
                     save_cqf(eeg_id, eeg_df, output_dir_eeg)
+
+    with trace("process spectrogram"):
+        spectrogram_ids = (
+            metadata["spectrogram_id"].unique(maintain_order=True).to_numpy()
+        )
+        for spectrogram_id in tqdm(spectrogram_ids, total=spectrogram_ids.shape[0]):
+            spectrogram_df = load_spectrogram(
+                spectrogram_id, data_dir=data_dir, phase=real_phase
+            )
+            spectrogram = process_spectrogram(spectrogram_df)
+
+            if not cfg.dry_run:
+                save_spectrogram(spectrogram_id, spectrogram, output_dir_spectrogram)
 
 
 if __name__ == "__main__":
