@@ -12,8 +12,8 @@ from src.preprocess import (
     do_apply_filter,
     load_eeg,
     load_spectrogram,
+    map_log_scale,
     process_eeg,
-    process_spectrogram,
 )
 
 
@@ -154,7 +154,7 @@ def plot_spectrogram(
     formatter = ticker.FuncFormatter(format_time)
     freqs = [float(col[3:]) for col in spectrogram.columns[1:101]][::-1]
 
-    x = process_spectrogram(spectrogram)
+    x = map_log_scale(spectrogram)
     num_samples = x.shape[0]
     if display_all_series:
         total_frame_sec = num_samples / sampling_rate
