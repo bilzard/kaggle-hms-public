@@ -29,14 +29,19 @@ class Wave2Spectrogram(nn.Module):
         super().__init__()
         torch_module = import_module("torch")
 
+        self.sampling_rate = sampling_rate
         self.n_fft = n_fft
+        self.win_length = win_length
         self.hop_length = hop_length
         self.cutoff_freqs = cutoff_freqs
+        self.frequency_lim = frequency_lim
         self.db_cutoff = db_cutoff
         self.db_offset = db_offset
-        self.sampling_rate = sampling_rate
+        self.n_mels = n_mels
+        self.window_fn = window_fn
         self.apply_mask = apply_mask
         self.downsample_mode = downsample_mode
+        self.expand_mask = expand_mask
 
         self.wave2spec = MelSpectrogram(
             sample_rate=sampling_rate,
@@ -49,7 +54,23 @@ class Wave2Spectrogram(nn.Module):
             center=False,
             window_fn=getattr(torch_module, window_fn),
         )
-        self.expand_mask = True
+
+    def __repr__(self):
+        return f"""{self.__class__.__name__}(
+            sampling_rate={self.sampling_rate},
+            n_fft={self.n_fft},
+            win_length={self.win_length},
+            hop_length={self.hop_length},
+            cutoff_freqs={self.cutoff_freqs},
+            frequency_lim={self.frequency_lim},
+            db_cutoff={self.db_cutoff},
+            db_offset={self.db_offset},
+            n_mels={self.n_mels},
+            window_fn={self.window_fn},
+            apply_mask={self.apply_mask},
+            downsample_mode={self.downsample_mode},
+            expand_mask={self.expand_mask},
+        )"""
 
     def downsample_mask(self, x: torch.Tensor, mode="nearest") -> torch.Tensor:
         """
