@@ -228,7 +228,6 @@ class UniformSamplingEegDataset(Dataset):
         self.id2cqf = id2cqf
         self.duration = duration
         self.transform = transform
-        print(f"transform: {transform}")
 
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
 

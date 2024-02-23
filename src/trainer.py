@@ -28,7 +28,21 @@ class AverageMeter(object):
         self.mean = self.sum / self.count
 
 
-class Trainer:
+class BaseTrainer:
+    def __init__(self, cfg: TrainerConfig):
+        self.cfg = cfg
+
+    def clear_log(self):
+        with open(self.cfg.log_file_name, "w"):
+            pass
+
+    def write_log(self, *args, sep=" ", end="\n"):
+        message = sep.join(map(str, args)) + end
+        with open(self.cfg.log_file_name, "a") as fp:
+            fp.write(message)
+
+
+class Trainer(BaseTrainer):
     def __init__(
         self,
         cfg: TrainerConfig,
@@ -61,6 +75,12 @@ class Trainer:
         self._valid_loss_meter = AverageMeter()
 
         self.configure_optimizers()
+        self.log_architecture()
+
+    def log_architecture(self):
+        self.write_log("Transform:", str(self.cfg.transform))
+        self.write_log("Optimizer", str(self.cfg.optimizer))
+        self.write_log("Model:", str(self.model))
 
     def configure_optimizers(self):
         cfg = self.cfg
@@ -76,7 +96,6 @@ class Trainer:
             num_warmup_steps=int(max_steps * cfg.scheduler.warmup_ratio),
             num_cycles=0.5,
         )
-        print(f"Optimizer: {self.optimizer}")
 
     def fit(self):
         for epoch in range(self.epochs):
