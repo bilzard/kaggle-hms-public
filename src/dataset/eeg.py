@@ -70,7 +70,37 @@ def sample_eeg(
     return eeg, mask
 
 
-class SlidingWindowPerEegDataset(Dataset):
+class HmsBaseDataset(Dataset):
+    def __init__(
+        self,
+        metadata: pl.DataFrame,
+        id2eeg: dict[int, np.ndarray],
+        id2cqf: dict[int, np.ndarray],
+        padding_type: str = "right",
+        duration: int = 2048,
+        weight_key: str = "weight_per_eeg",
+        **kwargs,
+    ):
+        self.metadata = metadata
+        self.id2eeg = id2eeg
+        self.id2cqf = id2cqf
+        self.padding_type = padding_type
+        self.duration = duration
+        self.weight_key = weight_key
+
+        self._args = dict(
+            padding_type=padding_type,
+            duration=duration,
+            weight_key=weight_key,
+            **kwargs,
+        )
+
+    def __repr__(self):
+        arg_str = ",\n    ".join([f"{k}={v}" for k, v in self._args.items()])
+        return f"""{self.__class__.__name__}({arg_str})"""
+
+
+class SlidingWindowPerEegDataset(HmsBaseDataset):
     def __init__(
         self,
         metadata: pl.DataFrame,
@@ -81,26 +111,22 @@ class SlidingWindowPerEegDataset(Dataset):
         stride: int = 2048,
         weight_key: str = "weight_per_eeg",
     ):
-        self.weight_key = weight_key
-        self.metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
+        metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
-            pl.col(self.weight_key).first(),
+            pl.col(weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
         )
-        self.id2eeg = id2eeg
-        self.id2cqf = id2cqf
-        self.duration = duration
+        super().__init__(
+            metadata, id2eeg, id2cqf, padding_type, duration, weight_key, stride=stride
+        )
         self.stride = stride
-
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
-
         self.eeg_id2metadata = {
             row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
             for row in self.metadata.to_dicts()
         }
-        self.padding_type = padding_type
 
     def __len__(self):
         return len(self.eeg_ids)
@@ -134,7 +160,7 @@ class SlidingWindowPerEegDataset(Dataset):
         return data
 
 
-class SlidingWindowEegDataset(Dataset):
+class SlidingWindowEegDataset(HmsBaseDataset):
     def __init__(
         self,
         metadata: pl.DataFrame,
@@ -145,26 +171,22 @@ class SlidingWindowEegDataset(Dataset):
         stride: int = 2048,
         weight_key: str = "weight_per_eeg",
     ):
-        self.weight_key = weight_key
-        self.metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
+        metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
-            pl.col(self.weight_key).first(),
+            pl.col(weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
         )
-        self.id2eeg = id2eeg
-        self.id2cqf = id2cqf
-        self.duration = duration
+        super().__init__(
+            metadata, id2eeg, id2cqf, padding_type, duration, weight_key, stride=stride
+        )
         self.stride = stride
-
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
-
         self.eeg_id2metadata = {
             row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
             for row in self.metadata.to_dicts()
         }
-        self.padding_type = padding_type
         self.chunks = self._generate_chunks()
 
     def _generate_chunks(self):
@@ -199,7 +221,7 @@ class SlidingWindowEegDataset(Dataset):
         return data
 
 
-class UniformSamplingEegDataset(Dataset):
+class UniformSamplingEegDataset(HmsBaseDataset):
     """
     EEGからdurationのchunkをランダムにサンプリングする。
     """
@@ -215,28 +237,31 @@ class UniformSamplingEegDataset(Dataset):
         num_samples_per_eeg: int = 1,
         weight_key: str = "weight_per_eeg",
     ):
-        self.weight_key = weight_key
-        self.metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
+        metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
-            pl.col(self.weight_key).first(),
+            pl.col(weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
             pl.col("loss").first(),
         )
-        self.id2eeg = id2eeg
-        self.id2cqf = id2cqf
-        self.duration = duration
+        super().__init__(
+            metadata,
+            id2eeg,
+            id2cqf,
+            padding_type,
+            duration,
+            weight_key,
+            num_samples_per_eeg=num_samples_per_eeg,
+            transform=transform,
+        )
+        self.num_samples_per_eeg = num_samples_per_eeg
         self.transform = transform
-
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
-
         self.eeg_id2metadata = {
             row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
             for row in self.metadata.to_dicts()
         }
-        self.padding_type = padding_type
-        self.num_samples_per_eeg = num_samples_per_eeg
 
     def __len__(self):
         return len(self.eeg_ids)
@@ -265,7 +290,7 @@ class UniformSamplingEegDataset(Dataset):
         return data
 
 
-class PerEegDataset(Dataset):
+class PerEegDataset(HmsBaseDataset):
     """
     EEG全体を1つずつロードする。
     """
@@ -280,26 +305,21 @@ class PerEegDataset(Dataset):
         is_test: bool = False,
         weight_key: str = "weight_per_eeg",
     ):
-        self.weight_key = weight_key
-        self.metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
+        metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
-            pl.col(self.weight_key).first(),
+            pl.col(weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
         )
-        self.id2eeg = id2eeg
-        self.id2cqf = id2cqf
+        super().__init__(metadata, id2eeg, id2cqf, padding_type, duration, weight_key)
+
         self.is_test = is_test
-
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
-
         self.eeg_id2metadata = {
             row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
             for row in self.metadata.to_dicts()
         }
-        self.duration = duration
-        self.padding_type = padding_type
 
     def __len__(self):
         return len(self.eeg_ids)
@@ -323,7 +343,7 @@ class PerEegDataset(Dataset):
         return data
 
 
-class PerEegSubsampleDataset(Dataset):
+class PerEegSubsampleDataset(HmsBaseDataset):
     """
     ラベルに相当するEEGのchunkをランダムにサンプリングする。
 
@@ -338,32 +358,38 @@ class PerEegSubsampleDataset(Dataset):
         sampling_rate: float = 40,
         duration_sec: int = 50,
         num_samples_per_eeg: int = 1,
-        pad_multiple: int = 2048,
+        duration: int = 2048,
         transform: BaseTransform | None = None,
         padding_type: str = "right",
         weight_key: str = "weight",
     ):
-        self.weight_key = weight_key
-        self.metadata = metadata.select(
+        metadata = metadata.select(
             "eeg_id",
             *[f"{label}_prob" for label in LABELS],
-            self.weight_key,
+            weight_key,
             "eeg_label_offset_seconds",
-        ).to_pandas()
-        self.id2eeg = id2eeg
-        self.id2cqf = id2cqf
-        self.sampling_rate = sampling_rate
+        )
+        super().__init__(
+            metadata,
+            id2eeg,
+            id2cqf,
+            padding_type,
+            duration,
+            weight_key,
+            sampling_rate=sampling_rate,
+            duration_sec=duration_sec,
+            num_samples_per_eeg=num_samples_per_eeg,
+            transform=transform,
+        )
         self.duration_sec = duration_sec
-
+        self.sampling_rate = sampling_rate
         self.num_samples_per_eeg = num_samples_per_eeg
-        self.eeg_ids = sorted(self.metadata["eeg_id"].unique().tolist())
+        self.eeg_ids = sorted(self.metadata["eeg_id"].unique().to_list())
 
         self.eeg_id2metadata = dict()
-        for eeg_id, df in self.metadata.groupby("eeg_id"):
+        for eeg_id, df in self.metadata.to_pandas().groupby("eeg_id"):
             self.eeg_id2metadata[eeg_id] = df.to_numpy()
         self.key2idx = {key: idx for idx, key in enumerate(self.metadata.columns)}
-        self.pad_multiple = pad_multiple
-        self.padding_type = padding_type
         self.transform = transform
 
     def __len__(self):
@@ -388,7 +414,7 @@ class PerEegSubsampleDataset(Dataset):
         eeg, cqf = pad_eeg(
             eeg,
             cqf,
-            self.pad_multiple,
+            self.duration,
             self.padding_type,
         )
 
