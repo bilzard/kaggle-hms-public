@@ -2,7 +2,7 @@ hydra:
   run:
     dir: ${env.working_dir}/${job_name}/${exp_name}/fold_${fold}/seed_${seed}
   sweep:
-    dir: ${env.working_dir}/multirun/${job_name}/${exp_name}/fold_${fold}/seed_${seed}
+    dir: ${env.working_dir}/multirun/${job_name}
     subdir: ${hydra.job.override_dirname}
   job:
     name: ${job_name}
@@ -10,9 +10,15 @@ hydra:
     config:
       override_dirname:
         exclude_keys:
+          - job_name
           - verbose
           - debug
           - description
+          - wandb.project
+          - wandb.mode
+          - dry_run
+          - trainer.save_last
+          - trainer.save_best
 
 defaults:
   - env: local
