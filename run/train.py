@@ -9,12 +9,7 @@ from omegaconf import OmegaConf
 from src.callback import MetricsLogger, SaveModelCheckpoint
 from src.config import MainConfig
 from src.data_util import preload_cqf, preload_eegs, train_valid_split
-from src.dataset.eeg import (
-    SlidingWindowEegDataset,
-    UniformSamplingEegDataset,
-    get_train_loader,
-    get_valid_loader,
-)
+from src.dataset.eeg import get_train_loader, get_valid_loader
 from src.model.hms_model import HmsModel, check_model
 from src.preprocess import (
     process_label,
@@ -69,15 +64,16 @@ def main(cfg: MainConfig):
 
         with trace("train model"):
             seed_everything(cfg.seed)
-            train_dataset = UniformSamplingEegDataset(
-                train_df,
-                id2eeg,
+            train_dataset = instantiate(
+                cfg.trainer.train_dataset,
+                metadata=train_df,
+                id2eeg=id2eeg,
                 id2cqf=id2cqf,
                 duration=cfg.trainer.duration,
-                transform=instantiate(cfg.trainer.transform)
-                if cfg.trainer.transform is not None
-                else None,
                 num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
+                transform=instantiate(cfg.trainer.transform)
+                if cfg.trainer.transform
+                else None,
             )
             train_sampler = (
                 LossBasedSampler(
@@ -99,9 +95,10 @@ def main(cfg: MainConfig):
                 sampler=train_sampler,
                 shuffle=not cfg.trainer.pseudo_label.enabled,
             )
-            valid_dataset = SlidingWindowEegDataset(
-                valid_df,
-                id2eeg,
+            valid_dataset = instantiate(
+                cfg.trainer.valid_dataset,
+                metadata=valid_df,
+                id2eeg=id2eeg,
                 id2cqf=id2cqf,
                 duration=cfg.trainer.val.duration,
                 stride=cfg.trainer.val.stride,
