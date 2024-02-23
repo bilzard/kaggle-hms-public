@@ -154,7 +154,7 @@ def plot_spectrogram(
     formatter = ticker.FuncFormatter(format_time)
     freqs = [float(col[3:]) for col in spectrogram.columns[1:101]][::-1]
 
-    x = map_log_scale(spectrogram)
+    x = map_log_scale(spectrogram.drop("time").fill_null(0).to_numpy())
     num_samples = x.shape[0]
     if display_all_series:
         total_frame_sec = num_samples / sampling_rate
@@ -167,10 +167,10 @@ def plot_spectrogram(
         offset_sec = 0
         total_frame_sec = duration_sec
 
-    x_ll = x[:, 1:101]
-    x_rl = x[:, 101:201]
-    x_lp = x[:, 201:301]
-    x_rp = x[:, 301:401]
+    x_ll = x[:, :100]
+    x_rl = x[:, 100:200]
+    x_lp = x[:, 200:300]
+    x_rp = x[:, 300:400]
 
     time = np.linspace(0, total_frame_sec, num_samples)
     center_sec = offset_sec + duration_sec / 2
