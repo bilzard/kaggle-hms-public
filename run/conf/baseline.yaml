@@ -40,7 +40,7 @@ trainer:
   lr: 1e-3
   batch_size: 32
   save_last: true
-  save_best: true
+  save_best: false
   duration: 2048
   val:
     batch_size: 32
