@@ -1,48 +1,8 @@
-import numpy as np
 import torch
 import torch.nn as nn
 
-CHANNEL_MEAN = [
-    -37.27,
-    -37.33,
-    -37.4,
-    -38.24,
-    -37.18,
-    -36.79,
-    -37.9,
-    -38.24,
-    -37.28,
-    -37.82,
-    -36.86,
-    -36.69,
-    -37.86,
-    -38.34,
-    -37.16,
-    -37.34,
-    -37.33,
-    -38.37,
-]
-
-CHANNEL_STD = [
-    16.29,
-    15.88,
-    15.95,
-    15.92,
-    16.27,
-    16.3,
-    15.9,
-    15.95,
-    16.75,
-    16.29,
-    16.31,
-    16.22,
-    15.92,
-    15.91,
-    16.35,
-    15.9,
-    15.91,
-    15.78,
-]
+CHANNEL_MEAN = -37.52
+CHANNEL_STD = 16.10
 
 
 class ConstantNormalizer(nn.Module):
@@ -52,24 +12,18 @@ class ConstantNormalizer(nn.Module):
 
     def __init__(
         self,
-        mean: list[float] = CHANNEL_MEAN,
-        std: list[float] = CHANNEL_STD,
-        dtype: torch.dtype = torch.float32,
+        mean: float = CHANNEL_MEAN,
+        std: float = CHANNEL_STD,
     ):
         super().__init__()
-        self.mean = torch.from_numpy(
-            np.array(mean)[np.newaxis, :, np.newaxis, np.newaxis]
-        ).to(dtype)
-        self.std = torch.from_numpy(
-            np.array(std)[np.newaxis, :, np.newaxis, np.newaxis]
-        ).to(dtype)
+        self.mean = mean
+        self.std = std
 
     def forward(
         self, spec: torch.Tensor, mask: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         assert spec.shape[1] == 18
-        device = spec.device
-        spec = (spec - self.mean.to(device)) / self.std.to(device)
+        spec = (spec - self.mean) / self.std
 
         return spec, mask
 
