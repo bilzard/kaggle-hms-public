@@ -70,12 +70,13 @@ class TrainerConfig:
     save_last: bool
     save_best: bool
     duration: int
+    num_samples_per_eeg: int
+    log_file_name: str
     transform: DictConfig | None
     data: DataConfig
     optimizer: DictConfig
     scheduler: SchedulerConfig
     val: EvalConfig
-    num_samples_per_eeg: int
     pseudo_label: PseudoLabelConfig
 
 

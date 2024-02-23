@@ -65,7 +65,6 @@ def main(cfg: MainConfig):
         with trace("check model"):
             model = HmsModel(cfg.architecture)
             check_model(model)
-            print(model)
             del model
 
         with trace("train model"):
