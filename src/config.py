@@ -73,6 +73,8 @@ class TrainerConfig:
     num_samples_per_eeg: int
     log_file_name: str
     transform: DictConfig | None
+    train_dataset: DictConfig
+    valid_dataset: DictConfig
     data: DataConfig
     optimizer: DictConfig
     scheduler: SchedulerConfig
