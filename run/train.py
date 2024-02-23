@@ -124,8 +124,8 @@ def main(cfg: MainConfig):
                 callbacks=[
                     MetricsLogger(aggregation_fn=cfg.trainer.val.aggregation_fn),
                     SaveModelCheckpoint(
-                        save_last=cfg.trainer.save_last,
-                        save_best=cfg.trainer.save_best,
+                        save_last=cfg.trainer.save_last and not cfg.dry_run,
+                        save_best=cfg.trainer.save_best and not cfg.dry_run,
                     ),
                 ],
                 epochs=cfg.trainer.epochs,
