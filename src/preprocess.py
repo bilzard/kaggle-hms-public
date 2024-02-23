@@ -18,7 +18,7 @@ def load_spectrogram(eeg_id: int, data_dir: Path, phase: str):
     return pl.read_parquet(data_dir / f"{phase}_spectrograms/{eeg_id}.parquet")
 
 
-def process_spectrogram(spectrogram: pl.DataFrame, eps=1e-4) -> np.ndarray:
+def map_log_scale(spectrogram: pl.DataFrame, eps=1e-4) -> np.ndarray:
     x = 10 * np.log10(spectrogram.fill_null(0) + eps) - 30
     return x
 
