@@ -1,0 +1,9 @@
+defaults:
+  - baseline_v2
+  - _self_
+
+exp_name: exp029
+description: baseline v2 + weight decay
+
+trainer:
+  weight_decay: 1e-5
