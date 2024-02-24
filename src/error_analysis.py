@@ -41,16 +41,13 @@ def calc_conditional_prob(
 
 
 def plot_matrix(preds, gts, weights, normalize=True, norm_axis=1):
-    preds = preds.copy()
-    gts = gts.copy()
-    weights = weights.copy()
     mat0 = calc_conditional_prob(
         gts, gts, weights, normalize=normalize, norm_axis=norm_axis
     )
     mat1 = calc_conditional_prob(
         preds, gts, weights, normalize=normalize, norm_axis=norm_axis
     )
-    _, (ax0, ax1) = plt.subplots(1, 2, figsize=(10, 4))
+    _, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=(15, 4))
     heatmap(
         mat0,
         annot=True,
@@ -80,6 +77,21 @@ def plot_matrix(preds, gts, weights, normalize=True, norm_axis=1):
     )
     ax1.set(
         xlabel="Predictions", ylabel="Ground Truth", title="Conditional Prob (GT-Pred)"
+    )
+    heatmap(
+        np.abs(mat1 - mat0),
+        annot=True,
+        fmt=".2f",
+        cmap="jet",
+        xticklabels=LABELS,
+        yticklabels=LABELS,
+        square=True,
+        ax=ax2,
+    )
+    ax2.set(
+        xlabel="Predictions",
+        ylabel="Ground Truth",
+        title="Difference (GT-Pred) - (GT-GT)",
     )
 
 
