@@ -132,6 +132,7 @@ class EnsembleFoldConfig:
 @dataclass
 class EnsembleExperimentConfig:
     exp_name: str
+    ensemble_seeds: list[int]
     folds: list[EnsembleFoldConfig]
 
 
