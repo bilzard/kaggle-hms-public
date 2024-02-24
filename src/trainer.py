@@ -79,7 +79,7 @@ class Trainer(BaseTrainer):
         self.log_architecture()
 
     def log_architecture(self):
-        self.write_log("Optimizer", str(self.cfg.optimizer))
+        self.write_log("Optimizer", str(self.optimizer))
         self.write_log("Train dataset", str(self.train_loader.dataset))
         self.write_log("Valid dataset", str(self.valid_loader.dataset))
         self.write_log("Model:", str(self.model))
