@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 class BaseTransform:
@@ -11,7 +12,7 @@ class BaseTransform:
         self.p = p
 
     def __call__(self, feature: np.ndarray, mask: np.ndarray):
-        if np.random.rand() < self.p:
+        if torch.rand((1,)).item() < self.p:
             feature, mask = self.apply(feature, mask)
         return feature, mask
 

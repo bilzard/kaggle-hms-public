@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from src.transform.base import BaseTransform
 
@@ -30,10 +31,10 @@ def cutout_1d(
 
     num_steps = feature.shape[-2]
     for _ in range(num_cutouts):
-        length = np.random.randint(0, max_length + 1)
+        length = int(torch.randint(0, max_length + 1, (1,)).item())
         length = min(length, num_steps)
 
-        start = np.random.randint(0, num_steps - length)
+        start = int(torch.randint(0, num_steps - length, (1,)).item())
         end = start + length
 
         feature[..., start:end, :] = 0
