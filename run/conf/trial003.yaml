@@ -1,0 +1,44 @@
+defaults:
+  - baseline
+  - override architecture/model/head: label_aligned_head_v2
+  - override architecture/model/decoder: pool_fpn
+  - override architecture/model/feature_extractor: wave2spec_128x128
+  - _self_
+
+exp_name: trial003
+description: wave2spec 128x128 w channel permutation
+
+architecture:
+  model:
+    feature_extractor:
+      cutoff_freqs: [0.5, null]
+    adapters:
+      - _target_: src.model.adapter.DualWeightedMeanAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 2.0]
+  in_channels: 6
+  is_dual: true
+  map_similarity: true
+  hidden_dim: 64
+  input_mask: true
+
+trainer:
+  train_dataset:
+    _target_: src.dataset.eeg.PerEegSubsampleDataset
+  valid_dataset:
+    _target_: src.dataset.eeg.PerEegSubsampleDataset
+    num_samples_per_eeg: 3
+    transform: null
+  transform:
+    _target_: src.transform.Compose
+    transforms:
+      - _target_: src.transform.SwapLr
+        p: 0.5
+      - _target_: src.transform.ChannelPermutation
+        p: 0.3
+      - _target_: src.transform.Cutout1d
+        p: 0.3
+        max_length: 128
+        num_cutouts: 4
+
+dry_run: true
