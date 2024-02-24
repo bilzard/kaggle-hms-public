@@ -40,6 +40,49 @@ def calc_conditional_prob(
     return mat
 
 
+def plot_matrix(preds, gts, weights, normalize=True, norm_axis=1):
+    preds = preds.copy()
+    gts = gts.copy()
+    weights = weights.copy()
+    mat0 = calc_conditional_prob(
+        gts, gts, weights, normalize=normalize, norm_axis=norm_axis
+    )
+    mat1 = calc_conditional_prob(
+        preds, gts, weights, normalize=normalize, norm_axis=norm_axis
+    )
+    _, (ax0, ax1) = plt.subplots(1, 2, figsize=(10, 4))
+    heatmap(
+        mat0,
+        annot=True,
+        fmt=".2f",
+        cmap="jet",
+        xticklabels=LABELS,
+        yticklabels=LABELS,
+        square=True,
+        ax=ax0,
+        vmin=0,
+        vmax=1,
+    )
+    ax0.set(
+        xlabel="Ground Truth", ylabel="Ground Truth", title="Conditional Prob (GT-GT)"
+    )
+    heatmap(
+        mat1,
+        annot=True,
+        fmt=".2f",
+        cmap="jet",
+        xticklabels=LABELS,
+        yticklabels=LABELS,
+        square=True,
+        ax=ax1,
+        vmin=0,
+        vmax=1,
+    )
+    ax1.set(
+        xlabel="Predictions", ylabel="Ground Truth", title="Conditional Prob (GT-Pred)"
+    )
+
+
 def savefig_or_show(save_file: bool, file_name: Path) -> None:
     if save_file:
         plt.savefig(file_name, bbox_inches="tight")
@@ -67,47 +110,12 @@ def plot_confusion_matrix(
     if apply_softmax:
         preds = softmax(preds, axis=1)
 
-    _, ax = plt.subplots()
-    heatmap(
-        calc_conditional_prob(preds, gts, weights, normalize=False),
-        cmap="viridis",
-        xticklabels=LABELS,
-        yticklabels=LABELS,
-        ax=ax,
-        annot=True,
-        fmt=".2f",
-        square=True,
-    )
-    ax.set(xlabel="Predicted", ylabel="Ground Truth", title="P(GT=i, pred=j)")
-    savefig_or_show(save_file, root_path / "total_prob.jpg")
-
-    _, ax = plt.subplots()
-    heatmap(
-        calc_conditional_prob(preds, gts, weights, norm_axis=1),
-        cmap="viridis",
-        xticklabels=LABELS,
-        yticklabels=LABELS,
-        ax=ax,
-        annot=True,
-        fmt=".2f",
-        square=True,
-    )
-    ax.set(xlabel="Predicted", ylabel="Ground Truth", title="P(pred=j | GT=i)")
-    savefig_or_show(save_file, root_path / "conditional_by_gt.jpg")
-
-    _, ax = plt.subplots()
-    heatmap(
-        calc_conditional_prob(preds, gts, weights),
-        cmap="viridis",
-        xticklabels=LABELS,
-        yticklabels=LABELS,
-        ax=ax,
-        annot=True,
-        fmt=".2f",
-        square=True,
-    )
-    ax.set(xlabel="Predicted", ylabel="Ground Truth", title="P(GT=i | pred=j)")
-    savefig_or_show(save_file, root_path / "conditional_by_pred.jpg")
+    plot_matrix(preds, gts, weights, normalize=False)
+    savefig_or_show(save_file, root_path / "joint_prob.jpg")
+    plot_matrix(preds, gts, weights)
+    savefig_or_show(save_file, root_path / "cond_norm_gt.jpg")
+    plot_matrix(preds, gts, weights, norm_axis=0)
+    savefig_or_show(save_file, root_path / "cond_norm_pred.jpg")
 
 
 def plot_loss_distribution(
