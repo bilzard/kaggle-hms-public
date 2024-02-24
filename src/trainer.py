@@ -91,6 +91,7 @@ class Trainer(BaseTrainer):
             self.cfg.optimizer,
             params=self.model.parameters(),
             lr=cfg.lr * (cfg.batch_size * cfg.num_samples_per_eeg) / 32.0,
+            weight_decay=cfg.weight_decay,
         )
         self.scheduler = get_cosine_schedule_with_warmup(
             self.optimizer,

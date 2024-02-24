@@ -67,6 +67,7 @@ class PseudoLabelConfig:
 class TrainerConfig:
     epochs: int
     lr: float
+    weight_decay: float
     batch_size: int
     save_last: bool
     save_best: bool

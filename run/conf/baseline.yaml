@@ -38,6 +38,7 @@ defaults:
 trainer:
   epochs: 4
   lr: 1e-3
+  weight_decay: 0.0
   batch_size: 32
   save_last: true
   save_best: false
