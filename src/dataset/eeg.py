@@ -110,6 +110,7 @@ class SlidingWindowPerEegDataset(HmsBaseDataset):
         duration: int = 2048,
         stride: int = 2048,
         weight_key: str = "weight_per_eeg",
+        **kwdargs,
     ):
         metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
@@ -170,6 +171,7 @@ class SlidingWindowEegDataset(HmsBaseDataset):
         duration: int = 2048,
         stride: int = 2048,
         weight_key: str = "weight_per_eeg",
+        **kwdargs,
     ):
         metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
@@ -236,6 +238,7 @@ class UniformSamplingEegDataset(HmsBaseDataset):
         transform: BaseTransform | None = None,
         num_samples_per_eeg: int = 1,
         weight_key: str = "weight_per_eeg",
+        **kwdargs,
     ):
         metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
@@ -304,6 +307,7 @@ class PerEegDataset(HmsBaseDataset):
         padding_type: str = "right",
         is_test: bool = False,
         weight_key: str = "weight_per_eeg",
+        **kwdargs,
     ):
         metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
@@ -362,6 +366,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         transform: BaseTransform | None = None,
         padding_type: str = "right",
         weight_key: str = "weight",
+        **kwdargs,
     ):
         metadata = metadata.select(
             "eeg_id",
