@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from src.constant import PROBE2IDX
 from src.transform.base import BaseTransform
@@ -83,7 +84,7 @@ def channel_permutation(
     left_idxs = np.array(left_idxs)
     right_idxs = np.array(right_idxs)
 
-    perm = np.random.permutation(len(left_idxs))
+    perm = torch.randperm(len(left_idxs)).numpy()
 
     feature[..., left_idxs] = feature[..., left_idxs[perm]]
     feature[..., right_idxs] = feature[..., right_idxs[perm]]
@@ -91,7 +92,7 @@ def channel_permutation(
     mask[..., right_idxs] = mask[..., right_idxs[perm]]
 
     central_idxs = np.array([PROBE2IDX[ch] for ch in CENTRAL_CHANNELS])
-    perm = np.random.permutation(len(central_idxs))
+    perm = torch.randperm(len(central_idxs)).numpy()
     feature[..., central_idxs] = feature[..., central_idxs[perm]]
     mask[..., central_idxs] = mask[..., central_idxs[perm]]
 
