@@ -47,6 +47,7 @@ trainer:
     duration: 2048
     stride: 1024
     aggregation_fn: max
+    seed: 123
   scheduler:
     warmup_ratio: 0.0
   data:

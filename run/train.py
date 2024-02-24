@@ -102,6 +102,7 @@ def main(cfg: MainConfig):
                 id2cqf=id2cqf,
                 duration=cfg.trainer.val.duration,
                 stride=cfg.trainer.val.stride,
+                seed=cfg.trainer.val.seed,
             )
             valid_loader = get_valid_loader(
                 valid_dataset,

@@ -186,6 +186,9 @@ class Trainer(BaseTrainer):
 
     def valid_epoch(self):
         self.model.eval()
+        if hasattr(self.valid_loader.dataset, "reset"):
+            self.valid_loader.dataset.reset()  # type: ignore
+            print("Reset valid dataset")
         with torch.no_grad():
             with tqdm(self.valid_loader, unit="step") as pbar:
                 for batch in pbar:

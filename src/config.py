@@ -46,6 +46,7 @@ class EvalConfig:
     aggregation_fn: str
     duration: int
     stride: int
+    seed: int
 
 
 @dataclass
