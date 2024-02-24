@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import torch
 from torch.utils.data import DataLoader, Dataset
 
 from src.array_util import pad_multiple_of
@@ -38,6 +39,7 @@ def sample_eeg(
     duration: int,
     padding_type: str,
     num_samples: int,
+    generator: torch.Generator | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     eeg: (num_frames, num_channels)
@@ -57,7 +59,9 @@ def sample_eeg(
         if num_frames < duration:
             eeg, cqf = pad_eeg(eeg_org, mask_org, duration, padding_type)
         else:
-            start_frame = np.random.randint(num_frames - duration + 1)
+            start_frame = torch.randint(
+                num_frames - duration + 1, (1,), generator=generator
+            ).item()
             eeg = eeg_org[start_frame : start_frame + duration]
             cqf = mask_org[start_frame : start_frame + duration]
 
@@ -238,6 +242,7 @@ class UniformSamplingEegDataset(HmsBaseDataset):
         transform: BaseTransform | None = None,
         num_samples_per_eeg: int = 1,
         weight_key: str = "weight_per_eeg",
+        seed: int = 42,
         **kwdargs,
     ):
         metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
@@ -257,6 +262,7 @@ class UniformSamplingEegDataset(HmsBaseDataset):
             weight_key,
             num_samples_per_eeg=num_samples_per_eeg,
             transform=transform,
+            seed=seed,
         )
         self.num_samples_per_eeg = num_samples_per_eeg
         self.transform = transform
@@ -265,6 +271,11 @@ class UniformSamplingEegDataset(HmsBaseDataset):
             row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
             for row in self.metadata.to_dicts()
         }
+        self.generator = torch.Generator()
+        self.seed = seed
+
+    def reset(self):
+        self.generator.manual_seed(self.seed)
 
     def __len__(self):
         return len(self.eeg_ids)
@@ -277,7 +288,12 @@ class UniformSamplingEegDataset(HmsBaseDataset):
         cqf = self.id2cqf[eeg_id].astype(np.float32)
 
         eeg, cqf = sample_eeg(
-            eeg, cqf, self.duration, self.padding_type, self.num_samples_per_eeg
+            eeg,
+            cqf,
+            self.duration,
+            self.padding_type,
+            self.num_samples_per_eeg,
+            self.generator,
         )
 
         label = np.array(
@@ -366,6 +382,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         transform: BaseTransform | None = None,
         padding_type: str = "right",
         weight_key: str = "weight",
+        seed: int = 42,
         **kwdargs,
     ):
         metadata = metadata.select(
@@ -385,6 +402,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             duration_sec=duration_sec,
             num_samples_per_eeg=num_samples_per_eeg,
             transform=transform,
+            seed=seed,
         )
         self.duration_sec = duration_sec
         self.sampling_rate = sampling_rate
@@ -397,6 +415,12 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         self.key2idx = {key: idx for idx, key in enumerate(self.metadata.columns)}
         self.transform = transform
 
+        self._generator = torch.Generator()
+        self.seed = seed
+
+    def reset(self):
+        self._generator.manual_seed(self.seed)
+
     def __len__(self):
         return len(self.eeg_ids) * self.num_samples_per_eeg
 
@@ -405,8 +429,9 @@ class PerEegSubsampleDataset(HmsBaseDataset):
 
         this_eeg = self.eeg_id2metadata[eeg_id]
         num_samples_in_this_eeg = len(this_eeg)
-        sample_idx = np.random.randint(num_samples_in_this_eeg)
-
+        sample_idx = torch.randint(
+            num_samples_in_this_eeg, (1,), generator=self._generator
+        ).item()
         row = this_eeg[sample_idx]
         eeg_label_offset_seconds = row[self.key2idx["eeg_label_offset_seconds"]]
 
