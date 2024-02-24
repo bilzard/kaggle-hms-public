@@ -3,12 +3,14 @@ import subprocess
 import click
 
 
-def parse_multi_vars(ctx, param, value):
+def parse_multi_vars(ctx, param, value, sep=","):
     """
-    スペースで区切られた文字列をリストに変換する
+    sepで区切られた文字列をリストに変換する
+
+    sep: 区切り文字(default: ",")
     """
     try:
-        return [v for v in value.split()]
+        return [v for v in value.split(sep)]
     except ValueError:
         raise click.BadParameter(
             f"must be a space separated list of parameters (specified: {value})."
@@ -19,7 +21,7 @@ def parse_multi_vars(ctx, param, value):
 @click.argument("job_name")
 @click.option("--phase", default="train")
 @click.option("--exp_names", callback=parse_multi_vars, default="exp001")
-@click.option("--folds", callback=parse_multi_vars, default="0 1 2 3 4")
+@click.option("--folds", callback=parse_multi_vars, default="0,1,2,3,4")
 @click.option("--seeds", callback=parse_multi_vars, default="42")
 @click.option("--env", default="local")
 @click.option("--dry_run", is_flag=True)
