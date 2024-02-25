@@ -20,7 +20,6 @@ class ConstantNormalizer(nn.Module):
         self.std = std
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
-        assert spec.shape[1] == 18
         spec = (spec - self.mean) / self.std
 
         return spec, mask
