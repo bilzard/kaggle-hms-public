@@ -323,20 +323,40 @@ class PerEegDataset(HmsBaseDataset):
         metadata: pl.DataFrame,
         id2eeg: dict[int, np.ndarray],
         id2cqf: dict[int, np.ndarray],
+        spec_id2spec: dict[int, np.ndarray] | None = None,
         duration: int = 2048,
+        spec_duration_sec: int = 600,
+        spec_sampling_rate: float = 0.5,
+        spec_cropped_duration: int = 256,
         padding_type: str = "right",
         is_test: bool = False,
         weight_key: str = "weight_per_eeg",
         **kwdargs,
     ):
         metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
+            pl.col("spectrogram_id").first(),
             *[pl.col(f"{label}_vote_per_eeg").first() for label in LABELS],
             pl.col(weight_key).first(),
             *[pl.col(f"{label}_prob_per_eeg").first() for label in LABELS],
             pl.col("min_eeg_label_offset_sec").first(),
             pl.col("max_eeg_label_offset_sec").first(),
         )
-        super().__init__(metadata, id2eeg, id2cqf, padding_type, duration, weight_key)
+        super().__init__(
+            metadata,
+            id2eeg,
+            id2cqf,
+            padding_type,
+            duration,
+            weight_key,
+            spec_duration_sec=spec_duration_sec,
+            spec_sampling_rate=spec_sampling_rate,
+            spec_cropped_duration=spec_cropped_duration,
+        )
+
+        self.spec_id2spec = spec_id2spec
+        self.spec_duration_sec = spec_duration_sec
+        self.spec_sampling_rate = spec_sampling_rate
+        self.spec_cropped_duration = spec_cropped_duration
 
         self.is_test = is_test
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
@@ -352,11 +372,40 @@ class PerEegDataset(HmsBaseDataset):
         eeg_id = self.eeg_ids[idx]
         row = self.eeg_id2metadata[eeg_id]
 
+        #
+        # eeg & mask
+        #
         eeg = self.id2eeg[eeg_id][: self.duration].astype(np.float32)
         cqf = self.id2cqf[eeg_id][: self.duration].astype(np.float32)
 
         eeg, cqf = pad_eeg(eeg, cqf, self.duration, self.padding_type)
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf)
+
+        #
+        # spectrogram
+        #
+        if self.spec_id2spec is not None:
+            spectrogram_id = row["spectrogram_id"]
+            spec_start_frame = 0
+            spec_end_frame = int(self.spec_duration_sec * self.spec_sampling_rate)
+            spec = self.spec_id2spec[spectrogram_id][
+                :, spec_start_frame:spec_end_frame, :
+            ].astype(np.float32)
+            crop_frames = spec_end_frame - spec_start_frame - self.spec_cropped_duration
+
+            if crop_frames > 0:
+                crop_left = crop_frames // 2
+                crop_right = crop_frames - crop_left
+                spec = spec[:, crop_left:-crop_right, :]
+                assert (
+                    spec.shape[1] == self.spec_cropped_duration
+                ), f"spec shape mismatch: {spec.shape}"
+
+            data |= dict(spec=spec)
+
+        #
+        # label & weight
+        #
         if not self.is_test:
             label = np.array(
                 [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
