@@ -115,6 +115,7 @@ class Trainer(BaseTrainer):
                 callback.on_train_epoch_end(self, epoch, self._train_loss_meter.mean)
 
             self._valid_loss_meter.reset()
+            self.valid_loader.dataset.reset()  # type: ignore
             self.valid_epoch()
             for callback in self.callbacks:
                 callback.on_valid_epoch_end(
@@ -187,9 +188,6 @@ class Trainer(BaseTrainer):
 
     def valid_epoch(self):
         self.model.eval()
-        if hasattr(self.valid_loader.dataset, "reset"):
-            self.valid_loader.dataset.reset()  # type: ignore
-            print("Reset valid dataset")
         with torch.no_grad():
             with tqdm(self.valid_loader, unit="step") as pbar:
                 for batch in pbar:

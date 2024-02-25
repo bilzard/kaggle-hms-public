@@ -103,6 +103,9 @@ class HmsBaseDataset(Dataset):
         arg_str = ",\n    ".join([f"{k}={v}" for k, v in self._args.items()])
         return f"""{self.__class__.__name__}({arg_str})"""
 
+    def reset(self):
+        print(f"[INFO] {self.__class__.__name__}.reset() is called.")
+
 
 class SlidingWindowPerEegDataset(HmsBaseDataset):
     def __init__(
@@ -275,6 +278,7 @@ class UniformSamplingEegDataset(HmsBaseDataset):
         self.seed = seed
 
     def reset(self):
+        super().reset()
         self.generator.manual_seed(self.seed)
 
     def __len__(self):
@@ -436,6 +440,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         self.seed = seed
 
     def reset(self):
+        super().reset()
         self._generator.manual_seed(self.seed)
 
     def __len__(self):
