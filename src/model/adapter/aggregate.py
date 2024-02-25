@@ -34,9 +34,7 @@ class WeightedMeanAggregator(nn.Module):
         super().__init__()
         self.eps = eps
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         spec: (B, 20, H, W)
         mask: (B, 19, H, W)
@@ -65,9 +63,7 @@ class WeightedMeanAggregator(nn.Module):
 
 
 class DualWeightedMeanAggregator(WeightedMeanAggregator):
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         spec, mask = super().forward(spec, mask)
 
         return collate_lr_channels(spec, mask)
@@ -81,9 +77,7 @@ class TilingAggregator(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         tiled_specs = []
         tiled_masks = []
         ranges = [0, 4, 8, 10, 14, 18]
@@ -111,9 +105,7 @@ class TilingAggregator(nn.Module):
 
 
 class DualTilingAggregator(TilingAggregator):
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         spec, mask = super().forward(spec, mask)
 
         return collate_lr_channels(spec, mask)
@@ -217,9 +209,7 @@ class CanvasAggregator(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         input: (B, 18, F, T)
         output: (B, 2, 5F, 2T)
@@ -234,9 +224,7 @@ class DualCanvasAggregator(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         input: (B, 18, F, T)
         output: (2B, 1, 5F, 2T)
@@ -254,9 +242,7 @@ class TransposedCanvasAggregator(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         input: (B, 18, F, T)
         output: (B, 2, 2F, 5T)
@@ -271,9 +257,7 @@ class DualTransposedCanvasAggregator(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         input: (B, 18, F, T)
         output: (2B, 1, 2F, 5T)
@@ -295,9 +279,7 @@ class FlatTilingAggregator(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         B, C, F, T = spec.shape
         spec = rearrange(spec, "b c f t -> b 1 (c f) t")
 
