@@ -3,14 +3,29 @@ from torch import Tensor
 
 
 class ResizeTransform(nn.Module):
-    def __init__(self, scale_factor: tuple[float, float], mode: str = "bilinear"):
+    def __init__(
+        self,
+        size: tuple[int, int] | None = None,
+        scale_factor: tuple[float, float] | None = None,
+        mode: str = "bilinear",
+    ):
         super().__init__()
-        self.scale_factor = (scale_factor[0], scale_factor[1])
+        assert (
+            size is not None or scale_factor is not None
+        ), "size or scale_factor must be specified"
+        self.size = tuple(size) if size is not None else None
+        self.scale_factor = tuple(scale_factor) if scale_factor is not None else None
         self.resize = nn.Upsample(
-            scale_factor=self.scale_factor, mode=mode, align_corners=False
+            size=self.size,
+            scale_factor=self.scale_factor,
+            mode=mode,
+            align_corners=False,
         )
         self.resize_mask = nn.Upsample(
-            scale_factor=self.scale_factor, mode=mode, align_corners=False
+            size=self.size,
+            scale_factor=self.scale_factor,
+            mode=mode,
+            align_corners=False,
         )
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
