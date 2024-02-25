@@ -501,12 +501,14 @@ class PerEegSubsampleDataset(HmsBaseDataset):
                 :, spec_start_frame:spec_end_frame, :
             ].astype(np.float32)
             crop_frames = spec_end_frame - spec_start_frame - self.spec_cropped_duration
-            crop_left = crop_frames // 2
-            crop_right = crop_frames - crop_left
-            spec = spec[:, crop_left:-crop_right, :]
-            assert (
-                spec.shape[1] == self.spec_cropped_duration
-            ), f"spec shape mismatch: {spec.shape}"
+
+            if crop_frames > 0:
+                crop_left = crop_frames // 2
+                crop_right = crop_frames - crop_left
+                spec = spec[:, crop_left:-crop_right, :]
+                assert (
+                    spec.shape[1] == self.spec_cropped_duration
+                ), f"spec shape mismatch: {spec.shape}"
 
             data |= dict(spec=spec)
 
