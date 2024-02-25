@@ -75,14 +75,6 @@ def process_eeg(
     return x, pad_mask
 
 
-def process_mask(eeg: pl.DataFrame, down_sampling_rate=5) -> np.ndarray:
-    mask = eeg.select(f"mask-{probe}" for probe in EEG_PROBES).with_columns(
-        pl.col(f"mask-{probe}").cast(pl.UInt8) for probe in EEG_PROBES
-    )
-    mask = mask[down_sampling_rate // 2 :: down_sampling_rate, :]
-    return mask.to_numpy()
-
-
 def do_apply_filter(
     xa: np.ndarray,
     sampling_rate: int = 40,
