@@ -50,6 +50,7 @@ def get_loader(
                 batch_size=cfg.trainer.val.batch_size,
                 num_workers=cfg.env.num_workers,
                 pin_memory=True,
+                persistent_workers=True,
             )
             return valid_loader
         case "test" | "develop":
