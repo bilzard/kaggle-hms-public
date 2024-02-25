@@ -116,6 +116,7 @@ class MainConfig:
     dry_run: bool
     cleanup: bool
     final_submission: bool
+    check_only: bool
     preprocess: PreprocesssConfig
     env: EnvironmentConfig
     split: SplitConfig
