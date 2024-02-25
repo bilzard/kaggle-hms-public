@@ -375,8 +375,12 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         metadata: pl.DataFrame,
         id2eeg: dict[int, np.ndarray],
         id2cqf: dict[int, np.ndarray],
+        spec_id2spec: dict[int, np.ndarray] | None = None,
         sampling_rate: float = 40,
         duration_sec: int = 50,
+        spec_duration_sec: int = 600,
+        spec_sampling_rate: float = 0.5,
+        spec_cropped_duration: int = 256,
         num_samples_per_eeg: int = 1,
         duration: int = 2048,
         transform: BaseTransform | None = None,
@@ -385,11 +389,16 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         seed: int = 42,
         **kwdargs,
     ):
+        """
+        spec_cropped_duration: 両端をcropしてこのサイズにする
+        """
         metadata = metadata.select(
             "eeg_id",
+            "spectrogram_id",
             *[f"{label}_prob" for label in LABELS],
             weight_key,
             "eeg_label_offset_seconds",
+            "spectrogram_label_offset_seconds",
         )
         super().__init__(
             metadata,
@@ -401,13 +410,21 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             sampling_rate=sampling_rate,
             duration_sec=duration_sec,
             num_samples_per_eeg=num_samples_per_eeg,
-            transform=transform,
             seed=seed,
+            spec_duration_sec=spec_duration_sec,
+            spec_sampling_rate=spec_sampling_rate,
+            spec_cropped_duration=spec_cropped_duration,
+            transform=transform,
         )
         self.duration_sec = duration_sec
         self.sampling_rate = sampling_rate
         self.num_samples_per_eeg = num_samples_per_eeg
         self.eeg_ids = sorted(self.metadata["eeg_id"].unique().to_list())
+
+        self.spec_id2spec = spec_id2spec
+        self.spec_duration_sec = spec_duration_sec
+        self.spec_sampling_rate = spec_sampling_rate
+        self.spec_cropped_duration = spec_cropped_duration
 
         self.eeg_id2metadata = dict()
         for eeg_id, df in self.metadata.to_pandas().groupby("eeg_id"):
@@ -425,16 +442,21 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         return len(self.eeg_ids) * self.num_samples_per_eeg
 
     def __getitem__(self, idx):
+        #
+        # sample label
+        #
         eeg_id = self.eeg_ids[idx // self.num_samples_per_eeg]
-
         this_eeg = self.eeg_id2metadata[eeg_id]
         num_samples_in_this_eeg = len(this_eeg)
         sample_idx = torch.randint(
             num_samples_in_this_eeg, (1,), generator=self._generator
         ).item()
         row = this_eeg[sample_idx]
-        eeg_label_offset_seconds = row[self.key2idx["eeg_label_offset_seconds"]]
 
+        #
+        # eeg
+        #
+        eeg_label_offset_seconds = row[self.key2idx["eeg_label_offset_seconds"]]
         start_frame = int(eeg_label_offset_seconds * self.sampling_rate)
         end_frame = start_frame + int(self.duration_sec * self.sampling_rate)
 
@@ -448,6 +470,9 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             self.padding_type,
         )
 
+        #
+        # label & weight
+        #
         label = np.array(
             [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
         )
@@ -457,6 +482,33 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             eeg, cqf = self.transform(eeg, cqf)
 
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
+
+        #
+        # spectrogram
+        #
+        if self.spec_id2spec is not None:
+            spectrogram_id = row[self.key2idx["spectrogram_id"]]
+            spectrogram_label_offset_seconds = row[
+                self.key2idx["spectrogram_label_offset_seconds"]
+            ]
+            spec_start_frame = int(
+                spectrogram_label_offset_seconds * self.spec_sampling_rate
+            )
+            spec_end_frame = spec_start_frame + int(
+                self.spec_duration_sec * self.spec_sampling_rate
+            )
+            spec = self.spec_id2spec[spectrogram_id][
+                :, spec_start_frame:spec_end_frame, :
+            ].astype(np.float32)
+            crop_frames = spec_end_frame - spec_start_frame - self.spec_cropped_duration
+            crop_left = crop_frames // 2
+            crop_right = crop_frames - crop_left
+            spec = spec[:, crop_left:-crop_right, :]
+            assert (
+                spec.shape[1] == self.spec_cropped_duration
+            ), f"spec shape mismatch: {spec.shape}"
+
+            data |= dict(spec=spec)
 
         return data
 
