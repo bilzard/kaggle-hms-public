@@ -102,3 +102,4 @@ dry_run: false
 debug: false
 cleanup: true
 final_submission: false
+check_only: false

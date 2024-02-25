@@ -1,8 +1,11 @@
 from pathlib import Path
 
 import hydra
+import numpy as np
 import polars as pl
+import torch
 import wandb
+from einops import rearrange
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
@@ -15,7 +18,7 @@ from src.data_util import (
     train_valid_split,
 )
 from src.dataset.eeg import get_train_loader, get_valid_loader
-from src.model.hms_model import HmsModel, check_model
+from src.model.hms_model import HmsModel, check_model, get_2d_image
 from src.preprocess import (
     process_label,
 )
@@ -71,9 +74,53 @@ def main(cfg: MainConfig):
         mode=cfg.wandb.mode,
     ):
         with trace("check model"):
-            model = HmsModel(cfg.architecture)
-            check_model(model)
+            model = HmsModel(cfg.architecture, pretrained=False)
+            model = model.to(device="cuda")
+            with torch.no_grad():
+                check_model(model, device="cuda")
             del model
+
+        with trace("check 2d image"):
+            num_samples = 5
+            figure_path = Path("figure")
+            if not figure_path.exists():
+                figure_path.mkdir(parents=True)
+
+            model = HmsModel(cfg.architecture, pretrained=False)
+            model = model.to(device="cuda")
+            sample_dataset = instantiate(
+                cfg.trainer.train_dataset,
+                metadata=train_df.sample(num_samples, shuffle=True, seed=0),
+                id2eeg=id2eeg,
+                id2cqf=id2cqf,
+                spec_id2spec=spec_id2spec,
+                duration=cfg.trainer.duration,
+                num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
+                transform=instantiate(cfg.trainer.transform)
+                if cfg.trainer.transform
+                else None,
+            )
+            with torch.no_grad():
+                for sample in sample_dataset:
+                    eeg_id = sample["eeg_id"]
+                    eeg = torch.from_numpy(sample["eeg"][np.newaxis, ...]).to("cuda")
+                    cqf = torch.from_numpy(sample["cqf"][np.newaxis, ...]).to("cuda")
+                    spec = (
+                        torch.from_numpy(sample["spec"][np.newaxis, ...]).to("cuda")
+                        if "spec" in sample
+                        else None
+                    )
+                    spec = get_2d_image(model, eeg, cqf, spec, device="cuda")
+                    b, c, f, t = spec.shape
+                    if b != 1:
+                        spec = rearrange(spec, "b c f t -> (b c) f t")
+                    spec = spec.detach().cpu().numpy().transpose(1, 2, 0)
+
+                    np.save(figure_path / f"spec_{eeg_id}.npy", spec.astype(np.float16))
+
+            del model, sample_dataset
+            if cfg.check_only:
+                return
 
         with trace("train model"):
             seed_everything(cfg.seed)

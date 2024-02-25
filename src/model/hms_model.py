@@ -154,9 +154,9 @@ def check_model(
     feature_keys=["signal", "channel_mask", "spectrogram", "spec_mask"],
 ):
     model = model.to(device)
-    eeg = torch.randn(2, 2048, 19)
-    cqf = torch.randn(2, 2048, 19)
-    bg_spec = torch.randn(2, 4, 100, 256)
+    eeg = torch.randn(2, 2048, 19).to(device)
+    cqf = torch.randn(2, 2048, 19).to(device)
+    bg_spec = torch.randn(2, 4, 100, 256).to(device)
 
     print_shapes("Input", {"eeg": eeg, "cqf": cqf})
 
@@ -202,3 +202,38 @@ def check_model(
 
     x = model.head(x)
     print_shapes("Head", {"x": x})
+
+
+def get_2d_image(
+    model: HmsModel,
+    eeg: Tensor,
+    cqf: Tensor,
+    bg_spec: Tensor | None = None,
+    device="cpu",
+):
+    """
+    encoder手前の画像を確認する
+    """
+    model = model.to(device)
+
+    output = model.feature_extractor(eeg, cqf)
+    spec = output["spectrogram"]
+    spec_mask = output["spec_mask"]
+    if model.cfg.use_bg_spec and bg_spec is not None:
+        bg_spec = rearrange(bg_spec, "b f t c -> b c f t")
+
+    for adapter in model.adapters:
+        spec, spec_mask = adapter(spec, spec_mask)
+
+    for bg_adapter in model.bg_adapters:
+        bg_spec = bg_adapter(bg_spec)
+
+    if model.cfg.use_bg_spec and bg_spec is not None:
+        assert model.merger is not None
+        bg_spec_mask = torch.ones_like(bg_spec).to(bg_spec.device)
+        spec, spec_mask = model.merger(spec, spec_mask, bg_spec, bg_spec_mask)
+
+    if model.cfg.input_mask:
+        spec = model.merge_spec_mask(spec, spec_mask)
+
+    return spec
