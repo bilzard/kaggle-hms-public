@@ -45,3 +45,15 @@ def preload_cqf(
         id2cqf[eeg_id] = cqf
 
     return id2cqf
+
+
+def preload_spectrograms(
+    spectrogram_ids: list[int],
+    preprocess_dir: Path,
+):
+    spectrogram_id2spec = dict()
+    for spectrogram_id in tqdm(spectrogram_ids):
+        spectrogram = np.load(preprocess_dir / str(spectrogram_id) / "spectrogram.npy")
+        spectrogram_id2spec[spectrogram_id] = spectrogram
+
+    return spectrogram_id2spec

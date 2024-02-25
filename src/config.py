@@ -93,6 +93,7 @@ class ArchitectureConfig:
     hidden_dim: int
     merge_type: str
     input_mask: bool
+    use_bg_spec: bool
     model: DictConfig
 
 

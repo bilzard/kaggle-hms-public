@@ -8,7 +8,12 @@ from omegaconf import OmegaConf
 
 from src.callback import MetricsLogger, SaveModelCheckpoint
 from src.config import MainConfig
-from src.data_util import preload_cqf, preload_eegs, train_valid_split
+from src.data_util import (
+    preload_cqf,
+    preload_eegs,
+    preload_spectrograms,
+    train_valid_split,
+)
 from src.dataset.eeg import get_train_loader, get_valid_loader
 from src.model.hms_model import HmsModel, check_model
 from src.preprocess import (
@@ -24,7 +29,8 @@ from src.trainer import Trainer
 def main(cfg: MainConfig):
     data_dir = Path(cfg.env.data_dir)
     working_dir = Path(cfg.env.working_dir)
-    preprocess_dir = Path(working_dir / "preprocess" / cfg.phase / "eeg")
+    eeg_dir = Path(working_dir / "preprocess" / cfg.phase / "eeg")
+    spec_dir = Path(working_dir / "preprocess" / cfg.phase / "spectrogram")
 
     metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
     metadata = process_label(metadata)
@@ -46,9 +52,16 @@ def main(cfg: MainConfig):
     print(f"train_df: {train_df.shape}, valid_df: {valid_df.shape}")
 
     with trace("load eeg"):
-        eeg_ids = fold_split_df["eeg_id"].unique().to_list()
-        id2eeg = preload_eegs(eeg_ids, preprocess_dir)
-        id2cqf = preload_cqf(eeg_ids, preprocess_dir)
+        eeg_ids = metadata["eeg_id"].unique().to_list()
+        id2eeg = preload_eegs(eeg_ids, eeg_dir)
+        id2cqf = preload_cqf(eeg_ids, eeg_dir)
+
+    if cfg.architecture.use_bg_spec:
+        with trace("load spectrogram"):
+            spec_ids = metadata["spectrogram_id"].unique().to_list()
+            spec_id2spec = preload_spectrograms(spec_ids, spec_dir)
+    else:
+        spec_id2spec = None
 
     cfg_dict = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     with wandb.init(
@@ -69,6 +82,7 @@ def main(cfg: MainConfig):
                 metadata=train_df,
                 id2eeg=id2eeg,
                 id2cqf=id2cqf,
+                spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.duration,
                 num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
                 transform=instantiate(cfg.trainer.transform)
@@ -100,6 +114,7 @@ def main(cfg: MainConfig):
                 metadata=valid_df,
                 id2eeg=id2eeg,
                 id2cqf=id2cqf,
+                spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.val.duration,
                 stride=cfg.trainer.val.stride,
                 seed=cfg.trainer.val.seed,
