@@ -30,6 +30,7 @@ class Evaluator:
     ) -> tuple[float, dict[str, float], np.ndarray, np.ndarray]:
         model.eval()
         model.to(device=device)
+        valid_loader.dataset.reset()  # type: ignore
 
         with tqdm(valid_loader, unit="step") as pbar:
             for batch in pbar:
