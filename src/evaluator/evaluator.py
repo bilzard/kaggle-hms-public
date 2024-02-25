@@ -12,6 +12,8 @@ from src.constant import LABELS
 class Evaluator:
     def __init__(
         self,
+        device: str = "cuda",
+        input_keys: list[str] = ["eeg", "cqf"],
         aggregation_fn: str = "max",
     ):
         self._valid_logits = defaultdict(list)
@@ -23,6 +25,13 @@ class Evaluator:
         self.target_key = "label"
         self.weight_key = "weight"
         self.aggregation_fn = aggregation_fn
+        self.input_keys = input_keys
+        self.device = device
+
+    def _move_device(self, x: dict[str, torch.Tensor]):
+        for k, v in x.items():
+            if k in self.input_keys + [self.target_key, self.weight_key]:
+                x[k] = v.to(self.device)
 
     @torch.no_grad()
     def evaluate(
@@ -34,8 +43,7 @@ class Evaluator:
 
         with tqdm(valid_loader, unit="step") as pbar:
             for batch in pbar:
-                batch["eeg"] = batch["eeg"].to(device=device)
-                batch["cqf"] = batch["cqf"].to(device=device)
+                self._move_device(batch)
                 output = model(batch)
                 self.process_batch(batch, output)
 
