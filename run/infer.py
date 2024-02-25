@@ -75,8 +75,17 @@ def get_loader(
             raise ValueError(f"Invalid phase: {cfg.phase}")
 
 
+def move_device(x: dict[str, torch.Tensor], input_keys: list[str], device: str):
+    for k, v in x.items():
+        if k in input_keys:
+            x[k] = v.to(device)
+
+
 def predict(
-    model: nn.Module, test_loader: DataLoader, device: str = "cuda"
+    model: nn.Module,
+    test_loader: DataLoader,
+    input_keys: list[str],
+    device: str = "cuda",
 ) -> tuple[np.ndarray, np.ndarray]:
     model.eval()
     model.to(device=device)
@@ -85,10 +94,9 @@ def predict(
     logits = []
 
     for batch in tqdm(test_loader, unit="step"):
-        eeg = batch["eeg"].to(device=device)
-        cqf = batch["cqf"].to(device=device)
+        move_device(batch, input_keys, device)
         eeg_id = batch["eeg_id"].detach().cpu().numpy().tolist()
-        output = model(dict(eeg=eeg, cqf=cqf))
+        output = model(batch)
         logit = output["pred"].detach().cpu().numpy().tolist()
         eeg_ids.extend(eeg_id)
         logits.extend(logit)
@@ -150,7 +158,9 @@ def main(cfg: MainConfig):
                     ", ".join([f"{k}={v:.4f}" for k, v in val_loss_per_label.items()])
                 )
             case "test" | "develop":
-                eeg_ids, logits = predict(model, data_loader)
+                eeg_ids, logits = predict(
+                    model, data_loader, cfg.trainer.data.input_keys
+                )
             case _:
                 raise ValueError(f"Invalid phase: {cfg.phase}")
 
