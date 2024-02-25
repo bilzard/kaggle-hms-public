@@ -5,12 +5,13 @@ import numpy as np
 import polars as pl
 import torch
 import torch.nn as nn
+from hydra.utils import instantiate
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 from src.config import MainConfig
-from src.data_util import preload_cqf, preload_eegs
-from src.dataset.eeg import PerEegDataset, SlidingWindowEegDataset, get_valid_loader
+from src.data_util import preload_cqf, preload_eegs, preload_spectrograms
+from src.dataset.eeg import PerEegDataset, get_valid_loader
 from src.evaluator import Evaluator
 from src.infer_util import load_metadata, make_submission
 from src.model.hms_model import HmsModel, check_model
@@ -30,15 +31,19 @@ def get_loader(
     metadata: pl.DataFrame,
     id2eeg: dict[int, np.ndarray],
     id2cqf: dict[int, np.ndarray],
+    spec_id2spec: dict[int, np.ndarray] | None = None,
 ) -> DataLoader:
     match cfg.phase:
         case "train":
-            valid_dataset = SlidingWindowEegDataset(
+            valid_dataset = instantiate(
+                cfg.trainer.valid_dataset,
                 metadata,
                 id2eeg,
                 id2cqf=id2cqf,
+                spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.val.duration,
                 stride=cfg.trainer.val.stride,
+                seed=cfg.trainer.val.seed,
             )
             valid_loader = get_valid_loader(
                 valid_dataset,
@@ -48,7 +53,16 @@ def get_loader(
             )
             return valid_loader
         case "test" | "develop":
-            test_dataset = PerEegDataset(metadata, id2eeg, id2cqf=id2cqf, is_test=True)
+            test_dataset = PerEegDataset(
+                metadata,
+                id2eeg,
+                id2cqf=id2cqf,
+                spec_id2spec=spec_id2spec,
+                spec_cropped_duration=getattr(
+                    cfg.trainer.train_dataset, "spec_cropped_duration", 0
+                ),
+                is_test=True,
+            )
             test_loader = get_valid_loader(
                 test_dataset,
                 batch_size=cfg.infer.batch_size,
@@ -87,18 +101,28 @@ def predict(
 def main(cfg: MainConfig):
     data_dir = Path(cfg.env.data_dir)
     working_dir = Path(cfg.env.working_dir)
-    preprocess_dir = Path(working_dir / "preprocess" / cfg.phase / "eeg")
+    eeg_dir = Path(working_dir / "preprocess" / cfg.phase / "eeg")
+    spec_dir = Path(working_dir / "preprocess" / cfg.phase / "spectrogram")
     fold_split_dir = Path(working_dir / "fold_split" / cfg.phase)
 
     metadata = load_metadata(data_dir, cfg.phase, fold_split_dir, cfg.fold)
 
     with trace("load eeg"):
         eeg_ids = metadata["eeg_id"].unique().to_list()
-        id2eeg = preload_eegs(eeg_ids, preprocess_dir)
-        id2cqf = preload_cqf(eeg_ids, preprocess_dir)
+        id2eeg = preload_eegs(eeg_ids, eeg_dir)
+        id2cqf = preload_cqf(eeg_ids, eeg_dir)
+
+    if cfg.architecture.use_bg_spec:
+        with trace("load spectrogram"):
+            spec_ids = metadata["spectrogram_id"].unique().to_list()
+            spec_id2spec = preload_spectrograms(spec_ids, spec_dir)
+    else:
+        spec_id2spec = None
 
     with trace("infer"):
-        data_loader = get_loader(cfg, metadata, id2eeg, id2cqf)
+        data_loader = get_loader(
+            cfg, metadata, id2eeg, id2cqf, spec_id2spec=spec_id2spec
+        )
         model = HmsModel(cfg.architecture, pretrained=False)
         check_model(model)
         weight_path = (
@@ -113,7 +137,10 @@ def main(cfg: MainConfig):
 
         match cfg.phase:
             case "train":
-                evaluator = Evaluator(aggregation_fn=cfg.trainer.val.aggregation_fn)
+                evaluator = Evaluator(
+                    aggregation_fn=cfg.trainer.val.aggregation_fn,
+                    input_keys=cfg.trainer.data.input_keys,
+                )
                 val_loss, val_loss_per_label, eeg_ids, logits = evaluator.evaluate(
                     model, data_loader
                 )
