@@ -1,5 +1,5 @@
-import torch
 import torch.nn as nn
+from torch import Tensor
 
 CHANNEL_MEAN = -37.52
 CHANNEL_STD = 16.10
@@ -19,18 +19,14 @@ class ConstantNormalizer(nn.Module):
         self.mean = mean
         self.std = std
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         assert spec.shape[1] == 18
         spec = (spec - self.mean) / self.std
 
         return spec, mask
 
 
-def mean_std_normalizer(
-    x: torch.Tensor, dim: tuple[int, ...], eps: float = 1e-4
-) -> torch.Tensor:
+def mean_std_normalizer(x: Tensor, dim: tuple[int, ...], eps: float = 1e-4) -> Tensor:
     mean = x.mean(dim=dim, keepdim=True)
     std = x.std(dim=dim, keepdim=True)
     return (x - mean) / (std + eps)
@@ -41,9 +37,7 @@ class InstanceNormalizer(nn.Module):
         super().__init__()
         self.eps = eps
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         spec: (B, C, F, T)
         """
@@ -56,9 +50,7 @@ class LayerNormalizer(nn.Module):
         super().__init__()
         self.eps = eps
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         spec: (B, C, F, T)
         """
@@ -71,9 +63,7 @@ class BatchNormalizer(nn.Module):
         super().__init__()
         self.eps = eps
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         spec: (B, C, F, T)
         """

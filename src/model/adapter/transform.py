@@ -1,5 +1,5 @@
-import torch
 import torch.nn as nn
+from torch import Tensor
 
 
 class ResizeTransform(nn.Module):
@@ -13,9 +13,7 @@ class ResizeTransform(nn.Module):
             scale_factor=self.scale_factor, mode=mode, align_corners=False
         )
 
-    def forward(
-        self, spec: torch.Tensor, mask: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         spec = self.resize(spec)
         mask = self.resize_mask(mask)
         return spec, mask
