@@ -11,6 +11,7 @@ def time_freq_masking(
     iid_masks: bool = True,
     num_time_masks: int = 1,
     num_freq_masks: int = 1,
+    mask_value: float = 0.0,
 ) -> Tensor:
     assert spec.ndim == 4, "Input tensor must be 4D"
     mask_fn = mask_along_axis_iid if iid_masks else mask_along_axis
@@ -19,7 +20,7 @@ def time_freq_masking(
         spec = mask_fn(
             spec,
             mask_param=time_mask_param,
-            mask_value=0.0,
+            mask_value=mask_value,
             axis=3,
         )
 
@@ -27,7 +28,7 @@ def time_freq_masking(
         spec = mask_fn(
             spec,
             mask_param=freq_mask_param,
-            mask_value=0.0,
+            mask_value=mask_value,
             axis=2,
         )
     return spec
@@ -40,6 +41,7 @@ class NaiveTimeFreqMasking(nn.Module):
         freq_mask_ratio: float = 0.25,
         num_time_masks: int = 1,
         num_freq_masks: int = 1,
+        mask_value: float = 0.0,
         iid_masks: bool = True,
     ):
         super().__init__()
@@ -47,6 +49,7 @@ class NaiveTimeFreqMasking(nn.Module):
         self.freq_mask_ratio = freq_mask_ratio
         self.num_time_masks = num_time_masks
         self.num_freq_masks = num_freq_masks
+        self.mask_value = mask_value
         self.iid_masks = iid_masks
 
     @torch.no_grad()
@@ -62,6 +65,7 @@ class NaiveTimeFreqMasking(nn.Module):
             self.iid_masks,
             self.num_time_masks,
             self.num_freq_masks,
+            self.mask_value,
         )
 
         return spec
@@ -82,6 +86,7 @@ class ChannelSyncedTimeFreqMasking(nn.Module):
         freq_mask_ratio: float = 0.2,
         num_time_masks: int = 2,
         num_freq_masks: int = 2,
+        mask_value: float = 0.0,
         p: float = 0.5,
     ):
         super().__init__()
@@ -90,6 +95,7 @@ class ChannelSyncedTimeFreqMasking(nn.Module):
         self.num_time_masks = num_time_masks
         self.num_freq_masks = num_freq_masks
         self.p = p
+        self.mask_value = mask_value
 
     @torch.no_grad()
     def forward(self, spec: Tensor) -> Tensor:
@@ -101,12 +107,18 @@ class ChannelSyncedTimeFreqMasking(nn.Module):
             if pp[i] < self.p:
                 for _ in range(self.num_time_masks):
                     spec[i] = mask_along_axis(
-                        spec[i], mask_param=freq_mask_param, mask_value=0.0, axis=2
+                        spec[i],
+                        mask_param=freq_mask_param,
+                        mask_value=self.mask_value,
+                        axis=2,
                     )
 
                 for _ in range(self.num_freq_masks):
                     spec[i] = mask_along_axis(
-                        spec[i], mask_param=time_mask_param, mask_value=0.0, axis=1
+                        spec[i],
+                        mask_param=time_mask_param,
+                        mask_value=self.mask_value,
+                        axis=1,
                     )
 
         return spec
