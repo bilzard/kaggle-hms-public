@@ -104,6 +104,7 @@ class InferConfig:
     num_samples: int
     model_choice: str
     log_name: str
+    tta: DictConfig | None
 
 
 @dataclass

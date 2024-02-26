@@ -90,6 +90,7 @@ infer:
   num_samples: 2640
   model_choice: last
   log_name: infer_pipeline.txt
+  tta: null
 
 wandb:
   project: kaggle-hms
