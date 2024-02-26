@@ -7,6 +7,7 @@ from transformers import get_cosine_schedule_with_warmup
 
 from src.callback.base import Callback
 from src.config import TrainerConfig
+from src.logger import BaseLogger
 
 
 class AverageMeter(object):
@@ -31,15 +32,13 @@ class AverageMeter(object):
 class BaseTrainer:
     def __init__(self, cfg: TrainerConfig):
         self.cfg = cfg
+        self.logger = BaseLogger(cfg.log_file_name)
 
     def clear_log(self):
-        with open(self.cfg.log_file_name, "w"):
-            pass
+        self.logger.clear()
 
     def write_log(self, *args, sep=" ", end="\n"):
-        message = sep.join(map(str, args)) + end
-        with open(self.cfg.log_file_name, "a") as fp:
-            fp.write(message)
+        self.logger.write_log(*args, sep=sep, end=end)
 
 
 class Trainer(BaseTrainer):
