@@ -26,13 +26,22 @@ def parse_multi_vars(ctx, param, value, sep=","):
 @click.option("--env", default="local")
 @click.option("--dry_run", is_flag=True)
 @click.option("--checkpointing", default="false")
+@click.option("--infer_batch_size", default=32)
 def run_experiments(
-    job_name, phase, exp_names, folds, seeds, env, dry_run, checkpointing
+    job_name,
+    phase,
+    exp_names,
+    folds,
+    seeds,
+    env,
+    dry_run,
+    checkpointing,
+    infer_batch_size,
 ):
     for exp_name in exp_names:
         for fold in folds:
             for seed in seeds:
-                cmd = f"python -m run.{job_name} --config-name={exp_name} phase={phase} job_name={job_name} fold={fold} seed={seed} env={env} architecture.model.encoder.grad_checkpointing={checkpointing}"
+                cmd = f"python -m run.{job_name} --config-name={exp_name} phase={phase} job_name={job_name} fold={fold} seed={seed} env={env} architecture.model.encoder.grad_checkpointing={checkpointing} infer.batch_size={infer_batch_size}"
                 print(cmd)
                 if not dry_run:
                     subprocess.run(cmd, shell=True)
