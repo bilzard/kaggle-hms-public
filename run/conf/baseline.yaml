@@ -67,6 +67,7 @@ trainer:
 
 architecture:
   model:
+    spec_transform: null
     adapters:
       - _target_: src.model.adapter.WeightedMeanAggregator
       - _target_: src.model.adapter.ResizeTransform

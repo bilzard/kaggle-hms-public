@@ -42,6 +42,9 @@ class HmsModel(nn.Module):
             if cfg.use_bg_spec
             else []
         )
+        self.spec_transform = (
+            instantiate(cfg.model.spec_transform) if cfg.model.spec_transform else None
+        )
         self.merger = instantiate(cfg.model.merger) if cfg.use_bg_spec else None
 
         self.encoder = instantiate(
@@ -93,6 +96,12 @@ class HmsModel(nn.Module):
             output = self.feature_extractor(feature, mask)
             spec = output["spectrogram"]
             spec_mask = output["spec_mask"]
+
+            if self.training and self.spec_transform is not None:
+                spec = self.spec_transform(spec)
+                if self.cfg.use_bg_spec:
+                    bg_spec = self.spec_transform(bg_spec)
+
             for adapter in self.adapters:
                 spec, spec_mask = adapter(spec, spec_mask)
             for bg_adapter in self.bg_adapters:
@@ -148,11 +157,13 @@ def print_shapes(title: str, data: dict):
         print(f"{key}: {value.shape}")
 
 
+@torch.no_grad()
 def check_model(
     model: HmsModel,
     device="cpu",
     feature_keys=["signal", "channel_mask", "spectrogram", "spec_mask"],
 ):
+    model.train()
     model = model.to(device)
     eeg = torch.randn(2, 2048, 19).to(device)
     cqf = torch.randn(2, 2048, 19).to(device)
@@ -167,6 +178,15 @@ def check_model(
 
     spec = output["spectrogram"]
     spec_mask = output["spec_mask"]
+
+    if model.spec_transform is not None:
+        spec = model.spec_transform(spec)
+        print_shapes(f"Spec Transform - {model.spec_transform}", {"spec": spec})
+        if model.cfg.use_bg_spec:
+            bg_spec = model.spec_transform(bg_spec)
+            print_shapes(
+                f"Bg Spec Transform - {model.spec_transform}", {"bg_spec": bg_spec}
+            )
 
     for i, adapter in enumerate(model.adapters):
         spec, spec_mask = adapter(spec, spec_mask)
@@ -204,6 +224,7 @@ def check_model(
     print_shapes("Head", {"x": x})
 
 
+@torch.no_grad()
 def get_2d_image(
     model: HmsModel,
     eeg: Tensor,
@@ -214,6 +235,7 @@ def get_2d_image(
     """
     encoder手前の画像を確認する
     """
+    model.train()
     model = model.to(device)
 
     output = model.feature_extractor(eeg, cqf)
@@ -221,6 +243,11 @@ def get_2d_image(
     spec_mask = output["spec_mask"]
     if model.cfg.use_bg_spec and bg_spec is not None:
         bg_spec = rearrange(bg_spec, "b f t c -> b c f t")
+
+    if model.spec_transform is not None:
+        spec = model.spec_transform(spec)
+        if model.cfg.use_bg_spec:
+            bg_spec = model.spec_transform(bg_spec)
 
     for adapter in model.adapters:
         spec, spec_mask = adapter(spec, spec_mask)
