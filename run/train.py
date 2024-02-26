@@ -71,7 +71,7 @@ def main(cfg: MainConfig):
         project=cfg.wandb.project,
         name=f"{cfg.exp_name}_fold{cfg.fold}_seed{cfg.seed:04d}",
         config=cfg_dict,  # type: ignore
-        mode=cfg.wandb.mode,
+        mode=cfg.wandb.mode if not cfg.check_only else "disabled",
     ):
         with trace("check model"):
             model = HmsModel(cfg.architecture, pretrained=False)
