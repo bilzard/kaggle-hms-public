@@ -14,6 +14,7 @@ from src.data_util import preload_cqf, preload_eegs, preload_spectrograms
 from src.dataset.eeg import PerEegDataset, get_valid_loader
 from src.evaluator import Evaluator
 from src.infer_util import load_metadata, make_submission
+from src.logger import BaseLogger
 from src.model.hms_model import HmsModel, check_model
 from src.proc_util import trace
 
@@ -116,6 +117,8 @@ def main(cfg: MainConfig):
 
     metadata = load_metadata(data_dir, cfg.phase, fold_split_dir, cfg.fold)
 
+    logger = BaseLogger(log_file_name=cfg.infer.log_name, clear=True)
+
     with trace("load eeg"):
         eeg_ids = metadata["eeg_id"].unique().to_list()
         id2eeg = preload_eegs(eeg_ids, eeg_dir)
@@ -134,6 +137,11 @@ def main(cfg: MainConfig):
         )
         model = HmsModel(cfg.architecture, pretrained=False)
         check_model(model)
+        logger.write_log("Dataset:", data_loader.dataset)
+        logger.write_log("Model:", model)
+        if cfg.check_only:
+            return
+
         weight_path = (
             Path(cfg.env.checkpoint_dir)
             / cfg.exp_name
