@@ -83,6 +83,7 @@ class HmsBaseDataset(Dataset):
         padding_type: str = "right",
         duration: int = 2048,
         weight_key: str = "weight_per_eeg",
+        apply_transform: bool = False,
         **kwargs,
     ):
         self.metadata = metadata
@@ -91,13 +92,25 @@ class HmsBaseDataset(Dataset):
         self.padding_type = padding_type
         self.duration = duration
         self.weight_key = weight_key
+        self._apply_transform = apply_transform
 
         self._args = dict(
             padding_type=padding_type,
             duration=duration,
             weight_key=weight_key,
+            apply_transform=apply_transform,
             **kwargs,
         )
+
+    @property
+    def apply_transform(self):
+        return self._apply_transform
+
+    def enable_transform(self):
+        self._apply_transform = True
+
+    def disable_transform(self):
+        self._apply_transform = False
 
     def __repr__(self):
         arg_str = ",\n    ".join([f"{k}={v}" for k, v in self._args.items()])
@@ -246,6 +259,7 @@ class UniformSamplingEegDataset(HmsBaseDataset):
         num_samples_per_eeg: int = 1,
         weight_key: str = "weight_per_eeg",
         seed: int = 42,
+        apply_transform: bool = False,
         **kwdargs,
     ):
         metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
@@ -266,6 +280,7 @@ class UniformSamplingEegDataset(HmsBaseDataset):
             num_samples_per_eeg=num_samples_per_eeg,
             transform=transform,
             seed=seed,
+            apply_transform=apply_transform,
         )
         self.num_samples_per_eeg = num_samples_per_eeg
         self.transform = transform
@@ -305,7 +320,7 @@ class UniformSamplingEegDataset(HmsBaseDataset):
         )
         weight = np.array([row[self.weight_key]], dtype=np.float32)
 
-        if self.transform is not None:
+        if self.apply_transform and self.transform is not None:
             eeg, cqf = self.transform(eeg, cqf)
 
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
@@ -332,6 +347,7 @@ class PerEegDataset(HmsBaseDataset):
         padding_type: str = "right",
         is_test: bool = False,
         weight_key: str = "weight_per_eeg",
+        apply_transform: bool = False,
         **kwdargs,
     ):
         metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
@@ -353,6 +369,7 @@ class PerEegDataset(HmsBaseDataset):
             spec_sampling_rate=spec_sampling_rate,
             spec_cropped_duration=spec_cropped_duration,
             transform=transform,
+            apply_transform=apply_transform,
         )
 
         self.spec_id2spec = spec_id2spec
@@ -383,7 +400,7 @@ class PerEegDataset(HmsBaseDataset):
 
         eeg, cqf = pad_eeg(eeg, cqf, self.duration, self.padding_type)
 
-        if self.transform is not None:
+        if self.apply_transform and self.transform is not None:
             eeg, cqf = self.transform(eeg, cqf)
 
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf)
@@ -447,6 +464,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         padding_type: str = "right",
         weight_key: str = "weight",
         seed: int = 42,
+        apply_transform: bool = False,
         **kwdargs,
     ):
         """
@@ -475,6 +493,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             spec_sampling_rate=spec_sampling_rate,
             spec_cropped_duration=spec_cropped_duration,
             transform=transform,
+            apply_transform=apply_transform,
         )
         self.duration_sec = duration_sec
         self.sampling_rate = sampling_rate
@@ -539,7 +558,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         )
         weight = np.array([row[self.key2idx[self.weight_key]]], dtype=np.float32)
 
-        if self.transform is not None:
+        if self.apply_transform and self.transform is not None:
             eeg, cqf = self.transform(eeg, cqf)
 
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)

@@ -99,6 +99,7 @@ def main(cfg: MainConfig):
                 transform=instantiate(cfg.trainer.transform)
                 if cfg.trainer.transform
                 else None,
+                apply_transform=True,
             )
             with torch.no_grad():
                 for sample in sample_dataset:
@@ -135,6 +136,7 @@ def main(cfg: MainConfig):
                 transform=instantiate(cfg.trainer.transform)
                 if cfg.trainer.transform
                 else None,
+                apply_transform=True,
             )
             train_sampler = (
                 LossBasedSampler(
