@@ -36,6 +36,9 @@ class Evaluator:
         self.device = device
         self.agg_policy = agg_policy
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(device={self.device}, agg_policy={self.agg_policy}, aggregation_fn={self.aggregation_fn}, input_keys={self.input_keys}, pred_key={self.pred_key}, target_key={self.target_key}, weight_key={self.weight_key})"
+
     def _move_device(self, x: dict[str, torch.Tensor]):
         for k, v in x.items():
             if k in self.input_keys + [self.target_key, self.weight_key]:
