@@ -325,6 +325,7 @@ class PerEegDataset(HmsBaseDataset):
         id2cqf: dict[int, np.ndarray],
         spec_id2spec: dict[int, np.ndarray] | None = None,
         duration: int = 2048,
+        transform: BaseTransform | None = None,
         spec_duration_sec: int = 600,
         spec_sampling_rate: float = 0.5,
         spec_cropped_duration: int = 256,
@@ -351,12 +352,14 @@ class PerEegDataset(HmsBaseDataset):
             spec_duration_sec=spec_duration_sec,
             spec_sampling_rate=spec_sampling_rate,
             spec_cropped_duration=spec_cropped_duration,
+            transform=transform,
         )
 
         self.spec_id2spec = spec_id2spec
         self.spec_duration_sec = spec_duration_sec
         self.spec_sampling_rate = spec_sampling_rate
         self.spec_cropped_duration = spec_cropped_duration
+        self.transform = transform
 
         self.is_test = is_test
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
@@ -379,6 +382,10 @@ class PerEegDataset(HmsBaseDataset):
         cqf = self.id2cqf[eeg_id][: self.duration].astype(np.float32)
 
         eeg, cqf = pad_eeg(eeg, cqf, self.duration, self.padding_type)
+
+        if self.transform is not None:
+            eeg, cqf = self.transform(eeg, cqf)
+
         data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf)
 
         #
