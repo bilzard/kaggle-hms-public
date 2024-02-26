@@ -159,6 +159,7 @@ def main(cfg: MainConfig):
                     input_keys=cfg.trainer.data.input_keys,
                     agg_policy=cfg.trainer.val.agg_policy,
                 )
+                logger.write_log("Evaluator:", evaluator)
                 val_loss, val_loss_per_label, eeg_ids, logits = evaluator.evaluate(
                     model, data_loader
                 )
