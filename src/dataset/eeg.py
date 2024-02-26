@@ -84,6 +84,7 @@ class HmsBaseDataset(Dataset):
         duration: int = 2048,
         weight_key: str = "weight_per_eeg",
         apply_transform: bool = False,
+        seed: int = 42,
         **kwargs,
     ):
         self.metadata = metadata
@@ -92,19 +93,27 @@ class HmsBaseDataset(Dataset):
         self.padding_type = padding_type
         self.duration = duration
         self.weight_key = weight_key
-        self._apply_transform = apply_transform
+        self.seed = seed
 
+        self._apply_transform = apply_transform
         self._args = dict(
             padding_type=padding_type,
             duration=duration,
             weight_key=weight_key,
             apply_transform=apply_transform,
+            seed=seed,
             **kwargs,
         )
+        self._generator = torch.Generator()
+        self.reset()
 
     @property
     def apply_transform(self):
         return self._apply_transform
+
+    @property
+    def generator(self):
+        return self._generator
 
     def enable_transform(self):
         self._apply_transform = True
@@ -118,6 +127,8 @@ class HmsBaseDataset(Dataset):
 
     def reset(self):
         print(f"[INFO] {self.__class__.__name__}.reset() is called.")
+        self._generator.manual_seed(self.seed)
+        print(f"[INFO] seed is reset to {self.seed}")
 
 
 class SlidingWindowPerEegDataset(HmsBaseDataset):
@@ -289,12 +300,6 @@ class UniformSamplingEegDataset(HmsBaseDataset):
             row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
             for row in self.metadata.to_dicts()
         }
-        self.generator = torch.Generator()
-        self.seed = seed
-
-    def reset(self):
-        super().reset()
-        self.generator.manual_seed(self.seed)
 
     def __len__(self):
         return len(self.eeg_ids)
@@ -511,13 +516,6 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         self.key2idx = {key: idx for idx, key in enumerate(self.metadata.columns)}
         self.transform = transform
 
-        self._generator = torch.Generator()
-        self.seed = seed
-
-    def reset(self):
-        super().reset()
-        self._generator.manual_seed(self.seed)
-
     def __len__(self):
         return len(self.eeg_ids) * self.num_samples_per_eeg
 
@@ -529,7 +527,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         this_eeg = self.eeg_id2metadata[eeg_id]
         num_samples_in_this_eeg = len(this_eeg)
         sample_idx = torch.randint(
-            num_samples_in_this_eeg, (1,), generator=self._generator
+            num_samples_in_this_eeg, (1,), generator=self.generator
         ).item()
         row = this_eeg[sample_idx]
 
