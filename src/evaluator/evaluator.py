@@ -15,10 +15,17 @@ class Evaluator:
         device: str = "cuda",
         input_keys: list[str] = ["eeg", "cqf"],
         aggregation_fn: str = "max",
+        agg_policy: str = "per_eeg_weighted",
     ):
+        assert agg_policy in [
+            "per_eeg_weighted",
+            "per_eeg_mean",
+            "per_label_weighted",
+            "per_label_mean",
+        ]
         self._valid_logits = defaultdict(list)
-        self._valid_label = dict()
-        self._valid_weight = dict()
+        self._valid_label = defaultdict(list)
+        self._valid_weight = defaultdict(list)
 
         self.criterion = nn.KLDivLoss(reduction="none")
         self.pred_key = "pred"
@@ -27,6 +34,7 @@ class Evaluator:
         self.aggregation_fn = aggregation_fn
         self.input_keys = input_keys
         self.device = device
+        self.agg_policy = agg_policy
 
     def _move_device(self, x: dict[str, torch.Tensor]):
         for k, v in x.items():
@@ -62,8 +70,8 @@ class Evaluator:
 
         for i, eeg_id in enumerate(eeg_ids):
             self._valid_logits[eeg_id].append(logit[i].detach().cpu())
-            self._valid_label[eeg_id] = label[i].detach().cpu()
-            self._valid_weight[eeg_id] = weight[i].detach().cpu()
+            self._valid_label[eeg_id].append(label[i].detach().cpu())
+            self._valid_weight[eeg_id].append(weight[i].detach().cpu())
 
     @torch.no_grad()
     def aggregate(self) -> tuple[float, dict[str, float], np.ndarray, np.ndarray]:
@@ -75,8 +83,8 @@ class Evaluator:
 
         for eeg_id, logits in tqdm(self._valid_logits.items()):
             logits = torch.stack(logits, dim=0)  # (B, C)
-            label = self._valid_label[eeg_id]  # (C)
-            weight = self._valid_weight[eeg_id].item()
+            labels = torch.stack(self._valid_label[eeg_id], dim=0)  # (B, C)
+            weights = torch.stack(self._valid_weight[eeg_id], dim=0)  # (B, 1)
 
             if self.aggregation_fn == "max":
                 logit = torch.max(logits, dim=0)[0]
@@ -85,14 +93,35 @@ class Evaluator:
             else:
                 raise ValueError(f"Invalid aggregation_fn: {self.aggregation_fn}")
 
-            # lossの計算
-            val_loss_per_label += (
-                (self.criterion(torch.log_softmax(logit, dim=0), label) * weight)
-                .detach()
-                .cpu()
-                .numpy()
-            )
-            val_count += weight
+            match self.agg_policy:
+                case "per_eeg_weighted":
+                    label = (labels * weights).sum(dim=0)  # (C)
+                    label = label / label.sum()
+                    pred = torch.log_softmax(logit, dim=0)  # (C)
+                    loss = self.criterion(pred, label) * weights.sum()
+                    val_loss_per_label += loss.detach().cpu().numpy()
+                    val_count += weights.sum().item()
+                case "per_eeg_mean":
+                    label = labels.mean(dim=0)  # (C)
+                    label = label / label.sum()
+                    pred = torch.log_softmax(logit, dim=0)  # (C)
+                    loss = self.criterion(pred, label)
+                    val_loss_per_label += loss.detach().cpu().numpy()
+                    val_count += 1
+                case "per_label_weighted":
+                    preds = torch.log_softmax(logits, dim=1)
+                    loss = self.criterion(preds, labels)
+                    loss = (loss * weights).sum(dim=0)
+                    val_loss_per_label += loss.detach().cpu().numpy()
+                    val_count += weights.sum().item()
+                case "per_label_mean":
+                    preds = torch.log_softmax(logits, dim=1)
+                    loss = self.criterion(preds, labels)
+                    loss = loss.mean(dim=0)
+                    val_loss_per_label += loss.detach().cpu().numpy()
+                    val_count += 1
+                case _:
+                    raise ValueError(f"Invalid agg_policy: {self.agg_policy}")
 
             # eegごとの予測値
             eeg_ids.append(eeg_id)

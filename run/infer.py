@@ -157,6 +157,7 @@ def main(cfg: MainConfig):
                 evaluator = Evaluator(
                     aggregation_fn=cfg.trainer.val.aggregation_fn,
                     input_keys=cfg.trainer.data.input_keys,
+                    agg_policy=cfg.trainer.val.agg_policy,
                 )
                 val_loss, val_loss_per_label, eeg_ids, logits = evaluator.evaluate(
                     model, data_loader
