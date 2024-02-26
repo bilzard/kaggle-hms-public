@@ -11,11 +11,12 @@ architecture:
       cutoff_freqs: [0.5, null]
     spec_transform:
       _target_: src.augmentation.ChannelSyncedTimeFreqMasking
-      time_mask_ratio: 0.15
-      freq_mask_ratio: 0.15
+      time_mask_ratio: 0.2
+      freq_mask_ratio: 0.2
       num_time_masks: 2
       num_freq_masks: 2
-      p: 0.3
+      mask_value: -40.0
+      p: 1.0
     adapters:
       - _target_: src.model.adapter.ConstantNormalizer
       - _target_: src.model.adapter.DualCanvasAggregator
