@@ -58,7 +58,7 @@ trainer:
     input_keys: [eeg, cqf]
   transform: null
   num_samples_per_eeg: 1
-  log_file_name: trainer.log
+  log_file_name: train_pipeline.txt
   train_dataset:
     _target_: src.dataset.eeg.UniformSamplingEegDataset
   valid_dataset:
