@@ -48,6 +48,7 @@ trainer:
     duration: 2048
     stride: 1024
     aggregation_fn: max
+    agg_policy: per_eeg_weighted
     seed: 123
   scheduler:
     warmup_ratio: 0.0

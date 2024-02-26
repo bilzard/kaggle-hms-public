@@ -44,6 +44,7 @@ class DataConfig:
 class EvalConfig:
     batch_size: int
     aggregation_fn: str
+    agg_policy: str
     duration: int
     stride: int
     seed: int
