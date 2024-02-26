@@ -53,7 +53,7 @@ class Trainer(BaseTrainer):
         callbacks: list[Callback] = [],
         mixed_precision=True,
     ):
-        self.cfg = cfg
+        super().__init__(cfg)
         self.model = model
         self.criterion = nn.KLDivLoss(reduction="none")
         self.device = device
