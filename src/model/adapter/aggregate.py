@@ -30,8 +30,9 @@ def collate_lr_channels(spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
 
 
 class WeightedMeanAggregator(nn.Module):
-    def __init__(self, eps=1e-4):
+    def __init__(self, norm_mask: bool = False, eps=1e-4):
         super().__init__()
+        self.norm_mask = norm_mask
         self.eps = eps
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
@@ -54,6 +55,8 @@ class WeightedMeanAggregator(nn.Module):
             sum_mask = mask[:, start:end].sum(dim=1, keepdim=True)
 
             sum_specs.append(sum_spec / (sum_mask + self.eps))
+            if self.norm_mask:
+                sum_mask /= end - start
             sum_masks.append(sum_mask)
 
         specs = torch.concat(sum_specs, dim=1)
