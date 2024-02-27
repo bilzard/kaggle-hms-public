@@ -2,8 +2,8 @@ defaults:
   - baseline_v2
   - _self_
 
-exp_name: exp043
-description: baseline v2 + normalize
+exp_name: exp049
+description: exp043 + w/o sim feat
 
 architecture:
   model:
@@ -16,6 +16,7 @@ architecture:
         scale_factor: [1.0, 2.0]
   in_channels: 6
   input_mask: true
+  use_similarity_feature: false
 
 trainer:
   weight_decay: 1e-5

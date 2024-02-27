@@ -17,7 +17,6 @@ architecture:
     adapters:
       - _target_: src.model.adapter.ConstantNormalizer
       - _target_: src.model.adapter.DualWeightedMeanStackingAggregator
-        norm_mask: true
       - _target_: src.model.adapter.ResizeTransform
         scale_factor: [1.0, 2.0]
     bg_adapters:
