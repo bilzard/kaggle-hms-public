@@ -80,7 +80,7 @@ architecture:
   in_channels: 5
   out_channels: 6
   is_dual: false
-  map_similarity: false
+  use_similarity_feature: false
   hidden_dim: 64
   input_mask: false
   use_bg_spec: false

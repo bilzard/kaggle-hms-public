@@ -91,7 +91,7 @@ class ArchitectureConfig:
     in_channels: int
     out_channels: int
     is_dual: bool
-    map_similarity: bool
+    use_similarity_feature: bool
     hidden_dim: int
     input_mask: bool
     use_bg_spec: bool
