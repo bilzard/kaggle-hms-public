@@ -1,0 +1,3 @@
+_target_: src.model.head.SimpleHeadV2
+hidden_channels: 32
+drop_rate: 0.0
