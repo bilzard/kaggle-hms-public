@@ -1,3 +1,4 @@
+from collections import defaultdict
 from pathlib import Path
 
 import hydra
@@ -70,6 +71,10 @@ def get_loader(
                     cfg.trainer.train_dataset, "spec_cropped_duration", 0
                 ),
                 is_test=True,
+                transform_enabled=True,
+                transform=instantiate(cfg.infer.tta)
+                if cfg.infer.tta is not None
+                else None,
             )
             test_loader = get_valid_loader(
                 test_dataset,
@@ -92,24 +97,35 @@ def predict(
     model: nn.Module,
     test_loader: DataLoader,
     input_keys: list[str],
+    iterations: int = 1,
     device: str = "cuda",
 ) -> tuple[np.ndarray, np.ndarray]:
     model.eval()
     model.to(device=device)
 
-    eeg_ids = []
-    logits = []
+    eeg_id2logits = defaultdict(list)
 
-    for batch in tqdm(test_loader, unit="step"):
-        move_device(batch, input_keys, device)
-        eeg_id = batch["eeg_id"].detach().cpu().numpy().tolist()
-        output = model(batch)
-        logit = output["pred"].detach().cpu().numpy().tolist()
-        eeg_ids.extend(eeg_id)
-        logits.extend(logit)
+    for i in range(iterations):
+        print(f"iteration: {i+1}/{iterations}")
+        for batch in tqdm(test_loader, unit="step"):
+            move_device(batch, input_keys, device)
+            eeg_ids = batch["eeg_id"].detach().cpu().numpy()
+            output = model(batch)
+            logits = output["pred"].detach().cpu().numpy()
 
-    eeg_ids = np.array(eeg_ids)
-    logits = np.array(logits)
+            for eeg_id, logit in zip(eeg_ids, logits):
+                if eeg_id not in eeg_id2logits:
+                    eeg_id2logits[eeg_id].append(logit)
+
+    # aggregate per EEG ID
+    for eeg_id, logits in tqdm(eeg_id2logits.items()):
+        logits = np.stack(logits, axis=0)
+        logit = logits.mean(axis=0)
+        eeg_id2logits[eeg_id] = logit
+
+    eeg_ids = np.array(list(eeg_id2logits.keys()))
+    logits = np.stack(list(eeg_id2logits.values()), axis=0)
+
     return eeg_ids, logits
 
 
@@ -177,7 +193,10 @@ def main(cfg: MainConfig):
                 )
             case "test" | "develop":
                 eeg_ids, logits = predict(
-                    model, data_loader, cfg.trainer.data.input_keys
+                    model,
+                    data_loader,
+                    cfg.trainer.data.input_keys,
+                    iterations=cfg.infer.tta_iterations,
                 )
             case _:
                 raise ValueError(f"Invalid phase: {cfg.phase}")
