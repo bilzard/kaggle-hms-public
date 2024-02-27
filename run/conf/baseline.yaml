@@ -70,7 +70,7 @@ architecture:
   model:
     spec_transform: null
     adapters:
-      - _target_: src.model.adapter.WeightedMeanAggregator
+      - _target_: src.model.adapter.WeightedMeanStackingAggregator
       - _target_: src.model.adapter.ResizeTransform
         scale_factor: [2.0, 8.0]
     bg_adapters: []
