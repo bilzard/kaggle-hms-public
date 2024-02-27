@@ -30,7 +30,7 @@ def collate_lr_channels(spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
 
 
 class WeightedMeanStackingAggregator(nn.Module):
-    def __init__(self, norm_mask: bool = False, eps=1e-4):
+    def __init__(self, norm_mask: bool = True, eps=1e-4):
         super().__init__()
         self.norm_mask = norm_mask
         self.eps = eps
@@ -81,7 +81,7 @@ class DualWeightedMeanStackingAggregator(WeightedMeanStackingAggregator):
 
 
 class WeightedMeanTilingAggregator(WeightedMeanStackingAggregator):
-    def __init__(self, norm_mask: bool = False, eps=1e-4):
+    def __init__(self, norm_mask: bool = True, eps=1e-4):
         super().__init__(norm_mask=norm_mask, eps=eps)
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
@@ -100,7 +100,7 @@ class WeightedMeanTilingAggregator(WeightedMeanStackingAggregator):
 
 
 class DualWeightedMeanTilingAggregator(DualWeightedMeanStackingAggregator):
-    def __init__(self, norm_mask: bool = False, eps=1e-4):
+    def __init__(self, norm_mask: bool = True, eps=1e-4):
         super().__init__(norm_mask=norm_mask, eps=eps)
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
