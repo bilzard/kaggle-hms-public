@@ -19,7 +19,7 @@ architecture:
 
   in_channels: 2
   is_dual: true
-  map_similarity: true
+  use_similarity_feature: true
   hidden_dim: 64
   input_mask: true
 

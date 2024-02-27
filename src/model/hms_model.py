@@ -56,14 +56,14 @@ class HmsModel(nn.Module):
             cfg.model.decoder, encoder_channels=self.encoder.out_channels
         )
 
-        similarity_dim = cfg.hidden_dim if cfg.map_similarity else 1
+        similarity_dim = cfg.hidden_dim if cfg.use_similarity_feature else 0
         head_input_channel_size = (
             2 * self.decoder.output_size + similarity_dim
             if self.is_dual
             else self.decoder.output_size
         )
 
-        if cfg.map_similarity:
+        if cfg.use_similarity_feature:
             self.similarity_encoder = nn.Sequential(
                 nn.Conv2d(1, similarity_dim, kernel_size=1, bias=False),
                 nn.BatchNorm2d(similarity_dim),
@@ -120,11 +120,13 @@ class HmsModel(nn.Module):
         x = rearrange(x, "(d b) c f t -> d b c f t", d=2)
         x_left = x[0]
         x_right = x[1]
-        sim = calc_similarity(x_left, x_right)
 
-        if self.cfg.map_similarity:
+        if self.cfg.use_similarity_feature:
+            sim = calc_similarity(x_left, x_right)
             sim = self.similarity_encoder(sim)
             x = torch.cat([x_left, x_right, sim], dim=1)
+        else:
+            x = torch.cat([x_left, x_right], dim=1)
         return x
 
     def merge_spec_mask(self, spec: Tensor, spec_mask: Tensor) -> Tensor:
