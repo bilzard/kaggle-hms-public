@@ -75,6 +75,7 @@ class TrainerConfig:
     duration: int
     num_samples_per_eeg: int
     log_file_name: str
+    random_seed_offset: int
     transform: DictConfig | None
     train_dataset: DictConfig
     valid_dataset: DictConfig
