@@ -105,6 +105,7 @@ class InferConfig:
     num_samples: int
     model_choice: str
     log_name: str
+    tta_iterations: int
     tta: DictConfig | None
 
 
