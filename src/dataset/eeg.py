@@ -126,9 +126,8 @@ class HmsBaseDataset(Dataset):
         return f"""{self.__class__.__name__}({arg_str})"""
 
     def reset(self):
-        print(f"[INFO] {self.__class__.__name__}.reset() is called.")
         self._generator.manual_seed(self.seed)
-        print(f"[INFO] seed is reset to {self.seed}")
+        print(f"[INFO] {self.__class__.__name__}: seed is reset to {self.seed}")
 
 
 class SlidingWindowPerEegDataset(HmsBaseDataset):
