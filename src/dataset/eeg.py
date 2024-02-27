@@ -103,6 +103,7 @@ class HmsBaseDataset(Dataset):
             weight_key=weight_key,
             transform_enabled=transform_enabled,
             seed=seed,
+            transform=transform,
             **kwargs,
         )
         self._generator = torch.Generator()
