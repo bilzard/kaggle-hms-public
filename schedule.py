@@ -20,7 +20,7 @@ def parse_multi_vars(ctx, param, value, sep=","):
 @click.command()
 @click.argument("job_name")
 @click.option("--phase", default="train")
-@click.option("--exp_names", callback=parse_multi_vars, default="exp001")
+@click.option("--config_names", callback=parse_multi_vars, default="exp001")
 @click.option("--folds", callback=parse_multi_vars, default="0,1,2,3,4")
 @click.option("--seeds", callback=parse_multi_vars, default="42")
 @click.option("--env", default="local")
@@ -30,7 +30,7 @@ def parse_multi_vars(ctx, param, value, sep=","):
 def run_experiments(
     job_name,
     phase,
-    exp_names,
+    config_names,
     folds,
     seeds,
     env,
@@ -38,10 +38,10 @@ def run_experiments(
     checkpointing,
     infer_batch_size,
 ):
-    for exp_name in exp_names:
+    for config_name in config_names:
         for fold in folds:
             for seed in seeds:
-                cmd = f"python -m run.{job_name} --config-name={exp_name} phase={phase} job_name={job_name} fold={fold} seed={seed} env={env} architecture.model.encoder.grad_checkpointing={checkpointing} infer.batch_size={infer_batch_size}"
+                cmd = f"python -m run.{job_name} --config-name={config_name} phase={phase} job_name={job_name} fold={fold} seed={seed} env={env} architecture.model.encoder.grad_checkpointing={checkpointing} infer.batch_size={infer_batch_size}"
                 print(cmd)
                 if not dry_run:
                     subprocess.run(cmd, shell=True)
