@@ -1,0 +1,35 @@
+defaults:
+  - baseline_v2
+  - _self_
+
+exp_name: exp040
+description: exp031 + w/o apply mask
+
+architecture:
+  model:
+    feature_extractor:
+      cutoff_freqs: [0.5, null]
+      apply_mask: false
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualWeightedMeanAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 2.0]
+    bg_adapters:
+      - _target_: src.model.bg_adapter.BgConstantNormalizer
+      - _target_: src.model.bg_adapter.BgDualStackAggregator
+      - _target_: src.model.bg_adapter.BgResizeTransform
+        size: [128, 256]
+    merger:
+      _target_: src.model.merger.MergeFreq
+  in_channels: 6
+  use_bg_spec: true
+
+trainer:
+  weight_decay: 1e-5
+  data:
+    input_keys: [eeg, cqf, spec]
+  train_dataset:
+    spec_cropped_duration: 128
+  valid_dataset:
+    spec_cropped_duration: 128
