@@ -1,0 +1,13 @@
+defaults:
+  - exp028
+  - _self_
+
+infer:
+  tta_iterations: 3
+  tta:
+    _target_: src.transform.Compose
+    transforms:
+      - _target_: src.transform.SwapLr
+        p: 0.5
+      - _target_: src.transform.ChannelPermutation
+        p: 0.5
