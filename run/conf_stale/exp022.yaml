@@ -10,7 +10,7 @@ description: dual weight mean + pool_fpn
 architecture:
   model:
     adapters:
-      - _target_: src.model.adapter.DualWeightedMeanAggregator
+      - _target_: src.model.adapter.DualWeightedMeanStackingAggregator
       - _target_: src.model.adapter.ResizeTransform
         scale_factor: [2.0, 8.0] # 256 x 256
 

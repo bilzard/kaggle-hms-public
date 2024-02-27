@@ -3,11 +3,11 @@ from .aggregate import (
     DualCanvasAggregator,
     DualTilingAggregator,
     DualTransposedCanvasAggregator,
-    DualWeightedMeanAggregator,
+    DualWeightedMeanStackingAggregator,
     FlatTilingAggregator,
     TilingAggregator,
     TransposedCanvasAggregator,
-    WeightedMeanAggregator,
+    WeightedMeanStackingAggregator,
 )
 from .normalize import (
     BatchNormalizer,
@@ -18,12 +18,12 @@ from .normalize import (
 from .transform import ResizeTransform
 
 __all__ = [
-    "WeightedMeanAggregator",
+    "WeightedMeanStackingAggregator",
     "ResizeTransform",
     "TilingAggregator",
     "FlatTilingAggregator",
     "DualTilingAggregator",
-    "DualWeightedMeanAggregator",
+    "DualWeightedMeanStackingAggregator",
     "ConstantNormalizer",
     "LayerNormalizer",
     "BatchNormalizer",

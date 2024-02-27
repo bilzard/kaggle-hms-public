@@ -11,7 +11,7 @@ architecture:
       cutoff_freqs: [0.5, null]
     adapters:
       - _target_: src.model.adapter.ConstantNormalizer
-      - _target_: src.model.adapter.DualWeightedMeanAggregator
+      - _target_: src.model.adapter.DualWeightedMeanStackingAggregator
       - _target_: src.model.adapter.ResizeTransform
         scale_factor: [1.0, 2.0]
   in_channels: 6
