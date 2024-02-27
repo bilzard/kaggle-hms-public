@@ -60,6 +60,7 @@ trainer:
   transform: null
   num_samples_per_eeg: 1
   log_file_name: train_pipeline.txt
+  random_seed_offset: 127458
   train_dataset:
     _target_: src.dataset.eeg.UniformSamplingEegDataset
   valid_dataset:

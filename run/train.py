@@ -133,10 +133,11 @@ def main(cfg: MainConfig):
                 spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.duration,
                 num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
+                apply_transform=True,
+                seed=cfg.seed + cfg.trainer.random_seed_offset,
                 transform=instantiate(cfg.trainer.transform)
                 if cfg.trainer.transform
                 else None,
-                apply_transform=True,
             )
             train_sampler = (
                 LossBasedSampler(
