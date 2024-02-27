@@ -82,7 +82,6 @@ architecture:
   is_dual: false
   map_similarity: false
   hidden_dim: 64
-  merge_type: cat
   input_mask: false
   use_bg_spec: false
 

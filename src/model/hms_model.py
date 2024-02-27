@@ -56,21 +56,12 @@ class HmsModel(nn.Module):
             cfg.model.decoder, encoder_channels=self.encoder.out_channels
         )
 
-        match cfg.merge_type, cfg.map_similarity:
-            case "cat", _:
-                similarity_dim = cfg.hidden_dim if cfg.map_similarity else 1
-                head_input_channel_size = (
-                    2 * self.decoder.output_size + similarity_dim
-                    if self.is_dual
-                    else self.decoder.output_size
-                )
-            case "add", True:
-                similarity_dim = self.decoder.output_size
-                head_input_channel_size = (
-                    similarity_dim if self.is_dual else self.decoder.output_size
-                )
-            case _:
-                raise ValueError(f"Invalid merge_type: {self.merge_type}")
+        similarity_dim = cfg.hidden_dim if cfg.map_similarity else 1
+        head_input_channel_size = (
+            2 * self.decoder.output_size + similarity_dim
+            if self.is_dual
+            else self.decoder.output_size
+        )
 
         if cfg.map_similarity:
             self.similarity_encoder = nn.Sequential(
@@ -133,14 +124,7 @@ class HmsModel(nn.Module):
 
         if self.cfg.map_similarity:
             sim = self.similarity_encoder(sim)
-
-        match self.cfg.merge_type:
-            case "add":
-                x = x_left + x_right + sim
-            case "cat":
-                x = torch.cat([x_left, x_right, sim], dim=1)
-            case _:
-                raise ValueError(f"Invalid merge_type: {self.merge_type}")
+            x = torch.cat([x_left, x_right, sim], dim=1)
         return x
 
     def merge_spec_mask(self, spec: Tensor, spec_mask: Tensor) -> Tensor:
