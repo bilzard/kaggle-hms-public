@@ -17,6 +17,7 @@ from src.infer_util import load_metadata, make_submission
 from src.logger import BaseLogger
 from src.model.hms_model import HmsModel, check_model
 from src.proc_util import trace
+from src.random_util import seed_everything, seed_worker
 
 
 def load_checkpoint(
@@ -45,13 +46,18 @@ def get_loader(
                 duration=cfg.trainer.val.duration,
                 stride=cfg.trainer.val.stride,
                 seed=cfg.trainer.val.seed,
+                transform_enabled=True,
+                transform=instantiate(cfg.infer.tta)
+                if cfg.infer.tta is not None
+                else None,
             )
             valid_loader = get_valid_loader(
                 valid_dataset,
                 batch_size=cfg.trainer.val.batch_size,
                 num_workers=cfg.env.num_workers,
+                worker_init_fn=seed_worker,
                 pin_memory=True,
-                persistent_workers=True,
+                persistent_workers=False,
             )
             return valid_loader
         case "test" | "develop":
@@ -152,12 +158,14 @@ def main(cfg: MainConfig):
         )
         load_checkpoint(model, weight_path)
 
+        seed_everything(cfg.seed)
         match cfg.phase:
             case "train":
                 evaluator = Evaluator(
                     aggregation_fn=cfg.trainer.val.aggregation_fn,
                     input_keys=cfg.trainer.data.input_keys,
                     agg_policy=cfg.trainer.val.agg_policy,
+                    iterations=cfg.infer.tta_iterations,
                 )
                 logger.write_log("Evaluator:", evaluator)
                 val_loss, val_loss_per_label, eeg_ids, logits = evaluator.evaluate(

@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 from src.constant import LABELS
+from src.dataset.eeg import HmsBaseDataset
 
 
 class Evaluator:
@@ -16,6 +17,7 @@ class Evaluator:
         input_keys: list[str] = ["eeg", "cqf"],
         aggregation_fn: str = "max",
         agg_policy: str = "per_eeg_weighted",
+        iterations: int = 1,
     ):
         assert agg_policy in [
             "per_eeg_weighted",
@@ -35,6 +37,7 @@ class Evaluator:
         self.input_keys = input_keys
         self.device = device
         self.agg_policy = agg_policy
+        self.iterations = iterations
 
     def __repr__(self):
         return f"{self.__class__.__name__}(device={self.device}, agg_policy={self.agg_policy}, aggregation_fn={self.aggregation_fn}, input_keys={self.input_keys}, pred_key={self.pred_key}, target_key={self.target_key}, weight_key={self.weight_key})"
@@ -52,8 +55,14 @@ class Evaluator:
         model.to(device=device)
         valid_loader.dataset.reset()  # type: ignore
 
-        with tqdm(valid_loader, unit="step") as pbar:
-            for batch in pbar:
+        for i in range(self.iterations):
+            print(
+                f"[INFO] {self.__class__.__name__}: iteration {i+1}/{self.iterations}"
+            )
+            valid_dataset: HmsBaseDataset = valid_loader.dataset  # type: ignore
+            valid_dataset.reset()
+
+            for batch in tqdm(valid_loader, unit="step"):
                 self._move_device(batch)
                 output = model(batch)
                 self.process_batch(batch, output)
