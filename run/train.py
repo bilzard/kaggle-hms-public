@@ -112,9 +112,7 @@ def main(cfg: MainConfig):
                         else None
                     )
                     spec = get_2d_image(model, eeg, cqf, spec, device="cuda")
-                    b, c, f, t = spec.shape
-                    if b != 1:
-                        spec = rearrange(spec, "b c f t -> (b c) f t")
+                    spec = rearrange(spec, "b c f t -> (b c) f t")
                     spec = spec.detach().cpu().numpy().transpose(1, 2, 0)
 
                     np.save(figure_path / f"spec_{eeg_id}.npy", spec.astype(np.float16))
