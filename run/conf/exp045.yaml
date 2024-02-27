@@ -1,0 +1,24 @@
+defaults:
+  - baseline_v2
+  - _self_
+
+exp_name: exp045
+description: DualWeightedMeanTiling + w/o mask
+
+architecture:
+  model:
+    feature_extractor:
+      cutoff_freqs: [0.5, null]
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualWeightedMeanTilingAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 2.0]
+  in_channels: 1
+  input_mask: false
+  is_dual: true
+
+trainer:
+  weight_decay: 1e-5
+  data:
+    input_keys: [eeg, cqf]
