@@ -96,10 +96,10 @@ def main(cfg: MainConfig):
                 spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.duration,
                 num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
+                transform_enabled=True,
                 transform=instantiate(cfg.trainer.transform)
                 if cfg.trainer.transform
                 else None,
-                apply_transform=True,
             )
             with torch.no_grad():
                 for sample in sample_dataset:
@@ -133,7 +133,7 @@ def main(cfg: MainConfig):
                 spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.duration,
                 num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
-                apply_transform=True,
+                transform_enabled=True,
                 seed=cfg.seed + cfg.trainer.random_seed_offset,
                 transform=instantiate(cfg.trainer.transform)
                 if cfg.trainer.transform
