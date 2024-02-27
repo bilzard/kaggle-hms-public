@@ -67,9 +67,55 @@ class WeightedMeanStackingAggregator(nn.Module):
 
 class DualWeightedMeanStackingAggregator(WeightedMeanStackingAggregator):
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
+        """
+        spec: (B, 20, H, W)
+        mask: (B, 19, H, W)
+
+        return:
+        specs: (2B, 3, H, W)
+        masks: (2B, 3, H, W)
+        """
         spec, mask = super().forward(spec, mask)
 
         return collate_lr_channels(spec, mask)
+
+
+class WeightedMeanTilingAggregator(WeightedMeanStackingAggregator):
+    def __init__(self, norm_mask: bool = False, eps=1e-4):
+        super().__init__(norm_mask=norm_mask, eps=eps)
+
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
+        """
+        spec: (B, 20, H, W)
+        mask: (B, 19, H, W)
+
+        return:
+        specs: (2B, 1, 5H, W)
+        masks: (2B, 1, 5H, W)
+        """
+        spec, mask = super().forward(spec, mask)
+        spec = rearrange(spec, "b c h w -> b 1 (c h) w")
+        mask = rearrange(mask, "b c h w -> b 1 (c h) w")
+        return spec, mask
+
+
+class DualWeightedMeanTilingAggregator(DualWeightedMeanStackingAggregator):
+    def __init__(self, norm_mask: bool = False, eps=1e-4):
+        super().__init__(norm_mask=norm_mask, eps=eps)
+
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
+        """
+        spec: (B, 20, H, W)
+        mask: (B, 19, H, W)
+
+        return:
+        specs: (2B, 1, 3H, W)
+        masks: (2B, 1, 3H, W)
+        """
+        spec, mask = super().forward(spec, mask)
+        spec = rearrange(spec, "b c h w -> b 1 (c h) w")
+        mask = rearrange(mask, "b c h w -> b 1 (c h) w")
+        return spec, mask
 
 
 class TilingAggregator(nn.Module):
