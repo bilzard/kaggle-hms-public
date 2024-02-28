@@ -21,7 +21,7 @@ class HmsModel(nn.Module):
         super().__init__()
         self.cfg = cfg
 
-        self.is_dual = cfg.is_dual
+        self.recover_dual = cfg.recover_dual
 
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
         self.adapters = [instantiate(adapter) for adapter in cfg.model.adapters]
@@ -47,7 +47,7 @@ class HmsModel(nn.Module):
         similarity_dim = cfg.hidden_dim if cfg.use_similarity_feature else 0
         head_input_channel_size = (
             2 * self.decoder.output_size + similarity_dim
-            if self.is_dual
+            if self.recover_dual
             else self.decoder.output_size
         )
 
@@ -96,15 +96,15 @@ class HmsModel(nn.Module):
 
         features = self.encoder(spec)
         x = self.decoder(features)
-        if self.is_dual:
-            x = self.recover_dual(x)
+        if self.recover_dual:
+            x = self._do_recover_dual(x)
 
         x = self.head(x)
 
         output = {self.pred_key: x}
         return output
 
-    def recover_dual(self, x: Tensor) -> Tensor:
+    def _do_recover_dual(self, x: Tensor) -> Tensor:
         x = rearrange(x, "(d b) c f t -> d b c f t", d=2)
         x_left = x[0]
         x_right = x[1]
@@ -190,8 +190,8 @@ def check_model(
     x = model.decoder(features)
     print_shapes("Decoder", {"x": x})
 
-    if model.is_dual:
-        x = model.recover_dual(x)
+    if model.recover_dual:
+        x = model._do_recover_dual(x)
         print_shapes("recover dual", {"x": x})
 
     x = model.head(x)

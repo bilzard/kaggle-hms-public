@@ -90,7 +90,7 @@ class TrainerConfig:
 class ArchitectureConfig:
     in_channels: int
     out_channels: int
-    is_dual: bool
+    recover_dual: bool
     use_similarity_feature: bool
     hidden_dim: int
     input_mask: bool
