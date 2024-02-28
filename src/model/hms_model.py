@@ -106,21 +106,15 @@ class HmsModel(nn.Module):
 
     def _do_recover_dual(self, x: Tensor) -> Tensor:
         x = rearrange(x, "(d b) c f t -> d b c f t", d=2)
-        x_left = x[0]
-        x_right = x[1]
+        x_left, x_right = x[0], x[1]
+        feats = list(vector_pair_mapping(x_left, x_right, self.cfg.lr_mapping_type))
 
         if self.cfg.use_similarity_feature:
             sim = calc_similarity(x_left, x_right)
             sim = self.similarity_encoder(sim)
-            x_left, x_right = vector_pair_mapping(
-                x_left, x_right, self.cfg.lr_mapping_type
-            )
-            x = torch.cat([x_left, x_right, sim], dim=1)
-        else:
-            x_left, x_right = vector_pair_mapping(
-                x_left, x_right, self.cfg.lr_mapping_type
-            )
-            x = torch.cat([x_left, x_right], dim=1)
+            feats.append(sim)
+
+        x = torch.cat(feats, dim=1)
         return x
 
     def merge_spec_mask(self, spec: Tensor, spec_mask: Tensor) -> Tensor:
