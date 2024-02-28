@@ -1,0 +1,3 @@
+_target_: src.model.decoder.SimilarityPooling
+hidden_dim: 64
+depth: 4
