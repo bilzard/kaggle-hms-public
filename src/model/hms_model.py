@@ -1,23 +1,11 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from einops import rearrange
 from hydra.utils import instantiate
 from torch import Tensor
 
 from src.config import ArchitectureConfig
-
-
-def calc_similarity(x: Tensor, y: Tensor, channel_dim: int = 1, eps=1e-4) -> Tensor:
-    """
-    x: (B, C, F, T)
-    y: (B, C, F, T)
-
-    Returns:
-    similarity: (B, 1, F, T)
-    """
-
-    return F.cosine_similarity(x, y, dim=channel_dim, eps=eps).unsqueeze(channel_dim)
+from src.model.basic_block import calc_similarity
 
 
 class HmsModel(nn.Module):
