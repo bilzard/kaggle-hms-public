@@ -95,6 +95,7 @@ class ArchitectureConfig:
     hidden_dim: int
     input_mask: bool
     use_bg_spec: bool
+    lr_mapping_type: str
     model: DictConfig
 
 
