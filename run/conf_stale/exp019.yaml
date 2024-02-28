@@ -14,7 +14,7 @@ architecture:
         scale_factor: [2.0, 8.0] # 256 x 256
 
   in_channels: 3
-  is_dual: true
+  recover_dual: true
 
 trainer:
   transform:

@@ -17,7 +17,7 @@ architecture:
       - _target_: src.model.adapter.ResizeTransform
         scale_factor: [1.0, 1.0]
   in_channels: 6
-  is_dual: true
+  recover_dual: true
   use_similarity_feature: true
   hidden_dim: 64
   input_mask: true

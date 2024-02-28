@@ -16,7 +16,7 @@ architecture:
         scale_factor: [1.0, 2.0]
   in_channels: 2
   input_mask: true
-  is_dual: true
+  recover_dual: true
   use_similarity_feature: false
 
 trainer:

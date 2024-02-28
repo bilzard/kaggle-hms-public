@@ -25,4 +25,4 @@ architecture:
       hidden_channels: 32
       drop_rate: 0.0
   in_channels: 3
-  is_dual: true
+  recover_dual: true
