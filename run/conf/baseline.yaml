@@ -84,6 +84,7 @@ architecture:
   hidden_dim: 64
   input_mask: false
   use_bg_spec: false
+  lr_mapping_type: identity
 
 infer:
   batch_size: 32

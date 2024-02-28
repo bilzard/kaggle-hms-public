@@ -5,7 +5,7 @@ from hydra.utils import instantiate
 from torch import Tensor
 
 from src.config import ArchitectureConfig
-from src.model.basic_block import calc_similarity
+from src.model.basic_block import calc_similarity, vector_pair_mapping
 
 
 class HmsModel(nn.Module):
@@ -112,8 +112,14 @@ class HmsModel(nn.Module):
         if self.cfg.use_similarity_feature:
             sim = calc_similarity(x_left, x_right)
             sim = self.similarity_encoder(sim)
+            x_left, x_right = vector_pair_mapping(
+                x_left, x_right, self.cfg.lr_mapping_type
+            )
             x = torch.cat([x_left, x_right, sim], dim=1)
         else:
+            x_left, x_right = vector_pair_mapping(
+                x_left, x_right, self.cfg.lr_mapping_type
+            )
             x = torch.cat([x_left, x_right], dim=1)
         return x
 
