@@ -1,0 +1,25 @@
+defaults:
+  - baseline_v2
+  - _self_
+
+exp_name: exp058
+description: exp048 + max-min lr-mapping
+
+architecture:
+  model:
+    feature_extractor:
+      cutoff_freqs: [0.5, null]
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 2.0]
+  in_channels: 2
+  input_mask: true
+  recover_dual: true
+  lr_mapping_type: max-min
+
+trainer:
+  weight_decay: 1e-5
+  data:
+    input_keys: [eeg, cqf]
