@@ -1,0 +1,25 @@
+defaults:
+  - baseline_v2
+  - override architecture/model/decoder: similarity_pooling
+  - _self_
+
+exp_name: exp054
+description: exp048 + similarity pooling decoder
+
+architecture:
+  model:
+    feature_extractor:
+      cutoff_freqs: [0.5, null]
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 2.0]
+  in_channels: 2
+  input_mask: true
+  recover_dual: false
+
+trainer:
+  weight_decay: 1e-5
+  data:
+    input_keys: [eeg, cqf]
