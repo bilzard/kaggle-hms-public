@@ -3,6 +3,7 @@ from .conv import ConvBnPReLu2d
 from .gated_attention import GatedMilAttention, GatedSpecAttention
 from .gem import GeMPool1d, GeMPool2d
 from .inverse_softmax import InverseSoftmax
+from .util import calc_similarity
 
 __all__ = [
     "GatedMilAttention",
@@ -13,4 +14,5 @@ __all__ = [
     "ClampedTanh",
     "ClampedSigmoid",
     "ConvBnPReLu2d",
+    "calc_similarity",
 ]
