@@ -187,7 +187,8 @@ def process_label(
         metadata = metadata.with_columns(
             *[pl.lit(1).alias(f"{label}_vote") for label in LABELS],
             pl.col("eeg_id").alias("label_id"),
-            pl.lit(0).alias("eeg_label_offset_seconds"),
+            pl.lit(0).cast(pl.Int64).alias("eeg_label_offset_seconds"),
+            pl.lit(0).cast(pl.Int64).alias("spectrogram_label_offset_seconds"),
         )
 
     total_votes = metadata.select(f"{label}_vote" for label in LABELS).fold(
