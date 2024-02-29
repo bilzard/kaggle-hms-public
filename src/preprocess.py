@@ -181,9 +181,9 @@ def calc_weight(x: np.ndarray, T: float = 3, alpha: float = 5) -> np.ndarray:
 
 
 def process_label(
-    metadata: pl.DataFrame, T: float = 3, alpha: float = 5, is_test=False
+    metadata: pl.DataFrame, T: float = 3, alpha: float = 5, add_dummy_label=False
 ) -> pl.DataFrame:
-    if is_test:
+    if add_dummy_label:
         metadata = metadata.with_columns(
             *[pl.lit(1).alias(f"{label}_vote") for label in LABELS],
             pl.col("eeg_id").alias("label_id"),
