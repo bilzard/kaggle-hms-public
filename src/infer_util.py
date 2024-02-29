@@ -35,7 +35,7 @@ def load_metadata(
             metadata = metadata.join(eeg_ids, on="eeg_id")
             metadata = process_label(metadata)
             if group_by_eeg:
-                metadata = metadata.groupby("eeg_id", maintain_order=True).agg(
+                metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
                     pl.col("spectrogram_id").first(),
                     pl.col("label_id").first(),
                     pl.col(weight_key).first().alias("weight"),
