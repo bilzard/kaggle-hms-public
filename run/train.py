@@ -96,6 +96,7 @@ def main(cfg: MainConfig):
                 spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.duration,
                 num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
+                spec_cropped_duration=cfg.architecture.spec_cropped_duration,
                 transform_enabled=True,
                 transform=instantiate(cfg.trainer.transform)
                 if cfg.trainer.transform
@@ -131,6 +132,7 @@ def main(cfg: MainConfig):
                 spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.duration,
                 num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
+                spec_cropped_duration=cfg.architecture.spec_cropped_duration,
                 transform_enabled=True,
                 seed=cfg.seed + cfg.trainer.random_seed_offset,
                 transform=instantiate(cfg.trainer.transform)
@@ -166,6 +168,7 @@ def main(cfg: MainConfig):
                 duration=cfg.trainer.val.duration,
                 stride=cfg.trainer.val.stride,
                 seed=cfg.trainer.val.seed,
+                spec_cropped_duration=cfg.architecture.spec_cropped_duration,
             )
             valid_loader = get_valid_loader(
                 valid_dataset,

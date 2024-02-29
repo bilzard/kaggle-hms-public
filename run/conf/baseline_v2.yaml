@@ -26,10 +26,8 @@ architecture:
 trainer:
   train_dataset:
     _target_: src.dataset.eeg.PerEegSubsampleDataset
-    spec_cropped_duration: 256
   valid_dataset:
     _target_: src.dataset.eeg.PerEegSubsampleDataset
-    spec_cropped_duration: 256
     num_samples_per_eeg: 3
     transform: null
   transform:

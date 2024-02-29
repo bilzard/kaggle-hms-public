@@ -28,7 +28,3 @@ trainer:
   weight_decay: 1e-5
   data:
     input_keys: [eeg, cqf, spec]
-  train_dataset:
-    spec_cropped_duration: 256
-  valid_dataset:
-    spec_cropped_duration: 256

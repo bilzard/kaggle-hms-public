@@ -63,7 +63,6 @@ trainer:
   random_seed_offset: 127458
   train_dataset:
     _target_: src.dataset.eeg.UniformSamplingEegDataset
-    spec_cropped_duration: 256
   valid_dataset:
     _target_: src.dataset.eeg.SlidingWindowEegDataset
 
@@ -86,6 +85,7 @@ architecture:
   input_mask: false
   use_bg_spec: false
   lr_mapping_type: identity
+  spec_cropped_duration: 256
 
 infer:
   batch_size: 32
@@ -96,7 +96,6 @@ infer:
   tta: null
   test_dataset:
     _target_: src.dataset.eeg.PerEegSubsampleDataset
-    spec_cropped_duration: 256
     num_samples_per_eeg: 1
     duration: 2048
 

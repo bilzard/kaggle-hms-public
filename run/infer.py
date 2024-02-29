@@ -47,6 +47,7 @@ def get_loader(
                 duration=cfg.trainer.val.duration,
                 stride=cfg.trainer.val.stride,
                 seed=cfg.trainer.val.seed,
+                spec_cropped_duration=cfg.architecture.spec_cropped_duration,
                 transform_enabled=True,
                 transform=instantiate(cfg.infer.tta)
                 if cfg.infer.tta is not None
@@ -69,6 +70,7 @@ def get_loader(
                 id2cqf=id2cqf,
                 spec_id2spec=spec_id2spec,
                 with_label=False,
+                spec_cropped_duration=cfg.architecture.spec_cropped_duration,
                 transform_enabled=True,
                 transform=instantiate(cfg.infer.tta)
                 if cfg.infer.tta is not None

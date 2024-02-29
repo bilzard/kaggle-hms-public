@@ -96,6 +96,7 @@ class ArchitectureConfig:
     input_mask: bool
     use_bg_spec: bool
     lr_mapping_type: str
+    spec_cropped_duration: int
     model: DictConfig
 
 
