@@ -95,8 +95,10 @@ infer:
   tta_iterations: 1
   tta: null
   test_dataset:
-    _target_: src.dataset.eeg.PerEegDataset
+    _target_: src.dataset.eeg.PerEegSubsampleDataset
     spec_cropped_duration: 256
+    num_samples_per_eeg: 1
+    duration: 2048
 
 wandb:
   project: kaggle-hms
