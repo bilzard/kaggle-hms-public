@@ -3,7 +3,7 @@ from .conv import ConvBnPReLu2d
 from .gated_attention import GatedMilAttention, GatedSpecAttention
 from .gem import GeMPool1d, GeMPool2d
 from .inverse_softmax import InverseSoftmax
-from .util import calc_similarity, vector_pair_mapping
+from .util import calc_similarity, norm_mean_std, vector_pair_mapping
 
 __all__ = [
     "GatedMilAttention",
@@ -16,4 +16,5 @@ __all__ = [
     "ConvBnPReLu2d",
     "calc_similarity",
     "vector_pair_mapping",
+    "norm_mean_std",
 ]

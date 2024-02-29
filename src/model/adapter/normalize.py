@@ -1,6 +1,8 @@
 import torch.nn as nn
 from torch import Tensor
 
+from src.model.basic_block import norm_mean_std
+
 CHANNEL_MEAN = -37.52
 CHANNEL_STD = 16.10
 
@@ -25,12 +27,6 @@ class ConstantNormalizer(nn.Module):
         return spec, mask
 
 
-def mean_std_normalizer(x: Tensor, dim: tuple[int, ...], eps: float = 1e-4) -> Tensor:
-    mean = x.mean(dim=dim, keepdim=True)
-    std = x.std(dim=dim, keepdim=True)
-    return (x - mean) / (std + eps)
-
-
 class InstanceNormalizer(nn.Module):
     def __init__(self, eps: float = 1e-4):
         super().__init__()
@@ -41,7 +37,7 @@ class InstanceNormalizer(nn.Module):
         spec: (B, C, F, T)
         """
 
-        return mean_std_normalizer(spec, (2, 3), self.eps), mask
+        return norm_mean_std(spec, (2, 3), self.eps), mask
 
 
 class LayerNormalizer(nn.Module):
@@ -54,7 +50,7 @@ class LayerNormalizer(nn.Module):
         spec: (B, C, F, T)
         """
 
-        return mean_std_normalizer(spec, (1, 2, 3), self.eps), mask
+        return norm_mean_std(spec, (1, 2, 3), self.eps), mask
 
 
 class BatchNormalizer(nn.Module):
@@ -67,4 +63,4 @@ class BatchNormalizer(nn.Module):
         spec: (B, C, F, T)
         """
 
-        return mean_std_normalizer(spec, (0, 2, 3), self.eps), mask
+        return norm_mean_std(spec, (0, 2, 3), self.eps), mask
