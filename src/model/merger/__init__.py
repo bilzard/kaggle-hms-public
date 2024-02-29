@@ -1,3 +1,3 @@
-from .merger import MergeFreq
+from .merger import MergeFreq, MergeTime
 
-__all__ = ["MergeFreq"]
+__all__ = ["MergeFreq", "MergeTime"]
