@@ -1,4 +1,8 @@
-from .aggregate import BgDualCanvasAggregator, BgDualStackAggregator
+from .aggregate import (
+    BgDualCanvasAggregator,
+    BgDualStackAggregator,
+    BgDualTilingAggregator,
+)
 from .normalize import BgConstantNormalizer
 from .transform import BgPaddingTransform, BgResizeTransform
 
@@ -8,4 +12,5 @@ __all__ = [
     "BgResizeTransform",
     "BgPaddingTransform",
     "BgDualCanvasAggregator",
+    "BgDualTilingAggregator",
 ]

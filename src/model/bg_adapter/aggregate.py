@@ -50,6 +50,18 @@ class BgDualStackAggregator(nn.Module):
         return bg_collate_lr_channels(spec, self.pad_with_mean)
 
 
+class BgDualTilingAggregator(nn.Module):
+    def __init__(self, pad_with_mean: bool = False):
+        super().__init__()
+        self.pad_with_mean = pad_with_mean
+
+    def forward(self, spec: Tensor) -> Tensor:
+        spec = bg_collate_lr_channels(spec, self.pad_with_mean)
+        spec = rearrange(spec, "b c f t -> b 1 (c f) t")
+
+        return spec
+
+
 class BgDualCanvasAggregator(nn.Module):
     def __init__(self):
         super().__init__()
