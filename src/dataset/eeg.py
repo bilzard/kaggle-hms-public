@@ -86,6 +86,7 @@ class HmsBaseDataset(Dataset):
         transform: BaseTransform | None = None,
         transform_enabled: bool = False,
         seed: int = 42,
+        with_label: bool = True,
         **kwargs,
     ):
         self.metadata = metadata
@@ -95,6 +96,7 @@ class HmsBaseDataset(Dataset):
         self.duration = duration
         self.weight_key = weight_key
         self.seed = seed
+        self.with_label = with_label
 
         self._transform_enabled = transform_enabled
         self._args = dict(
@@ -104,6 +106,7 @@ class HmsBaseDataset(Dataset):
             transform_enabled=transform_enabled,
             seed=seed,
             transform=transform,
+            with_label=with_label,
             **kwargs,
         )
         self._generator = torch.Generator()
@@ -379,6 +382,7 @@ class PerEegDataset(HmsBaseDataset):
             spec_cropped_duration=spec_cropped_duration,
             transform_enabled=transform_enabled,
             transform=transform,
+            with_label=with_label,
         )
 
         self.spec_id2spec = spec_id2spec
@@ -386,7 +390,6 @@ class PerEegDataset(HmsBaseDataset):
         self.spec_sampling_rate = spec_sampling_rate
         self.spec_cropped_duration = spec_cropped_duration
 
-        self.with_label = with_label
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
         self.eeg_id2metadata = {
             row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
@@ -467,6 +470,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         num_samples_per_eeg: int = 1,
         duration: int = 2048,
         transform: BaseTransform | None = None,
+        with_label: bool = True,
         padding_type: str = "right",
         weight_key: str = "weight",
         seed: int = 42,
@@ -500,6 +504,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             spec_cropped_duration=spec_cropped_duration,
             transform_enabled=transform_enabled,
             transform=transform,
+            with_label=with_label,
         )
         self.duration_sec = duration_sec
         self.sampling_rate = sampling_rate
@@ -547,17 +552,8 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             self.duration,
             self.padding_type,
         )
-
-        #
-        # label & weight
-        #
-        label = np.array(
-            [row[self.key2idx[f"{label}_prob"]] for label in LABELS], dtype=np.float32
-        )
-        weight = np.array([row[self.key2idx[self.weight_key]]], dtype=np.float32)
         eeg, cqf = self.apply_transform(eeg, cqf)
-
-        data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf, label=label, weight=weight)
+        data = dict(eeg_id=eeg_id, eeg=eeg, cqf=cqf)
 
         #
         # spectrogram
@@ -587,6 +583,17 @@ class PerEegSubsampleDataset(HmsBaseDataset):
                 ), f"spec shape mismatch: {spec.shape}"
 
             data |= dict(spec=spec)
+
+        #
+        # label & weight
+        #
+        if self.with_label:
+            label = np.array(
+                [row[self.key2idx[f"{label}_prob"]] for label in LABELS],
+                dtype=np.float32,
+            )
+            weight = np.array([row[self.key2idx[self.weight_key]]], dtype=np.float32)
+            data |= dict(label=label, weight=weight)
 
         return data
 
