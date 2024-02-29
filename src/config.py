@@ -107,6 +107,7 @@ class InferConfig:
     log_name: str
     tta_iterations: int
     tta: DictConfig | None
+    test_dataset: DictConfig
 
 
 @dataclass

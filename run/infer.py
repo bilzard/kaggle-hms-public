@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 
 from src.config import MainConfig
 from src.data_util import preload_cqf, preload_eegs, preload_spectrograms
-from src.dataset.eeg import PerEegDataset, get_valid_loader
+from src.dataset.eeg import get_valid_loader
 from src.evaluator import Evaluator
 from src.infer_util import load_metadata, make_submission
 from src.logger import BaseLogger
@@ -62,14 +62,12 @@ def get_loader(
             )
             return valid_loader
         case "test" | "develop":
-            test_dataset = PerEegDataset(
-                metadata,
-                id2eeg,
+            test_dataset = instantiate(
+                cfg.infer.test_dataset,
+                metadata=metadata,
+                id2eeg=id2eeg,
                 id2cqf=id2cqf,
                 spec_id2spec=spec_id2spec,
-                spec_cropped_duration=getattr(
-                    cfg.trainer.train_dataset, "spec_cropped_duration", 0
-                ),
                 is_test=True,
                 transform_enabled=True,
                 transform=instantiate(cfg.infer.tta)

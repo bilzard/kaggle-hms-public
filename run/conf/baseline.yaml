@@ -63,6 +63,7 @@ trainer:
   random_seed_offset: 127458
   train_dataset:
     _target_: src.dataset.eeg.UniformSamplingEegDataset
+    spec_cropped_duration: 256
   valid_dataset:
     _target_: src.dataset.eeg.SlidingWindowEegDataset
 
@@ -93,6 +94,9 @@ infer:
   log_name: infer_pipeline.txt
   tta_iterations: 1
   tta: null
+  test_dataset:
+    _target_: src.dataset.eeg.PerEegDataset
+    spec_cropped_duration: 256
 
 wandb:
   project: kaggle-hms
