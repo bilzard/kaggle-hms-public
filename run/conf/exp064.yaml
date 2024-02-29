@@ -1,0 +1,31 @@
+defaults:
+  - baseline_v3_canvas_bg
+  - _self_
+
+exp_name: exp064
+description: exp058 + merge bg spec in time direction
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 2.0]
+    bg_adapters:
+      - _target_: src.model.bg_adapter.BgConstantNormalizer
+      - _target_: src.model.bg_adapter.BgResizeTransform
+        size: [128, 128]
+      - _target_: src.model.bg_adapter.BgDualTilingAggregator
+        pad_z: false
+      - _target_: src.model.bg_adapter.BgResizeTransform
+        size: [640, 128]
+    merger:
+      _target_: src.model.merger.MergeTime
+  in_channels: 2
+  input_mask: true
+  recover_dual: true
+  lr_mapping_type: max-min
+  use_bg_spec: true
+  spec_cropped_duration: 64
+  bg_spec_mask_value: 0.5
