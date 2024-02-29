@@ -4,7 +4,9 @@ from einops import rearrange
 from torch import Tensor
 
 
-def bg_collate_lr_channels(spec: Tensor, pad_z: bool = True) -> Tensor:
+def bg_collate_lr_channels(
+    spec: Tensor, pad_z: bool = True, pad_value: float = 0
+) -> Tensor:
     """
     左右のchannelをbatch方向に積み上げる
     Zチャネルは左右両方に入力する
@@ -18,7 +20,7 @@ def bg_collate_lr_channels(spec: Tensor, pad_z: bool = True) -> Tensor:
 
     spec_left, spec_right = spec[:, 0:2, ...], spec[:, 2:4, ...]
     if pad_z:
-        pad = torch.zeros_like(spec[:, 0:1, ...]).to(spec.device)
+        pad = torch.full_like(spec_left, pad_value).to(spec.device)
         spec_left = torch.cat([spec_left, pad], dim=1)  # (LL, LP, pad)
         spec_right = torch.cat([spec_right, pad], dim=1)  # (RL, RP, pad)
 
@@ -42,21 +44,23 @@ def bg_fill_canvas(spec: Tensor) -> Tensor:
 
 
 class BgDualStackAggregator(nn.Module):
-    def __init__(self, pad_z: bool = True):
+    def __init__(self, pad_z: bool = True, pad_value: float = 0):
         super().__init__()
         self.pad_z = pad_z
+        self.pad_value = pad_value
 
     def forward(self, spec: Tensor) -> Tensor:
-        return bg_collate_lr_channels(spec, pad_z=self.pad_z)
+        return bg_collate_lr_channels(spec, pad_z=self.pad_z, pad_value=self.pad_value)
 
 
 class BgDualTilingAggregator(nn.Module):
-    def __init__(self, pad_z: bool = True):
+    def __init__(self, pad_z: bool = True, pad_value: float = 0):
         super().__init__()
         self.pad_z = pad_z
+        self.pad_value = pad_value
 
     def forward(self, spec: Tensor) -> Tensor:
-        spec = bg_collate_lr_channels(spec, self.pad_z)
+        spec = bg_collate_lr_channels(spec, pad_z=self.pad_z, pad_value=self.pad_value)
         spec = rearrange(spec, "b c f t -> b 1 (c f) t")
 
         return spec
