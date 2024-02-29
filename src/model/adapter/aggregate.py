@@ -4,7 +4,9 @@ from einops import rearrange
 from torch import Tensor
 
 
-def collate_lr_channels(spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
+def collate_lr_channels(
+    spec: Tensor, mask: Tensor, drop_z: bool = False
+) -> tuple[Tensor, Tensor]:
     """
     左右のchannelをbatch方向に積み上げる
     Zチャネルは左右両方に入力する
@@ -13,27 +15,32 @@ def collate_lr_channels(spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
     mask: (B, C, F, T)
 
     Return:
-    spec: (2 * B, C, F, T)
-    mask: (2 * B, C, F, T)
+    spec: (2B, C, F, T)
+    mask: (2B, C, F, T)
     """
-    assert spec.shape[1] == 5
+    left_idxs = [0, 1]
+    right_idxs = [4, 3]
+    if not drop_z:
+        left_idxs.append(2)
+        right_idxs.append(2)
 
-    spec_left = spec[:, [0, 1, 2], ...]
-    spec_right = spec[:, [4, 3, 2], ...]
+    spec_left = spec[:, left_idxs, ...]
+    spec_right = spec[:, right_idxs, ...]
     spec = torch.cat([spec_left, spec_right], dim=0)
 
-    mask_left = mask[:, [0, 1, 2], ...]
-    mask_right = mask[:, [4, 3, 2], ...]
+    mask_left = mask[:, left_idxs, ...]
+    mask_right = mask[:, right_idxs, ...]
     mask = torch.cat([mask_left, mask_right], dim=0)
 
     return spec, mask
 
 
 class WeightedMeanStackingAggregator(nn.Module):
-    def __init__(self, norm_mask: bool = True, eps=1e-4):
+    def __init__(self, drop_z: bool = False, norm_mask: bool = True, eps=1e-4):
         super().__init__()
         self.norm_mask = norm_mask
         self.eps = eps
+        self.drop_z = drop_z
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
@@ -47,8 +54,9 @@ class WeightedMeanStackingAggregator(nn.Module):
         sum_specs = []
         sum_masks = []
         ranges = [0, 4, 8, 10, 14, 18]
-        B, C, H, W = spec.shape
-        for i, (start, end) in zip(range(C), zip(ranges[:-1], ranges[1:])):
+        for i, (start, end) in enumerate(zip(ranges[:-1], ranges[1:])):
+            if self.drop_z and i == 2:
+                continue
             sum_spec = (spec[:, start:end] * mask[:, start:end]).sum(
                 dim=1, keepdim=True
             )
@@ -66,6 +74,9 @@ class WeightedMeanStackingAggregator(nn.Module):
 
 
 class DualWeightedMeanStackingAggregator(WeightedMeanStackingAggregator):
+    def __init__(self, drop_z: bool = False, norm_mask: bool = True, eps=1e-4):
+        super().__init__(drop_z=drop_z, norm_mask=norm_mask, eps=eps)
+
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         spec: (B, 20, H, W)
@@ -77,7 +88,7 @@ class DualWeightedMeanStackingAggregator(WeightedMeanStackingAggregator):
         """
         spec, mask = super().forward(spec, mask)
 
-        return collate_lr_channels(spec, mask)
+        return collate_lr_channels(spec, mask, drop_z=self.drop_z)
 
 
 class WeightedMeanTilingAggregator(WeightedMeanStackingAggregator):
@@ -100,8 +111,8 @@ class WeightedMeanTilingAggregator(WeightedMeanStackingAggregator):
 
 
 class DualWeightedMeanTilingAggregator(DualWeightedMeanStackingAggregator):
-    def __init__(self, norm_mask: bool = True, eps=1e-4):
-        super().__init__(norm_mask=norm_mask, eps=eps)
+    def __init__(self, drop_z: bool = False, norm_mask: bool = True, eps=1e-4):
+        super().__init__(drop_z=drop_z, norm_mask=norm_mask, eps=eps)
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
@@ -123,15 +134,20 @@ class TilingAggregator(nn.Module):
     周波数方向にspetrogramを積み上げる
     """
 
-    def __init__(self):
+    def __init__(self, drop_z: bool = False):
         super().__init__()
+        self.drop_z = drop_z
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         tiled_specs = []
         tiled_masks = []
         ranges = [0, 4, 8, 10, 14, 18]
         B, C, F, T = spec.shape
-        for i, (start, end) in zip(range(C), zip(ranges[:-1], ranges[1:])):
+        mask = mask.expand(B, C, F, T)
+
+        for i, (start, end) in enumerate(zip(ranges[:-1], ranges[1:])):
+            if i == 2 and self.drop_z:
+                continue
             ch = end - start
             pad_size = F * (4 - ch)
             tile = rearrange(spec[:, start:end], "b c f t -> b (c f) t", c=ch)
@@ -140,7 +156,6 @@ class TilingAggregator(nn.Module):
             )
             tiled_specs.append(tile)
 
-            mask = mask.expand(B, C, F, T)
             tiled_mask = rearrange(mask[:, start:end], "b c f t -> b (c f) t", c=ch)
             tiled_mask = torch.nn.functional.pad(
                 tiled_mask, (0, 0, 0, pad_size), mode="constant", value=0
@@ -154,13 +169,17 @@ class TilingAggregator(nn.Module):
 
 
 class DualTilingAggregator(TilingAggregator):
+    def __init__(self, drop_z: bool = False):
+        super().__init__()
+        self.drop_z = drop_z
+
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         spec, mask = super().forward(spec, mask)
 
-        return collate_lr_channels(spec, mask)
+        return collate_lr_channels(spec, mask, drop_z=self.drop_z)
 
 
-def fill_canvas(spec: Tensor) -> Tensor:
+def fill_canvas(spec: Tensor, drop_z: bool = False) -> Tensor:
     """
     全てのチャネルを1枚のキャンバスに敷き詰める
 
@@ -191,15 +210,22 @@ def fill_canvas(spec: Tensor) -> Tensor:
     spec_rp = spec[:, 10:14]
     spec_rl = spec[:, 14:18]
 
-    spec_l0 = torch.cat([spec_ll, spec_z0], dim=1)  # (B, 5, F, T)
-    spec_l1 = torch.cat([spec_lp, spec_z1], dim=1)  # (B, 5, F, T)
+    spec_l0, spec_l1 = spec_ll, spec_lp
+    if not drop_z:
+        spec_l0 = torch.cat([spec_l0, spec_z0], dim=1)  # (B, 5, F, T)
+        spec_l1 = torch.cat([spec_l1, spec_z1], dim=1)  # (B, 5, F, T)
+
     spec_l0 = rearrange(spec_l0, "b c f t -> b (c f) t")  # (B, 5F, T)
     spec_l1 = rearrange(spec_l1, "b c f t -> b (c f) t")  # (B, 5F, T)
+
     spec_l = torch.stack([spec_l0, spec_l1], dim=1)  # (B, 2, 5F, T)
     spec_l = rearrange(spec_l, "b c f t -> b f (c t)")  # (B, 5F, 2T)
 
-    spec_r0 = torch.cat([spec_rl, spec_z0], dim=1)  # (B, 5, F, T)
-    spec_r1 = torch.cat([spec_rp, spec_z1], dim=1)  # (B, 5, F, T)
+    spec_r0, spec_r1 = spec_rl, spec_rp
+    if not drop_z:
+        spec_r0 = torch.cat([spec_r0, spec_z0], dim=1)  # (B, 5, F, T)
+        spec_r1 = torch.cat([spec_r1, spec_z1], dim=1)  # (B, 5, F, T)
+
     spec_r0 = rearrange(spec_r0, "b c f t -> b (c f) t")  # (B, 5F, T)
     spec_r1 = rearrange(spec_r1, "b c f t -> b (c f) t")  # (B, 5F, T)
     spec_r = torch.stack([spec_r0, spec_r1], dim=1)  # (B, 2, 5F, T)
@@ -210,129 +236,34 @@ def fill_canvas(spec: Tensor) -> Tensor:
     return spec
 
 
-def fill_canvas_tr(spec: Tensor) -> Tensor:
-    """
-    全てのチャネルを1枚のキャンバスに敷き詰める
-
-    input: (B 18 F T)
-    output: (B 2 2F 5T)
-
-    [
-        [
-            [LL0, LL1, LL2, LL3, Z0],
-            [LP0, LP1, LP2, LP3, Z1],
-        ],
-        [
-            [RP0, RP1, RP2, RP3, Z0],
-            [RL0, RL1, RL2, RL3, Z1],
-        ],
-    ]
-    """
-    spec_ll = spec[:, 0:4]
-    spec_lp = spec[:, 4:8]
-    spec_z0 = spec[:, 8:9]
-    spec_z1 = spec[:, 9:10]
-    spec_rp = spec[:, 10:14]
-    spec_rl = spec[:, 14:18]
-
-    spec_l0 = torch.cat([spec_ll, spec_z0], dim=1)  # (B, 5, F, T)
-    spec_l1 = torch.cat([spec_lp, spec_z1], dim=1)  # (B, 5, F, T)
-    spec_l0 = rearrange(spec_l0, "b c f t -> b f (c t)")  # (B, F, 5T)
-    spec_l1 = rearrange(spec_l1, "b c f t -> b f (c t)")  # (B, F, 5T)
-    spec_l = torch.stack([spec_l0, spec_l1], dim=1)  # (B, 2, F, 5T)
-    spec_l = rearrange(spec_l, "b c f t -> b (c f) t")  # (B, 2F, 5T)
-
-    spec_r0 = torch.cat([spec_rl, spec_z0], dim=1)  # (B, 5, F, T)
-    spec_r1 = torch.cat([spec_rp, spec_z1], dim=1)  # (B, 5, F, T)
-    spec_r0 = rearrange(spec_r0, "b c f t -> b f (c t)")  # (B, F, 5T)
-    spec_r1 = rearrange(spec_r1, "b c f t -> b f (c t)")  # (B, F, 5T)
-    spec_r = torch.stack([spec_r0, spec_r1], dim=1)  # (B, 2, F, 5T)
-    spec_r = rearrange(spec_r, "b c f t -> b (c f) t")  # (B, 2F, 5T)
-
-    spec = torch.stack([spec_l, spec_r], dim=1)  # (B, 2, 2F, 5T)
-
-    return spec
-
-
 class CanvasAggregator(nn.Module):
-    def __init__(self):
+    def __init__(self, drop_z: bool = False):
         super().__init__()
+        self.drop_z = drop_z
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         input: (B, 18, F, T)
         output: (B, 2, 5F, 2T)
         """
-        spec = fill_canvas(spec)  # (B, 2, 5F, 2T)
-        mask = fill_canvas(mask)  # (B, 2, 5F, 2T)
+        spec = fill_canvas(spec, drop_z=self.drop_z)  # (B, 2, 5F, 2T)
+        mask = fill_canvas(mask, drop_z=self.drop_z)  # (B, 2, 5F, 2T)
 
         return spec, mask
 
 
-class DualCanvasAggregator(nn.Module):
-    def __init__(self):
-        super().__init__()
+class DualCanvasAggregator(CanvasAggregator):
+    def __init__(self, drop_z: bool = False):
+        super().__init__(drop_z=drop_z)
 
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         input: (B, 18, F, T)
         output: (2B, 1, 5F, 2T)
         """
-        spec = fill_canvas(spec)  # (B, 2, 5F, 2T)
-        mask = fill_canvas(mask)  # (B, 2, 5F, 2T)
+        spec, mask = super().forward(spec, mask)
 
         spec = rearrange(spec, "b c f t -> (c b) 1 f t")
         mask = rearrange(mask, "b c f t -> (c b) 1 f t")
-
-        return spec, mask
-
-
-class TransposedCanvasAggregator(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
-        """
-        input: (B, 18, F, T)
-        output: (B, 2, 2F, 5T)
-        """
-        spec = fill_canvas_tr(spec)  # (B, 2, 2F, 5T)
-        mask = fill_canvas_tr(mask)  # (B, 2, 2F, 5T)
-
-        return spec, mask
-
-
-class DualTransposedCanvasAggregator(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
-        """
-        input: (B, 18, F, T)
-        output: (2B, 1, 2F, 5T)
-        """
-        spec = fill_canvas_tr(spec)  # (B, 2, 2F, 5T)
-        mask = fill_canvas_tr(mask)  # (B, 2, 2F, 5T)
-
-        spec = rearrange(spec, "b c f t -> (c b) 1 f t")
-        mask = rearrange(mask, "b c f t -> (c b) 1 f t")
-
-        return spec, mask
-
-
-class FlatTilingAggregator(nn.Module):
-    """
-    周波数方向にspetrogramを積み上げる
-    """
-
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
-        B, C, F, T = spec.shape
-        spec = rearrange(spec, "b c f t -> b 1 (c f) t")
-
-        mask = mask.expand(B, C, F, T)
-        mask = rearrange(mask, "b c f t -> b 1 (c f) t")
 
         return spec, mask
