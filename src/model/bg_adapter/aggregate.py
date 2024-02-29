@@ -4,7 +4,7 @@ from einops import rearrange
 from torch import Tensor
 
 
-def bg_collate_lr_channels(spec: Tensor, pad_with_mean: bool = False) -> Tensor:
+def bg_collate_lr_channels(spec: Tensor, pad_z: bool = True) -> Tensor:
     """
     左右のchannelをbatch方向に積み上げる
     Zチャネルは左右両方に入力する
@@ -15,13 +15,13 @@ def bg_collate_lr_channels(spec: Tensor, pad_with_mean: bool = False) -> Tensor:
     spec: (2B, C, F, T)
     """
     assert spec.shape[1] == 4, f"spec shape mismatch: {spec.shape}"
-    if pad_with_mean:
-        pad = spec.mean(dim=1, keepdim=True)
-    else:
-        pad = torch.zeros_like(spec[:, 0:1, ...]).to(spec.device)
 
-    spec_left = torch.cat([spec[:, 0:2, ...], pad], dim=1)  # (LL, LP, pad)
-    spec_right = torch.cat([spec[:, 2:4, ...], pad], dim=1)  # (RL, RP, pad)
+    spec_left, spec_right = spec[:, 0:2, ...], spec[:, 2:4, ...]
+    if pad_z:
+        pad = torch.zeros_like(spec[:, 0:1, ...]).to(spec.device)
+        spec_left = torch.cat([spec_left, pad], dim=1)  # (LL, LP, pad)
+        spec_right = torch.cat([spec_right, pad], dim=1)  # (RL, RP, pad)
+
     spec = torch.cat([spec_left, spec_right], dim=0)
 
     return spec
@@ -42,21 +42,21 @@ def bg_fill_canvas(spec: Tensor) -> Tensor:
 
 
 class BgDualStackAggregator(nn.Module):
-    def __init__(self, pad_with_mean: bool = False):
+    def __init__(self, pad_z: bool = True):
         super().__init__()
-        self.pad_with_mean = pad_with_mean
+        self.pad_z = pad_z
 
     def forward(self, spec: Tensor) -> Tensor:
-        return bg_collate_lr_channels(spec, self.pad_with_mean)
+        return bg_collate_lr_channels(spec, pad_z=self.pad_z)
 
 
 class BgDualTilingAggregator(nn.Module):
-    def __init__(self, pad_with_mean: bool = False):
+    def __init__(self, pad_z: bool = True):
         super().__init__()
-        self.pad_with_mean = pad_with_mean
+        self.pad_z = pad_z
 
     def forward(self, spec: Tensor) -> Tensor:
-        spec = bg_collate_lr_channels(spec, self.pad_with_mean)
+        spec = bg_collate_lr_channels(spec, self.pad_z)
         spec = rearrange(spec, "b c f t -> b 1 (c f) t")
 
         return spec
