@@ -1,7 +1,7 @@
 data/*
 log/*
 tmp/
-sandbox*.ipynb
+sandbox*
 **/wandb/
 !.gitkeep
 debug.yaml
