@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v3_canvas_bg
+  - _self_
+
+exp_name: exp061
+description: exp058 + gb spec

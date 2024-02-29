@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v3_wms_bg
+  - _self_
+
+exp_name: exp060
+description: exp057 + bg spec
