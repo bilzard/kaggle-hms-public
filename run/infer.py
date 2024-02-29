@@ -135,7 +135,9 @@ def main(cfg: MainConfig):
     spec_dir = Path(working_dir / "preprocess" / cfg.phase / "spectrogram")
     fold_split_dir = Path(working_dir / "fold_split" / cfg.phase)
 
-    metadata = load_metadata(data_dir, cfg.phase, fold_split_dir, cfg.fold)
+    metadata = load_metadata(
+        data_dir=data_dir, phase=cfg.phase, fold_split_dir=fold_split_dir, fold=cfg.fold
+    )
 
     logger = BaseLogger(log_file_name=cfg.infer.log_name, clear=True)
 
