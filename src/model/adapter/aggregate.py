@@ -267,3 +267,45 @@ class DualCanvasAggregator(CanvasAggregator):
         mask = rearrange(mask, "b c f t -> (c b) 1 f t")
 
         return spec, mask
+
+
+class CanvasWeightedMeanAggregator(CanvasAggregator):
+    def __init__(self, drop_z: bool = False, norm_mask=True, eps=1e-4):
+        super().__init__(drop_z=drop_z)
+        self.eps = eps
+        self.norm_mask = norm_mask
+
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
+        """
+        input: (B, 18, F, T)
+        output: (B, 2, 5F, T)
+        """
+        spec, mask = super().forward(spec, mask)  # (B, 2, 5F, 2T)
+
+        spec = rearrange(spec, "b c f (s t) -> b c f s t", s=2)  # (B, C, 5F, 2, T)
+        mask = rearrange(mask, "b c f (s t) -> b c f s t", s=2)  # (B, C, 5F, 2, T)
+
+        spec = (spec * mask).sum(dim=3)  # (B, C, 5F, T)
+        mask = mask.sum(dim=3)  # (B, C, 5F, T)
+
+        spec /= mask + self.eps
+        if self.norm_mask:
+            mask /= 2
+
+        return spec, mask
+
+
+class DualCanvasWeightedMeanAggregator(CanvasWeightedMeanAggregator):
+    def __init__(self, drop_z: bool = False, norm_mask=True, eps=1e-4):
+        super().__init__(drop_z=drop_z, norm_mask=norm_mask, eps=eps)
+
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
+        """
+        input: (B, 18, F, T)
+        output: (2B, 1, 5F, T)
+        """
+        spec, mask = super().forward(spec, mask)  # (B, 2, 5F, T)
+        spec = rearrange(spec, "b c f t -> (c b) 1 f t")
+        mask = rearrange(mask, "b c f t -> (c b) 1 f t")
+
+        return spec, mask
