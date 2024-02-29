@@ -45,7 +45,7 @@ def load_metadata(
             return metadata
         case "test":
             metadata = pl.read_csv(data_dir / "test.csv")
-            metadata = process_label(metadata, is_test=True)
+            metadata = process_label(metadata, add_dummy_label=True)
 
             return metadata
         case "develop":
