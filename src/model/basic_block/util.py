@@ -37,3 +37,9 @@ def vector_pair_mapping(
         case _:
             raise ValueError(f"Invalid base_type: {base_type}")
     return u, v
+
+
+def norm_mean_std(x: Tensor, dim: tuple[int, ...], eps: float = 1e-4) -> Tensor:
+    mean = x.mean(dim=dim, keepdim=True)
+    std = x.std(dim=dim, keepdim=True)
+    return (x - mean) / std.clamp_min(eps)
