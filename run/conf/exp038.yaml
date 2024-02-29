@@ -25,12 +25,9 @@ architecture:
       name: efficientnet_b2
   in_channels: 2
   use_bg_spec: true
+  spec_cropped_duration: 128
 
 trainer:
   weight_decay: 1e-5
   data:
     input_keys: [eeg, cqf, spec]
-  train_dataset:
-    spec_cropped_duration: 128
-  valid_dataset:
-    spec_cropped_duration: 128

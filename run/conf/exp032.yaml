@@ -23,12 +23,9 @@ architecture:
       _target_: src.model.merger.MergeFreq
   in_channels: 6
   use_bg_spec: true
+  spec_cropped_duration: 64
 
 trainer:
   weight_decay: 1e-5
   data:
     input_keys: [eeg, cqf, spec]
-  train_dataset:
-    spec_cropped_duration: 64
-  valid_dataset:
-    spec_cropped_duration: 64
