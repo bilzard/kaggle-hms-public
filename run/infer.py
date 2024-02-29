@@ -40,8 +40,8 @@ def get_loader(
         case "train":
             valid_dataset = instantiate(
                 cfg.trainer.valid_dataset,
-                metadata,
-                id2eeg,
+                metadata=metadata,
+                id2eeg=id2eeg,
                 id2cqf=id2cqf,
                 spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.val.duration,
