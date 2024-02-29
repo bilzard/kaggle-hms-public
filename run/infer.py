@@ -68,7 +68,7 @@ def get_loader(
                 id2eeg=id2eeg,
                 id2cqf=id2cqf,
                 spec_id2spec=spec_id2spec,
-                is_test=True,
+                with_label=False,
                 transform_enabled=True,
                 transform=instantiate(cfg.infer.tta)
                 if cfg.infer.tta is not None

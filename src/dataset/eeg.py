@@ -354,7 +354,7 @@ class PerEegDataset(HmsBaseDataset):
         spec_sampling_rate: float = 0.5,
         spec_cropped_duration: int = 256,
         padding_type: str = "right",
-        is_test: bool = False,
+        with_label: bool = True,
         weight_key: str = "weight_per_eeg",
         transform_enabled: bool = False,
         **kwdargs,
@@ -386,7 +386,7 @@ class PerEegDataset(HmsBaseDataset):
         self.spec_sampling_rate = spec_sampling_rate
         self.spec_cropped_duration = spec_cropped_duration
 
-        self.is_test = is_test
+        self.with_label = with_label
         self.eeg_ids = sorted(self.metadata["eeg_id"].to_list())
         self.eeg_id2metadata = {
             row["eeg_id"]: row_to_dict(row, exclude_keys=["eeg_id"])
@@ -436,7 +436,7 @@ class PerEegDataset(HmsBaseDataset):
         #
         # label & weight
         #
-        if not self.is_test:
+        if self.with_label:
             label = np.array(
                 [row[f"{label}_prob_per_eeg"] for label in LABELS], dtype=np.float32
             )
