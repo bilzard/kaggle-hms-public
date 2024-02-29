@@ -88,7 +88,9 @@ class HmsModel(nn.Module):
 
             if self.cfg.use_bg_spec:
                 assert self.merger is not None
-                bg_spec_mask = torch.ones_like(bg_spec).to(bg_spec.device)
+                bg_spec_mask = torch.full_like(bg_spec, self.cfg.bg_spec_mask_value).to(
+                    bg_spec.device
+                )
                 spec, spec_mask = self.merger(spec, spec_mask, bg_spec, bg_spec_mask)
 
         if self.cfg.input_mask:
@@ -177,7 +179,9 @@ def check_model(
 
     if model.cfg.use_bg_spec:
         assert model.merger is not None
-        bg_spec_mask = torch.ones_like(bg_spec).to(bg_spec.device)
+        bg_spec_mask = torch.full_like(bg_spec, model.cfg.bg_spec_mask_value).to(
+            bg_spec.device
+        )
         spec, spec_mask = model.merger(spec, spec_mask, bg_spec, bg_spec_mask)
         print_shapes("Merger", dict(spec=spec, spec_mask=spec_mask))
 
@@ -231,7 +235,9 @@ def get_2d_image(
 
     if model.cfg.use_bg_spec and bg_spec is not None:
         assert model.merger is not None
-        bg_spec_mask = torch.ones_like(bg_spec).to(bg_spec.device)
+        bg_spec_mask = torch.full_like(bg_spec, model.cfg.bg_spec_mask_value).to(
+            bg_spec.device
+        )
         spec, spec_mask = model.merger(spec, spec_mask, bg_spec, bg_spec_mask)
 
     if model.cfg.input_mask:
