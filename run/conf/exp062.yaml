@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v3_wmt_bg
+  - _self_
+
+exp_name: exp062
+description: exp059 + bg spec
