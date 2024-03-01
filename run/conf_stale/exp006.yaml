@@ -1,7 +1,0 @@
-defaults:
-  - baseline
-  - override architecture/model/head: label_aligned_head_v2
-  - _self_
-
-exp_name: exp006
-description: label-aligned head v2
