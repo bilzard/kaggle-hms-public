@@ -32,6 +32,7 @@ defaults:
   - architecture/model/encoder: timm_encoder
   - architecture/model/decoder: pick_last
   - architecture/model/sample_aggregator: mean_aggregator
+  - architecture/model/feature_processor: identity
   - architecture/model/head: simple_head
   - _self_
 
@@ -80,6 +81,7 @@ architecture:
   in_channels: 5
   out_channels: 6
   recover_dual: false
+  use_lr_feature: true
   use_similarity_feature: false
   hidden_dim: 64
   input_mask: false

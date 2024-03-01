@@ -3,6 +3,7 @@ defaults:
   - override architecture/model/head: label_aligned_head_v2
   - override architecture/model/decoder: pool_fpn
   - override architecture/model/feature_extractor: wave2spec_128x128
+  - override architecture/model/feature_processor: dual
   - _self_
 
 exp_name: ???
@@ -18,7 +19,6 @@ architecture:
         scale_factor: [1.0, 2.0]
 
   in_channels: 6
-  recover_dual: true
   use_similarity_feature: true
   hidden_dim: 64
   input_mask: true

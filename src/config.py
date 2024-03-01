@@ -91,6 +91,7 @@ class ArchitectureConfig:
     in_channels: int
     out_channels: int
     recover_dual: bool
+    use_lr_feature: bool
     use_similarity_feature: bool
     hidden_dim: int
     input_mask: bool

@@ -5,7 +5,6 @@ from hydra.utils import instantiate
 from torch import Tensor
 
 from src.config import ArchitectureConfig
-from src.model.basic_block import calc_similarity, vector_pair_mapping
 
 
 class HmsModel(nn.Module):
@@ -20,9 +19,6 @@ class HmsModel(nn.Module):
     ):
         super().__init__()
         self.cfg = cfg
-
-        self.recover_dual = cfg.recover_dual
-
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
         self.adapters = [instantiate(adapter) for adapter in cfg.model.adapters]
         self.bg_adapters = (
@@ -43,22 +39,12 @@ class HmsModel(nn.Module):
         self.decoder = instantiate(
             cfg.model.decoder, encoder_channels=self.encoder.out_channels
         )
-
-        similarity_dim = cfg.hidden_dim if cfg.use_similarity_feature else 0
-        head_input_channel_size = (
-            2 * self.decoder.output_size + similarity_dim
-            if self.recover_dual
-            else self.decoder.output_size
+        self.feature_processor = instantiate(
+            cfg.model.feature_processor, in_channels=self.decoder.output_size
         )
-
-        if cfg.use_similarity_feature:
-            self.similarity_encoder = nn.Sequential(
-                nn.Conv2d(1, similarity_dim, kernel_size=1, bias=False),
-                nn.BatchNorm2d(similarity_dim),
-                nn.PReLU(),
-            )
-
-        self.head = instantiate(cfg.model.head, in_channels=head_input_channel_size)
+        self.head = instantiate(
+            cfg.model.head, in_channels=self.feature_processor.out_channels
+        )
         self.feature_key = feature_key
         self.pred_key = pred_key
         self.mask_key = mask_key
@@ -98,26 +84,11 @@ class HmsModel(nn.Module):
 
         features = self.encoder(spec)
         x = self.decoder(features)
-        if self.recover_dual:
-            x = self._do_recover_dual(x)
-
+        x = self.feature_processor(x)
         x = self.head(x)
 
         output = {self.pred_key: x}
         return output
-
-    def _do_recover_dual(self, x: Tensor) -> Tensor:
-        x = rearrange(x, "(d b) c f t -> d b c f t", d=2)
-        x_left, x_right = x[0], x[1]
-        feats = list(vector_pair_mapping(x_left, x_right, self.cfg.lr_mapping_type))
-
-        if self.cfg.use_similarity_feature:
-            sim = calc_similarity(x_left, x_right)
-            sim = self.similarity_encoder(sim)
-            feats.append(sim)
-
-        x = torch.cat(feats, dim=1)
-        return x
 
     def merge_spec_mask(self, spec: Tensor, spec_mask: Tensor) -> Tensor:
         B, C, F, T = spec.shape
@@ -194,9 +165,8 @@ def check_model(
     x = model.decoder(features)
     print_shapes("Decoder", {"x": x})
 
-    if model.recover_dual:
-        x = model._do_recover_dual(x)
-        print_shapes("recover dual", {"x": x})
+    x = model.feature_processor(x)
+    print_shapes("Feature Processor", {"x": x})
 
     x = model.head(x)
     print_shapes("Head", {"x": x})
