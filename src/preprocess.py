@@ -280,6 +280,9 @@ def process_label(
             .over("eeg_id")
             .alias("max_eeg_label_offset_sec"),
         )
+        .with_columns(
+            pl.col("num_labels_per_eeg").log().alias("log_num_labels_per_eeg"),
+        )
     )
 
     return metadata
