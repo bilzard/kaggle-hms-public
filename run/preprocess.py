@@ -68,13 +68,74 @@ def save_cqf(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
     np.save(output_file_path / "mask.npy", mask)
 
 
+def preprocess_eeg(
+    metadata: pl.DataFrame,
+    cfg: MainConfig,
+    data_dir: Path,
+    output_dir: Path,
+    phase: str,
+):
+    if output_dir.exists():
+        print(f"The directory {output_dir} already exists. Skip preprocessing eeg.")
+        return
+
+    mkdir_if_not_exists(output_dir)
+    with trace(f"process eeg (process_cqf={cfg.preprocess.process_cqf})"):
+        eeg_ids = metadata["eeg_id"].unique().to_numpy()
+        for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
+            eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=phase)
+            eeg, pad_mask = process_eeg(eeg_df)
+
+            eeg /= cfg.preprocess.ref_voltage
+            eeg_df = pl.DataFrame(
+                {probe: pl.Series(v) for probe, v in zip(PROBES, np.transpose(eeg))}
+            )
+            if cfg.preprocess.process_cqf:
+                eeg_df = process_cqf(eeg_df)
+
+            if not cfg.dry_run:
+                save_eeg(eeg_id, eeg_df, output_dir)
+                save_pad_mask(eeg_id, pad_mask, output_dir)
+
+                if cfg.preprocess.process_cqf:
+                    save_cqf(eeg_id, eeg_df, output_dir)
+
+
+def preprocess_spectrogram(
+    metadata: pl.DataFrame,
+    cfg: MainConfig,
+    data_dir: Path,
+    output_dir: Path,
+    phase: str,
+):
+    if output_dir.exists():
+        print(
+            f"The directory {output_dir} already exists. Skip processing spectrogram."
+        )
+        return
+
+    mkdir_if_not_exists(output_dir)
+    with trace("process spectrogram"):
+        spectrogram_ids = (
+            metadata["spectrogram_id"].unique(maintain_order=True).to_numpy()
+        )
+        for spectrogram_id in tqdm(spectrogram_ids, total=spectrogram_ids.shape[0]):
+            spectrogram_df = load_spectrogram(
+                spectrogram_id, data_dir=data_dir, phase=phase
+            )
+            spectrogram = process_spectrogram(spectrogram_df)
+
+            if not cfg.dry_run:
+                save_spectrogram(spectrogram_id, spectrogram, output_dir)
+
+
 @hydra.main(config_path="conf", config_name="main", version_base="1.2")
 def main(cfg: MainConfig):
-    real_phase = cfg.phase if cfg.phase != "develop" else "train"
+    phase = cfg.phase if cfg.phase != "develop" else "train"
 
     data_dir = Path(cfg.env.data_dir)
 
-    metadata = pl.read_csv(data_dir / f"{real_phase}.csv")
+    metadata = pl.read_csv(data_dir / f"{phase}.csv")
     if cfg.phase == "develop":
         columns_org = metadata.columns
         metadata = process_label(metadata)
@@ -84,51 +145,8 @@ def main(cfg: MainConfig):
     output_dir_eeg = Path("eeg")
     output_dir_spectrogram = Path("spectrogram")
 
-    if output_dir_eeg.exists():
-        print(f"The directory {output_dir_eeg} already exists. Skip preprocessing eeg.")
-    else:
-        mkdir_if_not_exists(output_dir_eeg)
-
-        with trace(f"process eeg (process_cqf={cfg.preprocess.process_cqf})"):
-            eeg_ids = metadata["eeg_id"].unique().to_numpy()
-            for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
-                eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=real_phase)
-                eeg, pad_mask = process_eeg(eeg_df)
-
-                eeg /= cfg.preprocess.ref_voltage
-                eeg_df = pl.DataFrame(
-                    {probe: pl.Series(v) for probe, v in zip(PROBES, np.transpose(eeg))}
-                )
-                if cfg.preprocess.process_cqf:
-                    eeg_df = process_cqf(eeg_df)
-
-                if not cfg.dry_run:
-                    save_eeg(eeg_id, eeg_df, output_dir_eeg)
-                    save_pad_mask(eeg_id, pad_mask, output_dir_eeg)
-
-                    if cfg.preprocess.process_cqf:
-                        save_cqf(eeg_id, eeg_df, output_dir_eeg)
-
-    if output_dir_spectrogram.exists():
-        print(
-            f"The directory {output_dir_spectrogram} already exists. Skip processing spectrogram."
-        )
-    else:
-        mkdir_if_not_exists(output_dir_spectrogram)
-        with trace("process spectrogram"):
-            spectrogram_ids = (
-                metadata["spectrogram_id"].unique(maintain_order=True).to_numpy()
-            )
-            for spectrogram_id in tqdm(spectrogram_ids, total=spectrogram_ids.shape[0]):
-                spectrogram_df = load_spectrogram(
-                    spectrogram_id, data_dir=data_dir, phase=real_phase
-                )
-                spectrogram = process_spectrogram(spectrogram_df)
-
-                if not cfg.dry_run:
-                    save_spectrogram(
-                        spectrogram_id, spectrogram, output_dir_spectrogram
-                    )
+    preprocess_eeg(metadata, cfg, data_dir, output_dir_eeg, phase)
+    preprocess_spectrogram(metadata, cfg, data_dir, output_dir_spectrogram, phase)
 
 
 if __name__ == "__main__":
