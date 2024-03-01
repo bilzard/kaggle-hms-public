@@ -1,0 +1,19 @@
+defaults:
+  - baseline_v3_canvas
+  - _self_
+
+exp_name: exp067
+description: exp066 + drop z
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasWeightedMeanAggregator
+        drop_z: true
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 2.0]
+  in_channels: 2
+  input_mask: true
+  recover_dual: true
+  lr_mapping_type: max-min
