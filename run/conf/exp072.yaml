@@ -1,0 +1,20 @@
+defaults:
+  - baseline_v3_canvas
+  - override architecture/model/decoder: pick_last
+  - override architecture/model/feature_processor: dual_with_z_sim
+  - _self_
+
+exp_name: exp072
+description: exp69 + z sim
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [0.5, 1.0]
+  in_channels: 2
+  input_mask: true
+  recover_dual: true
+  lr_mapping_type: max-min
