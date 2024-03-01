@@ -1,6 +1,7 @@
 defaults:
   - baseline_v2
   - override architecture/model/decoder: similarity_pooling
+  - override architecture/model/feature_processor: identity
   - _self_
 
 exp_name: exp053
