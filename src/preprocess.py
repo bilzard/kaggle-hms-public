@@ -181,7 +181,11 @@ def calc_weight(x: np.ndarray, T: float = 3, alpha: float = 5) -> np.ndarray:
 
 
 def process_label(
-    metadata: pl.DataFrame, T: float = 3, alpha: float = 5, add_dummy_label=False
+    metadata: pl.DataFrame,
+    population_power: float = 1.0,
+    diversity_power: float = 0.0,
+    max_votes: int = 28,
+    add_dummy_label=False,
 ) -> pl.DataFrame:
     if add_dummy_label:
         metadata = metadata.with_columns(
@@ -220,8 +224,10 @@ def process_label(
             pl.Series(total_votes_per_eeg).alias("total_votes_per_eeg")
         )
         .with_columns(
-            pl.col("total_votes").truediv(10).alias("weight"),
-            pl.col("total_votes_per_eeg").truediv(10).alias("weight_per_eeg"),
+            pl.col("total_votes").truediv(max_votes).alias("population"),
+            pl.col("total_votes_per_eeg")
+            .truediv(max_votes)
+            .alias("population_per_eeg"),
         )
         .with_columns(
             pl.col(f"{label}_vote")
@@ -282,6 +288,26 @@ def process_label(
         )
         .with_columns(
             pl.col("num_labels_per_eeg").log().alias("log_num_labels_per_eeg"),
+        )
+        .with_columns(
+            pl.col("num_unique_vote_combinations_per_eeg")
+            .truediv("num_labels_per_eeg")
+            .alias("diversity")
+        )
+        .with_columns(
+            pl.col("diversity").pow(diversity_power).alias("diversity_weight"),
+            pl.col("population").pow(population_power).alias("population_weight"),
+            pl.col("population_per_eeg")
+            .pow(population_power)
+            .alias("population_per_eeg_weight"),
+        )
+        .with_columns(
+            pl.col("population_weight").mul(pl.col("diversity_weight")).alias("weight")
+        )
+        .with_columns(
+            pl.col("population_per_eeg_weight")
+            .mul(pl.col("diversity_weight"))
+            .alias("weight_per_eeg")
         )
     )
 

@@ -65,6 +65,13 @@ class PseudoLabelConfig:
 
 
 @dataclass
+class LabelConfig:
+    diversity_power: float
+    population_power: float
+    max_votes: int
+
+
+@dataclass
 class TrainerConfig:
     epochs: int
     lr: float
@@ -84,6 +91,7 @@ class TrainerConfig:
     scheduler: SchedulerConfig
     val: EvalConfig
     pseudo_label: PseudoLabelConfig
+    label: LabelConfig
 
 
 @dataclass
