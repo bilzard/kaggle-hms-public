@@ -36,7 +36,12 @@ def main(cfg: MainConfig):
     spec_dir = Path(working_dir / "preprocess" / cfg.phase / "spectrogram")
 
     metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
-    metadata = process_label(metadata)
+    metadata = process_label(
+        metadata,
+        population_power=cfg.trainer.label.population_power,
+        diversity_power=cfg.trainer.label.diversity_power,
+        max_votes=cfg.trainer.label.max_votes,
+    )
 
     if cfg.trainer.pseudo_label.enabled:
         teacher_ensemble_name = cfg.trainer.pseudo_label.teacher_ensemble_name

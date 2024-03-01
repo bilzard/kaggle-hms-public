@@ -66,6 +66,11 @@ trainer:
     _target_: src.dataset.eeg.UniformSamplingEegDataset
   valid_dataset:
     _target_: src.dataset.eeg.SlidingWindowEegDataset
+  label:
+    diversity_power: 0.0
+    population_power: 1.0
+    max_votes: 28
+
 
 architecture:
   model:
