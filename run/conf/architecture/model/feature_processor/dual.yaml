@@ -1,0 +1,5 @@
+_target_: src.model.feature_processor.DualFeatureProcessor
+hidden_dim: ${architecture.hidden_dim}
+use_lr_feature: ${architecture.use_lr_feature}
+use_similarity_feature: ${architecture.use_similarity_feature}
+lr_mapping_type: ${architecture.lr_mapping_type}
