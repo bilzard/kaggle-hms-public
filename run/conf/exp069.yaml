@@ -1,0 +1,20 @@
+defaults:
+  - baseline_v3_canvas
+  - override architecture/model/decoder: pick_last
+  - _self_
+
+exp_name: exp069
+description: exp068 + pick_last
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+        drop_z: true
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [0.5, 1.0]
+  in_channels: 2
+  input_mask: true
+  recover_dual: true
+  lr_mapping_type: max-min
