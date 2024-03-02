@@ -45,7 +45,7 @@ trainer:
   save_last: true
   save_best: false
   duration: 2048
-  population_threshold: .inf
+  population_threshold: 0
   val:
     batch_size: 32
     duration: 2048
@@ -53,7 +53,7 @@ trainer:
     aggregation_fn: max
     agg_policy: per_eeg_weighted
     seed: 123
-    population_threshold: .inf
+    population_threshold: 0
   scheduler:
     warmup_ratio: 0.0
   data:
