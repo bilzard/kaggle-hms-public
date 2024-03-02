@@ -83,7 +83,7 @@ def save_sample_spec(
     )
     batch = dict(eeg=eeg, cqf=cqf, label=label, weight=weight)
     if bg_spec is not None:
-        batch |= dict(bg_spec=bg_spec)
+        batch |= dict(spec=bg_spec)
 
     input_keys = cfg.trainer.data.input_keys + ["label", "weight"]
     move_device(batch, input_keys=input_keys, device=device)
