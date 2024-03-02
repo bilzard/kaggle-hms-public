@@ -1,0 +1,4 @@
+_target_: src.model.consistency_regularizer.MixUpFixedRatio
+alpha: 0.25
+p: 0.3
+eps: 1e-4
