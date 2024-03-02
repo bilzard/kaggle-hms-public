@@ -11,7 +11,7 @@ class BaseFeatureProcessor(nn.Module):
     def out_channels(self) -> int:
         raise NotImplementedError
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, inputs: dict[str, Tensor]) -> Tensor:
         raise NotImplementedError
 
 
@@ -23,5 +23,5 @@ class IdentityFeatureProcessor(BaseFeatureProcessor):
     def out_channels(self) -> int:
         return self.in_channels
 
-    def forward(self, x: Tensor) -> Tensor:
-        return x
+    def forward(self, inputs: dict[str, Tensor]) -> Tensor:
+        return inputs["spec"]

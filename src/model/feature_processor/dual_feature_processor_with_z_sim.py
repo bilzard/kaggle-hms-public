@@ -51,10 +51,11 @@ class DualFeatureProcessorWithZSim(BaseFeatureProcessor):
             out_channels += 2 * self.hidden_dim
         return out_channels
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, inputs: dict[str, Tensor]) -> Tensor:
         """
         x: (2B, C, 5F, 2T)
         """
+        x = inputs["spec"]
         feats = []
 
         x0 = rearrange(x, "b c (m f) t -> b c m f t", m=5)
