@@ -19,12 +19,39 @@ class DualFeatureProcessorWithMask(BaseFeatureProcessor):
         hidden_dim: int = 256,
         lr_mapping_type: str = "identity",
         output_stride: int = 32,
+        reduce_dim: bool = False,
+        merge_type: str = "concat",
     ):
         super().__init__(in_channels=in_channels)
         self.hidden_dim = hidden_dim
         self.lr_mapping_type = lr_mapping_type
         self.output_stride = output_stride
-        self.feature_dim = in_channels
+        self.reduce_dim = reduce_dim
+        self.merge_type = merge_type
+
+        assert merge_type in [
+            "concat",
+            "add",
+        ], f"merge_type must be `concat` or `add`, but got {merge_type}"
+
+        if merge_type == "add":
+            self.reduce_dim = True
+            print(
+                f"[INFO] {self.__class__.__name__} reduce_dim is forced to True when merge_type is `add`"
+            )
+
+        self.feature_dim = in_channels if not reduce_dim else hidden_dim
+        if reduce_dim:
+            self.mapper = nn.Sequential(
+                nn.Conv2d(
+                    in_channels,
+                    hidden_dim,
+                    kernel_size=1,
+                    bias=False,
+                ),
+                nn.BatchNorm2d(hidden_dim),
+                nn.PReLU(),
+            )
 
         self.mask_encoder = nn.Sequential(
             nn.Conv2d(1, hidden_dim, kernel_size=1, bias=False),
@@ -42,11 +69,15 @@ class DualFeatureProcessorWithMask(BaseFeatureProcessor):
 
     @property
     def out_channels(self) -> int:
-        out_channels = 2 * self.feature_dim + 2 * self.hidden_dim
-        return out_channels
+        if self.merge_type == "add":
+            return self.feature_dim
+
+        return 2 * self.feature_dim + 2 * self.hidden_dim
 
     def forward(self, inputs: dict[str, Tensor]) -> Tensor:
         x, spec_mask = inputs["spec"], inputs["spec_mask"]
+        if self.reduce_dim:
+            x = self.mapper(x)
 
         # map scalar mask to feature space
         spec_mask = self.downsample(spec_mask)
@@ -76,5 +107,10 @@ class DualFeatureProcessorWithMask(BaseFeatureProcessor):
         mask_sim = self.similarity_encoder(mask_sim)
         feats.append(mask_sim)
 
-        x = torch.cat(feats, dim=1)
-        return x
+        if self.merge_type == "add":
+            x = torch.stack(feats, dim=1)
+            x = torch.sum(x, dim=1)
+            return x
+        else:
+            x = torch.cat(feats, dim=1)
+            return x
