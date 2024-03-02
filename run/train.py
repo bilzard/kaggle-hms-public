@@ -18,7 +18,7 @@ from src.data_util import (
     train_valid_split,
 )
 from src.dataset.eeg import get_train_loader, get_valid_loader
-from src.model.hms_model import HmsModel, check_model, get_2d_image
+from src.model.hms_model import HmsModel, check_model
 from src.preprocess import (
     process_label,
 )
@@ -26,6 +26,12 @@ from src.proc_util import trace
 from src.random_util import seed_everything, seed_worker
 from src.sampler import LossBasedSampler
 from src.trainer import Trainer
+
+
+def move_device(x: dict[str, torch.Tensor], input_keys: list[str], device: str):
+    for k, v in x.items():
+        if k in input_keys:
+            x[k] = v.to(device)
 
 
 @torch.no_grad()
@@ -37,13 +43,16 @@ def save_sample_spec(
     spec_id2spec: dict[str, np.ndarray] | None = None,
     num_samples: int = 5,
     seed: int = 0,
+    device: str = "cuda",
     figure_path: Path = Path("figure"),
 ):
     if not figure_path.exists():
         figure_path.mkdir(parents=True)
 
     model = HmsModel(cfg.architecture, pretrained=False)
-    model = model.to(device="cuda")
+    model = model.to(device=device)
+    model.train()
+
     sample_dataset = instantiate(
         cfg.trainer.train_dataset,
         metadata=metadata.sample(
@@ -70,7 +79,9 @@ def save_sample_spec(
     if bg_spec is not None:
         batch |= dict(bg_spec=bg_spec)
 
-    specs = get_2d_image(model, batch, device="cuda")
+    move_device(batch, input_keys=cfg.trainer.data.input_keys, device=device)
+    output = model.generate_and_compose_spec(batch)
+    specs = output["spec"]
     d = specs.shape[0] // num_samples
     specs = rearrange(specs, "(d b) c f t -> b (d c) f t", d=d, b=num_samples)
     specs = specs.detach().cpu().numpy()
