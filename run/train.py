@@ -131,7 +131,6 @@ def main(cfg: MainConfig):
     valid_df = valid_df.filter(
         pl.col("population").gt(cfg.trainer.val.population_threshold)
     )
-    print(f"train_df: {train_df.shape}, valid_df: {valid_df.shape}")
 
     with trace("load eeg"):
         eeg_ids = metadata["eeg_id"].unique().to_list()
@@ -152,6 +151,7 @@ def main(cfg: MainConfig):
         config=cfg_dict,  # type: ignore
         mode=cfg.wandb.mode if not cfg.check_only else "disabled",
     ):
+        print(f"train_df: {train_df.shape}, valid_df: {valid_df.shape}")
         with trace("check model"):
             model = HmsModel(cfg.architecture, pretrained=False)
             model = model.to(device="cuda")
