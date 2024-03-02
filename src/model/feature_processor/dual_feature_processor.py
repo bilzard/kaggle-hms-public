@@ -39,7 +39,8 @@ class DualFeatureProcessor(BaseFeatureProcessor):
             out_channels += self.hidden_dim
         return out_channels
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, inputs: dict[str, Tensor]) -> Tensor:
+        x = inputs["spec"]
         x = rearrange(x, "(d b) c f t -> d b c f t", d=2)
         x_left, x_right = x[0], x[1]
         feats = []

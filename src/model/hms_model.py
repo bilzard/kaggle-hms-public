@@ -94,7 +94,7 @@ class HmsModel(nn.Module):
         output = self.generate_and_compose_spec(batch)
         features = self.encoder(output["spec"])
         x = self.decoder(features)
-        x = self.feature_processor(x)
+        x = self.feature_processor(dict(spec=x, spec_mask=output["spec_mask"]))
         x = self.head(x)
 
         output = {self.pred_key: x}
@@ -175,7 +175,7 @@ def check_model(
     x = model.decoder(features)
     print_shapes("Decoder", {"x": x})
 
-    x = model.feature_processor(x)
+    x = model.feature_processor(dict(spec=x, spec_mask=spec_mask))
     print_shapes("Feature Processor", {"x": x})
 
     x = model.head(x)
