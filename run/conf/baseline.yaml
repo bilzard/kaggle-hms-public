@@ -94,7 +94,7 @@ architecture:
   use_bg_spec: false
   lr_mapping_type: identity
   spec_cropped_duration: 256
-  bg_spec_mask_value: 0.0
+  bg_spec_mask_value: 1.0
 
 infer:
   batch_size: 32
