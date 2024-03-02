@@ -125,8 +125,11 @@ def main(cfg: MainConfig):
     fold_dir = Path(working_dir / "fold_split" / cfg.phase)
     fold_split_df = pl.read_parquet(fold_dir / "fold_split.pqt")
     train_df, valid_df = train_valid_split(metadata, fold_split_df, fold=cfg.fold)
+    train_df = train_df.filter(
+        pl.col("population").gt(cfg.trainer.population_threshold)
+    )
     valid_df = valid_df.filter(
-        pl.col("population") > cfg.trainer.val.population_threshold
+        pl.col("population").gt(cfg.trainer.val.population_threshold)
     )
     print(f"train_df: {train_df.shape}, valid_df: {valid_df.shape}")
 
