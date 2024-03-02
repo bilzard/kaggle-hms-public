@@ -1,0 +1,4 @@
+_target_: src.model.feature_processor.DualFeatureProcessorWithMask
+hidden_dim: ${architecture.hidden_dim}
+lr_mapping_type: ${architecture.lr_mapping_type}
+output_stride: 32
