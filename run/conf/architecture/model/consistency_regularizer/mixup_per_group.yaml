@@ -1,0 +1,6 @@
+_target_: src.model.consistency_regularizer.MixUpPerGroup
+alpha: 0.25
+p_clean: 0.3
+p_noisy: 0.0
+weight_threshold: 0.3
+eps: 1e-4
