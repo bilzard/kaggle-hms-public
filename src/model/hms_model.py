@@ -7,6 +7,12 @@ from torch import Tensor
 from src.config import ArchitectureConfig
 
 
+def move_device(x: dict[str, torch.Tensor], input_keys: list[str], device: str):
+    for k, v in x.items():
+        if k in input_keys:
+            x[k] = v.to(device)
+
+
 class HmsModel(nn.Module):
     def __init__(
         self,
@@ -179,9 +185,7 @@ def check_model(
 @torch.no_grad()
 def get_2d_image(
     model: HmsModel,
-    eeg: Tensor,
-    cqf: Tensor,
-    bg_spec: Tensor | None = None,
+    batch: dict[str, Tensor],
     device="cpu",
 ):
     """
@@ -189,32 +193,12 @@ def get_2d_image(
     """
     model.train()
     model = model.to(device)
-
-    output = model.feature_extractor(eeg, cqf)
-    spec = output["spectrogram"]
-    spec_mask = output["spec_mask"]
-    if model.cfg.use_bg_spec and bg_spec is not None:
-        bg_spec = rearrange(bg_spec, "b f t c -> b c f t")
-
-    if model.spec_transform is not None:
-        spec = model.spec_transform(spec)
-        if model.cfg.use_bg_spec:
-            bg_spec = model.spec_transform(bg_spec)
-
-    for adapter in model.adapters:
-        spec, spec_mask = adapter(spec, spec_mask)
-
-    for bg_adapter in model.bg_adapters:
-        bg_spec = bg_adapter(bg_spec)
-
-    if model.cfg.use_bg_spec and bg_spec is not None:
-        assert model.merger is not None
-        bg_spec_mask = torch.full_like(bg_spec, model.cfg.bg_spec_mask_value).to(
-            bg_spec.device
-        )
-        spec, spec_mask = model.merger(spec, spec_mask, bg_spec, bg_spec_mask)
-
-    if model.cfg.input_mask:
-        spec = model.merge_spec_mask(spec, spec_mask)
+    input_keys = [
+        "eeg",
+        "cqf",
+        "spec",
+    ]
+    move_device(batch, input_keys, device)
+    spec = model.generate_and_compose_spec(batch)
 
     return spec
