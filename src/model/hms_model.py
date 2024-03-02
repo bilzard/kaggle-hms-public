@@ -7,12 +7,6 @@ from torch import Tensor
 from src.config import ArchitectureConfig
 
 
-def move_device(x: dict[str, torch.Tensor], input_keys: list[str], device: str):
-    for k, v in x.items():
-        if k in input_keys:
-            x[k] = v.to(device)
-
-
 class HmsModel(nn.Module):
     def __init__(
         self,
@@ -56,7 +50,7 @@ class HmsModel(nn.Module):
         self.spec_key = spec_key
 
     @torch.no_grad()
-    def generate_and_compose_spec(self, batch: dict[str, Tensor]) -> Tensor:
+    def generate_and_compose_spec(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         eeg = batch[self.feature_key]
         eeg_mask = batch[self.mask_key]
 
@@ -65,6 +59,8 @@ class HmsModel(nn.Module):
 
         spec = output["spectrogram"]
         spec_mask = output["spec_mask"]
+        eeg = output["signal"]
+        eeg_mask = output["channel_mask"]
 
         if self.cfg.use_bg_spec:
             bg_spec = batch[self.spec_key]
@@ -90,11 +86,13 @@ class HmsModel(nn.Module):
         if self.cfg.input_mask:
             spec = self.merge_spec_mask(spec, spec_mask)
 
-        return spec
+        output = dict(spec=spec, spec_mask=spec_mask, eeg=eeg, eeg_mask=eeg_mask)
+
+        return output
 
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        spec = self.generate_and_compose_spec(batch)
-        features = self.encoder(spec)
+        output = self.generate_and_compose_spec(batch)
+        features = self.encoder(output["spec"])
         x = self.decoder(features)
         x = self.feature_processor(x)
         x = self.head(x)
@@ -182,25 +180,3 @@ def check_model(
 
     x = model.head(x)
     print_shapes("Head", {"x": x})
-
-
-@torch.no_grad()
-def get_2d_image(
-    model: HmsModel,
-    batch: dict[str, Tensor],
-    device="cpu",
-):
-    """
-    encoder手前の画像を確認する
-    """
-    model.train()
-    model = model.to(device)
-    input_keys = [
-        "eeg",
-        "cqf",
-        "spec",
-    ]
-    move_device(batch, input_keys, device)
-    spec = model.generate_and_compose_spec(batch)
-
-    return spec
