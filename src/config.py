@@ -48,6 +48,7 @@ class EvalConfig:
     duration: int
     stride: int
     seed: int
+    population_threshold: float
 
 
 @dataclass
