@@ -4,4 +4,4 @@ tmp/
 sandbox*
 **/wandb/
 !.gitkeep
-debug.yaml
+debug*.yaml
