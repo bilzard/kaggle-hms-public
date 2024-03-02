@@ -30,7 +30,6 @@ class HmsModel(nn.Module):
             instantiate(cfg.model.spec_transform) if cfg.model.spec_transform else None
         )
         self.merger = instantiate(cfg.model.merger) if cfg.use_bg_spec else None
-
         self.encoder = instantiate(
             cfg.model.encoder,
             pretrained=pretrained,
@@ -50,38 +49,43 @@ class HmsModel(nn.Module):
         self.mask_key = mask_key
         self.spec_key = spec_key
 
-    def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        mask = batch[self.mask_key]
-        feature = batch[self.feature_key]
+    @torch.no_grad()
+    def generate_and_compose_spec(self, batch: dict[str, Tensor]) -> Tensor:
+        eeg = batch[self.feature_key]
+        eeg_mask = batch[self.mask_key]
+
+        output = self.feature_extractor(eeg, eeg_mask)
+        spec = output["spectrogram"]
+        spec_mask = output["spec_mask"]
+
         if self.cfg.use_bg_spec:
             bg_spec = batch[self.spec_key]
             bg_spec = rearrange(bg_spec, "b f t c -> b c f t")
 
-        with torch.autocast(device_type="cuda", enabled=False), torch.no_grad():
-            output = self.feature_extractor(feature, mask)
-            spec = output["spectrogram"]
-            spec_mask = output["spec_mask"]
-
-            if self.training and self.spec_transform is not None:
-                spec = self.spec_transform(spec)
-                if self.cfg.use_bg_spec:
-                    bg_spec = self.spec_transform(bg_spec)
-
-            for adapter in self.adapters:
-                spec, spec_mask = adapter(spec, spec_mask)
-            for bg_adapter in self.bg_adapters:
-                bg_spec = bg_adapter(bg_spec)
-
+        if self.training and self.spec_transform is not None:
+            spec = self.spec_transform(spec)
             if self.cfg.use_bg_spec:
-                assert self.merger is not None
-                bg_spec_mask = torch.full_like(bg_spec, self.cfg.bg_spec_mask_value).to(
-                    bg_spec.device
-                )
-                spec, spec_mask = self.merger(spec, spec_mask, bg_spec, bg_spec_mask)
+                bg_spec = self.spec_transform(bg_spec)
+
+        for adapter in self.adapters:
+            spec, spec_mask = adapter(spec, spec_mask)
+        for bg_adapter in self.bg_adapters:
+            bg_spec = bg_adapter(bg_spec)
+
+        if self.cfg.use_bg_spec and bg_spec is not None:
+            assert self.merger is not None
+            bg_spec_mask = torch.full_like(bg_spec, self.cfg.bg_spec_mask_value).to(
+                bg_spec.device
+            )
+            spec, spec_mask = self.merger(spec, spec_mask, bg_spec, bg_spec_mask)
 
         if self.cfg.input_mask:
             spec = self.merge_spec_mask(spec, spec_mask)
 
+        return spec
+
+    def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        spec = self.generate_and_compose_spec(batch)
         features = self.encoder(spec)
         x = self.decoder(features)
         x = self.feature_processor(x)
