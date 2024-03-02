@@ -84,6 +84,7 @@ class TrainerConfig:
     num_samples_per_eeg: int
     log_file_name: str
     random_seed_offset: int
+    population_threshold: float
     transform: DictConfig | None
     train_dataset: DictConfig
     valid_dataset: DictConfig
