@@ -70,16 +70,23 @@ def save_sample_spec(
     eeg_ids = [sample["eeg_id"] for sample in sample_dataset]
     eeg = torch.stack([torch.from_numpy(sample["eeg"]) for sample in sample_dataset])
     cqf = torch.stack([torch.from_numpy(sample["cqf"]) for sample in sample_dataset])
+    label = torch.stack(
+        [torch.from_numpy(sample["label"]) for sample in sample_dataset]
+    )
+    weight = torch.stack(
+        [torch.from_numpy(sample["weight"]) for sample in sample_dataset]
+    )
     bg_spec = (
         torch.stack([torch.from_numpy(sample["spec"]) for sample in sample_dataset])
         if cfg.architecture.use_bg_spec
         else None
     )
-    batch = dict(eeg=eeg, cqf=cqf)
+    batch = dict(eeg=eeg, cqf=cqf, label=label, weight=weight)
     if bg_spec is not None:
         batch |= dict(bg_spec=bg_spec)
 
-    move_device(batch, input_keys=cfg.trainer.data.input_keys, device=device)
+    input_keys = cfg.trainer.data.input_keys + ["label", "weight"]
+    move_device(batch, input_keys=input_keys, device=device)
     output = model.generate_and_compose_spec(batch)
     specs = output["spec"]
     d = specs.shape[0] // num_samples
