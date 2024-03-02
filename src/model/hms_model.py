@@ -60,7 +60,9 @@ class HmsModel(nn.Module):
         eeg = batch[self.feature_key]
         eeg_mask = batch[self.mask_key]
 
-        output = self.feature_extractor(eeg, eeg_mask)
+        with torch.autocast(device_type="cuda", enabled=False):
+            output = self.feature_extractor(eeg, eeg_mask)
+
         spec = output["spectrogram"]
         spec_mask = output["spec_mask"]
 
