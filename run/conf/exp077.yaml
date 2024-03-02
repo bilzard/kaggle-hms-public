@@ -1,0 +1,36 @@
+defaults:
+  - baseline_v3_canvas_bg
+  - override architecture/model/decoder: pick_last
+  - _self_
+
+exp_name: exp077
+description: exp068 + bg + w/o swap LR
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+        drop_z: true
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [0.5, 1.0]
+    bg_adapters:
+      - _target_: src.model.bg_adapter.BgConstantNormalizer
+      - _target_: src.model.bg_adapter.BgResizeTransform
+        size: [64, 128]
+      - _target_: src.model.bg_adapter.BgDualCanvasAggregator
+  in_channels: 2
+  input_mask: true
+  recover_dual: true
+  lr_mapping_type: max-min
+
+trainer:
+  transform:
+    _target_: src.transform.Compose
+    transforms:
+      - _target_: src.transform.ChannelPermutation
+        p: 0.3
+      - _target_: src.transform.Cutout1d
+        p: 0.3
+        max_length: 128
+        num_cutouts: 4
