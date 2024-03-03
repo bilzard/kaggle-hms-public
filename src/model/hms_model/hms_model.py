@@ -14,7 +14,7 @@ class HmsModel(nn.Module):
         feature_key: str = "eeg",
         pred_key: str = "pred",
         mask_key: str = "cqf",
-        spec_key: str = "spec",
+        bg_spec_key: str = "bg_spec",
         label_key: str = "label",
         weight_key: str = "weight",
         pretrained: bool = True,
@@ -50,7 +50,7 @@ class HmsModel(nn.Module):
         self.feature_key = feature_key
         self.pred_key = pred_key
         self.mask_key = mask_key
-        self.spec_key = spec_key
+        self.bg_spec_key = bg_spec_key
         self.label_key = label_key
         self.weight_key = weight_key
 
@@ -74,7 +74,7 @@ class HmsModel(nn.Module):
         eeg_mask = output["eeg_mask"]
 
         if self.cfg.use_bg_spec:
-            bg_spec = batch[self.spec_key]
+            bg_spec = batch[self.bg_spec_key]
             bg_spec = rearrange(bg_spec, "b f t c -> b c f t")
 
         if self.training and self.spec_transform is not None:
