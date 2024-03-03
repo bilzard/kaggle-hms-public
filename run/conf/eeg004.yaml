@@ -1,0 +1,13 @@
+defaults:
+  - baseline_eeg_v1
+  - override trainer/optimizer: radam
+  - _self_
+
+exp_name: eeg004
+description: eeg001 + RAdam
+
+trainer:
+  epochs: 18
+  lr: 3e-3
+  weight_decay: 1e-3
+  batch_size: 32
