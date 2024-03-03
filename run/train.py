@@ -81,6 +81,13 @@ def save_sample_spec(
 
     input_keys = cfg.trainer.data.input_keys + ["label", "weight"]
     move_device(batch, input_keys=input_keys, device=device)
+
+    if not hasattr(model, "generate_and_compose_spec"):
+        print(
+            "model does not have generate_and_compose_spec method. skip generating sample image."
+        )
+        return
+
     output = model.generate_and_compose_spec(batch)
     specs = output["spec"]
     d = specs.shape[0] // num_samples

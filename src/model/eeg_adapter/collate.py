@@ -36,9 +36,13 @@ class EegDualStackingCollator(nn.Module):
     左右ごとに独立してencodingする
     """
 
+    def __init__(self, drop_z: bool = False):
+        super().__init__()
+        self.drop_z = drop_z
+
     def forward(self, eeg: Tensor, eeg_mask: Tensor) -> tuple[Tensor, Tensor]:
-        eeg = dual_stack_eeg_channels(eeg)
-        eeg_mask = dual_stack_eeg_channels(eeg_mask)
+        eeg = dual_stack_eeg_channels(eeg, drop_z=self.drop_z)
+        eeg_mask = dual_stack_eeg_channels(eeg_mask, drop_z=self.drop_z)
         eeg = rearrange(eeg, "d b c t -> (d b) c t")
         eeg_mask = rearrange(eeg_mask, "d b c t -> (d b) c t")
 
@@ -50,9 +54,13 @@ class EegDualPerChannelCollator(nn.Module):
     左右、チャネルごとに独立してencodingする
     """
 
+    def __init__(self, drop_z: bool = False):
+        super().__init__()
+        self.drop_z = drop_z
+
     def forward(self, eeg: Tensor, eeg_mask: Tensor) -> tuple[Tensor, Tensor]:
-        eeg = dual_stack_eeg_channels(eeg)
-        eeg_mask = dual_stack_eeg_channels(eeg_mask)
+        eeg = dual_stack_eeg_channels(eeg, drop_z=self.drop_z)
+        eeg_mask = dual_stack_eeg_channels(eeg_mask, drop_z=self.drop_z)
         eeg = rearrange(eeg, "d b c t -> (d c b) 1 t")
         eeg_mask = rearrange(eeg_mask, "d b c t -> (d c b) 1 t")
 

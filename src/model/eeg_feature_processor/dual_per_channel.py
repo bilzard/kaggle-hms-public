@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from einops import rearrange
 from torch import Tensor
@@ -12,8 +13,8 @@ class EegDualPerChannelFeatureProcessor(nn.Module):
         hidden_dim: int,
         eeg_channels: int,
         lr_mapping_type: str = "identity",
-        num_gru_blocks: int = 1,
-        num_sim_gru_blocks: int = 1,
+        num_gru_blocks: int = 0,
+        num_gru_blocks_sim: int = 0,
         use_ff: bool = False,
         use_ff_sim: bool = False,
     ):
@@ -28,10 +29,28 @@ class EegDualPerChannelFeatureProcessor(nn.Module):
             nn.BatchNorm1d(self.hidden_dim),
             nn.PReLU(),
         )
-        self.gru = GruBlock(hidden_dim, n_layers=num_gru_blocks, use_ff=use_ff)
-        self.gru_sim = GruBlock(
-            hidden_dim, n_layers=num_sim_gru_blocks, use_ff=use_ff_sim
+        self.gru = (
+            GruBlock(hidden_dim, n_layers=num_gru_blocks, use_ff=use_ff)
+            if num_gru_blocks > 0
+            else nn.Identity()
         )
+        self.gru_sim = (
+            GruBlock(hidden_dim, n_layers=num_gru_blocks_sim, use_ff=use_ff_sim)
+            if num_gru_blocks_sim > 0
+            else nn.Identity()
+        )
+
+    def __repr__(self):
+        return f"""{self.__class__.__name__}(
+            in_channels={self.in_channels},
+            hidden_dim={self.hidden_dim},
+            eeg_channels={self.eeg_channels},
+            lr_mapping_type={self.lr_mapping_type},
+            num_gru_blocks={self.gru.num_layers},
+            num_gru_blocks_sim={self.gru_sim.num_layers},
+            use_ff={self.gru.use_ff},
+            use_ff_sim={self.gru_sim.use_ff}
+        )"""
 
     @property
     def out_channels(self) -> int:
