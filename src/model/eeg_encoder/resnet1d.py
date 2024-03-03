@@ -135,6 +135,10 @@ class ResNet1d(nn.Module):
             ]
         )
 
+    @property
+    def out_channels(self) -> int:
+        return self.hidden_dim
+
     def forward(self, x: Tensor) -> Tensor:
         """
         x: (B, C, T)
