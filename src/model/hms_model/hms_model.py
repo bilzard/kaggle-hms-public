@@ -68,10 +68,10 @@ class HmsModel(nn.Module):
     def compose_spec(
         self, batch: dict[str, Tensor], output: dict[str, Tensor]
     ) -> dict[str, Tensor]:
-        spec = output["spectrogram"]
+        spec = output["spec"]
         spec_mask = output["spec_mask"]
-        eeg = output["signal"]
-        eeg_mask = output["channel_mask"]
+        eeg = output["eeg"]
+        eeg_mask = output["eeg_mask"]
 
         if self.cfg.use_bg_spec:
             bg_spec = batch[self.spec_key]
@@ -157,7 +157,6 @@ def print_shapes(title: str, data: dict):
 def check_model(
     model: HmsModel,
     device="cpu",
-    feature_keys=["signal", "channel_mask", "spectrogram", "spec_mask"],
 ):
     model.train()
     model = model.to(device)
@@ -168,11 +167,9 @@ def check_model(
     print_shapes("Input", {"eeg": eeg, "cqf": cqf})
 
     output = model.feature_extractor(eeg, cqf)
-    print_shapes(
-        "Feature Extractor", {k: v for k, v in output.items() if k in feature_keys}
-    )
+    print_shapes("Feature Extractor", {k: v for k, v in output.items()})
 
-    spec = output["spectrogram"]
+    spec = output["spec"]
     spec_mask = output["spec_mask"]
 
     if model.spec_transform is not None:

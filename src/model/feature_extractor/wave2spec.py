@@ -147,10 +147,5 @@ class Wave2Spectrogram(nn.Module):
             spec_mask = spec_mask.expand(-1, -1, F, -1)
 
         assert spec.shape[-1] == num_frames // self.hop_length, spec.shape
-        output = dict(
-            spectrogram=spec,
-            signal=eeg,
-            channel_mask=eeg_mask,
-            spec_mask=spec_mask,
-        )
+        output = dict(spec=spec, eeg=eeg, eeg_mask=eeg_mask, spec_mask=spec_mask)
         return output
