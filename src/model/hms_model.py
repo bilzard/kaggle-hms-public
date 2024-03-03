@@ -55,13 +55,19 @@ class HmsModel(nn.Module):
         self.weight_key = weight_key
 
     @torch.no_grad()
-    def generate_and_compose_spec(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
+    def generate_spec(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         eeg = batch[self.feature_key]
         eeg_mask = batch[self.mask_key]
 
         with torch.autocast(device_type="cuda", enabled=False):
             output = self.feature_extractor(eeg, eeg_mask)
 
+        return output
+
+    @torch.no_grad()
+    def compose_spec(
+        self, batch: dict[str, Tensor], output: dict[str, Tensor]
+    ) -> dict[str, Tensor]:
         spec = output["spectrogram"]
         spec_mask = output["spec_mask"]
         eeg = output["signal"]
@@ -98,8 +104,15 @@ class HmsModel(nn.Module):
 
         return output
 
+    @torch.no_grad()
+    def generate_and_compose_spec(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
+        output = self.generate_spec(batch)
+        output = self.compose_spec(batch, output)
+        return output
+
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        output = self.generate_and_compose_spec(batch)
+        output = self.generate_spec(batch)
+        output = self.compose_spec(batch, output)
         features = self.encoder(output["spec"])
         x = self.decoder(features)
         x = self.feature_processor(dict(spec=x, spec_mask=output["spec_mask"]))
