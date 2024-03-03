@@ -1,8 +1,0 @@
-_target_: src.model.hms_model.HMSModel
-sample_collator: ???
-feature_extractor: ???
-encoder: ???
-decoder: ???
-sample_aggregator: ???
-head: ???
-recover_dual: false

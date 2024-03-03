@@ -16,9 +16,9 @@ from src.dataset.eeg import get_valid_loader
 from src.evaluator import Evaluator
 from src.infer_util import load_metadata, make_submission
 from src.logger import BaseLogger
-from src.model.hms_model import HmsModel, check_model
 from src.proc_util import trace
 from src.random_util import seed_everything, seed_worker
+from src.train_util import check_model, get_model, move_device
 
 
 def load_checkpoint(
@@ -87,12 +87,6 @@ def get_loader(
             raise ValueError(f"Invalid phase: {cfg.phase}")
 
 
-def move_device(x: dict[str, torch.Tensor], input_keys: list[str], device: str):
-    for k, v in x.items():
-        if k in input_keys:
-            x[k] = v.to(device)
-
-
 def predict(
     model: nn.Module,
     test_loader: DataLoader,
@@ -159,8 +153,9 @@ def main(cfg: MainConfig):
         data_loader = get_loader(
             cfg, metadata, id2eeg, id2cqf, spec_id2spec=spec_id2spec
         )
-        model = HmsModel(cfg.architecture, pretrained=False)
-        check_model(model)
+
+        model = get_model(cfg.architecture, pretrained=False)
+        check_model(cfg.architecture, model)
         logger.write_log("Dataset:", data_loader.dataset)
         logger.write_log("Model:", model)
         if cfg.check_only:
