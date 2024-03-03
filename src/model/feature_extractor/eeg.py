@@ -41,34 +41,30 @@ class ChannelCollator(nn.Module):
         if mask is None:
             mask = torch.ones_like(x)
 
-        for probe_group, probes in PROBE_GROUPS.items():
-            signal = []
+        for _, probes in PROBE_GROUPS.items():
+            channel = []
             channel_mask = []
             for p1, p2 in zip(probes[:-1], probes[1:]):
                 x_diff = x[..., PROBE2IDX[p1]] - x[..., PROBE2IDX[p2]]
                 if self.apply_mask:
                     x_diff *= mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]]
-                signal.append(x_diff)
+                channel.append(x_diff)
                 channel_mask.append(mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]])
 
-            signal = torch.stack(signal, dim=1)
+            channel = torch.stack(channel, dim=1)
             channel_mask = torch.stack(channel_mask, dim=1)
 
-            if self.cutoff_freqs[0] is not None:
-                signal = AF.highpass_biquad(
-                    signal, self.sampling_rate, self.cutoff_freqs[0]
-                )
-            if self.cutoff_freqs[1] is not None:
-                signal = AF.lowpass_biquad(
-                    signal, self.sampling_rate, self.cutoff_freqs[1]
-                )
-
             for i, (p1, p2) in enumerate(zip(probes[:-1], probes[1:])):
-                eegs.append(signal[:, i, :])
+                eegs.append(channel[:, i, :])
                 eeg_masks.append(channel_mask[:, i, :])
 
         eegs = torch.stack(eegs, dim=1)
         eeg_masks = torch.stack(eeg_masks, dim=1)
+
+        if self.cutoff_freqs[0] is not None:
+            eegs = AF.highpass_biquad(eegs, self.sampling_rate, self.cutoff_freqs[0])
+        if self.cutoff_freqs[1] is not None:
+            eegs = AF.lowpass_biquad(eegs, self.sampling_rate, self.cutoff_freqs[1])
 
         output = dict(eeg=eegs, eeg_mask=eeg_masks)
         return output
