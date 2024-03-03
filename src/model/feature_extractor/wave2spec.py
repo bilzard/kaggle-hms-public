@@ -48,7 +48,6 @@ class Wave2Spectrogram(nn.Module):
             sampling_rate=sampling_rate,
             cutoff_freqs=cutoff_freqs,
             apply_mask=apply_mask,
-            expand_mask=expand_mask,
         )
         self.wave2spec = MelSpectrogram(
             sample_rate=sampling_rate,

@@ -11,21 +11,18 @@ class ChannelCollator(nn.Module):
         sampling_rate=40,
         cutoff_freqs=(0.5, 50),
         apply_mask=True,
-        expand_mask=True,
     ):
         super().__init__()
 
         self.sampling_rate = sampling_rate
         self.cutoff_freqs = cutoff_freqs
         self.apply_mask = apply_mask
-        self.expand_mask = expand_mask
 
     def __repr__(self):
         return f"""{self.__class__.__name__}(
             sampling_rate={self.sampling_rate},
             cutoff_freqs={self.cutoff_freqs},
             apply_mask={self.apply_mask},
-            expand_mask={self.expand_mask},
         )"""
 
     @torch.no_grad()
