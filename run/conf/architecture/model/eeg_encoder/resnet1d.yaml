@@ -7,4 +7,4 @@ stem_conv_kernel_size: 4
 stem_conv_stride: 2
 res_block_size: 6
 stride_per_block: 2
-num_gru_layers: 0
+num_gru_blocks: 0
