@@ -5,8 +5,9 @@ import torch.nn as nn
 import torchaudio.functional as AF
 from torchaudio.transforms import MelSpectrogram
 
-from src.constant import PROBE2IDX, PROBE_GROUPS
 from src.model.tensor_util import rolling_mean, same_padding_1d
+
+from .eeg import ChannelCollator
 
 
 class Wave2Spectrogram(nn.Module):
@@ -43,6 +44,12 @@ class Wave2Spectrogram(nn.Module):
         self.downsample_mode = downsample_mode
         self.expand_mask = expand_mask
 
+        self.collate_channels = ChannelCollator(
+            sampling_rate=sampling_rate,
+            cutoff_freqs=cutoff_freqs,
+            apply_mask=apply_mask,
+            expand_mask=expand_mask,
+        )
         self.wave2spec = MelSpectrogram(
             sample_rate=sampling_rate,
             n_mels=n_mels,
@@ -105,82 +112,45 @@ class Wave2Spectrogram(nn.Module):
         - channel_mask: (B, C, T)
         - spec_mask: (B, C, 1, T)
         """
-        _, num_frames, _ = x.shape
-        spectrograms = []
-        signals = []
-        channel_masks = []
-        spec_masks = []
+        output = self.collate_channels(x, mask)
+        eeg = output["eeg"]
+        eeg_mask = output["eeg_mask"]
 
+        _, num_frames, _ = x.shape
         if mask is None:
             mask = torch.ones_like(x)
 
-        for probe_group, probes in PROBE_GROUPS.items():
-            signal = []
-            channel_mask = []
-            for p1, p2 in zip(probes[:-1], probes[1:]):
-                x_diff = x[..., PROBE2IDX[p1]] - x[..., PROBE2IDX[p2]]
-                if self.apply_mask:
-                    x_diff *= mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]]
-                signal.append(x_diff)
-                channel_mask.append(mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]])
+        spec_mask = self.downsample_mask(eeg_mask, mode=self.downsample_mode)
+        spec_mask = spec_mask.unsqueeze(dim=2)
 
-            signal = torch.stack(signal, dim=1)
-            channel_mask = torch.stack(channel_mask, dim=1)
-
-            if self.cutoff_freqs[0] is not None:
-                signal = AF.highpass_biquad(
-                    signal, self.sampling_rate, self.cutoff_freqs[0]
-                )
-            if self.cutoff_freqs[1] is not None:
-                signal = AF.lowpass_biquad(
-                    signal, self.sampling_rate, self.cutoff_freqs[1]
-                )
-
-            spec_mask = self.downsample_mask(channel_mask, mode=self.downsample_mode)
-            spec_mask = spec_mask.unsqueeze(dim=2)
-
-            spec = same_padding_1d(
-                signal, kernel_size=self.n_fft, stride=self.hop_length, mode="reflect"
+        spec = same_padding_1d(
+            eeg, kernel_size=self.n_fft, stride=self.hop_length, mode="reflect"
+        )
+        spec = self.wave2spec(spec)
+        spec = (
+            AF.amplitude_to_DB(
+                spec,
+                multiplier=10.0,
+                amin=1e-8,
+                top_db=self.db_cutoff,
+                db_multiplier=0,
             )
-            spec = self.wave2spec(spec)
-            spec = (
-                AF.amplitude_to_DB(
-                    spec,
-                    multiplier=10.0,
-                    amin=1e-8,
-                    top_db=self.db_cutoff,
-                    db_multiplier=0,
-                )
-                + self.db_offset
-            )
-            B, C, F, T = spec.shape
-            spec_mask = spec_mask[..., :T]
-            BM, CM, FM, TM = spec_mask.shape
-            assert B == BM and C == CM and T == TM, (spec.shape, spec_mask.shape)
-
-            for i, (p1, p2) in enumerate(zip(probes[:-1], probes[1:])):
-                signals.append(signal[:, i, :])
-                channel_masks.append(channel_mask[:, i, :])
-                spectrograms.append(spec[:, i, :])
-                spec_masks.append(spec_mask[:, i, :])
-
-        spectrograms = torch.stack(spectrograms, dim=1)
-        signals = torch.stack(signals, dim=1)
-        channel_masks = torch.stack(channel_masks, dim=1)
-        spec_masks = torch.stack(spec_masks, dim=1)
-        spectrograms = torch.nan_to_num(spectrograms, nan=-self.db_cutoff)
+            + self.db_offset
+        )
+        B, C, F, T = spec.shape
+        spec_mask = spec_mask[..., :T]
+        BM, CM, FM, TM = spec_mask.shape
+        assert B == BM and C == CM and T == TM, (spec.shape, spec_mask.shape)
 
         if self.expand_mask:
-            F = spectrograms.shape[2]
-            spec_masks = spec_masks.expand(-1, -1, F, -1)
+            F = spec.shape[2]
+            spec_mask = spec_mask.expand(-1, -1, F, -1)
 
-        assert (
-            spectrograms.shape[-1] == num_frames // self.hop_length
-        ), spectrograms.shape
+        assert spec.shape[-1] == num_frames // self.hop_length, spec.shape
         output = dict(
-            spectrogram=spectrograms,
-            signal=signals,
-            channel_mask=channel_masks,
-            spec_mask=spec_masks,
+            spectrogram=spec,
+            signal=eeg,
+            channel_mask=eeg_mask,
+            spec_mask=spec_mask,
         )
         return output
