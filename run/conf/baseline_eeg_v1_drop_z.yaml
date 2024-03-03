@@ -6,11 +6,10 @@ exp_name: ???
 description: ???
 
 architecture:
-  eeg_adapter:
-    eeg_dual_per_channel_collator:
+  model:
+    eeg_adapter:
       drop_z: true
-  eeg_feature_processor:
-    eeg_channels: 8
-
+    eeg_feature_processor:
+      eeg_channels: 8
   in_channels: 2
   input_mask: true
