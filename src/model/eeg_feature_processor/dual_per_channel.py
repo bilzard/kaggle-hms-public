@@ -44,18 +44,6 @@ class EegDualPerChannelFeatureProcessor(nn.Module):
             else nn.Identity()
         )
 
-    def __repr__(self):
-        return f"""{self.__class__.__name__}(
-            in_channels={self.in_channels},
-            hidden_dim={self.hidden_dim},
-            eeg_channels={self.eeg_channels},
-            lr_mapping_type={self.lr_mapping_type},
-            num_gru_blocks={self.num_gru_blocks},
-            num_gru_blocks_sim={self.num_gru_blocks_sim},
-            use_ff={self.use_ff},
-            use_ff_sim={self.use_ff_sim}
-        )"""
-
     @property
     def out_channels(self) -> int:
         return 2 * self.in_channels + self.hidden_dim
