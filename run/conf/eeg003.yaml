@@ -1,16 +1,15 @@
 defaults:
-  - baseline_eeg_v1_drop_z
+  - baseline_eeg_v1
   - _self_
 
 exp_name: eeg003
-description: eeg002 + gru
+description: eeg001 + gru
 
 architecture:
   model:
     eeg_encoder:
       num_gru_blocks: 1
     eeg_feature_processor:
-      eeg_channels: 8
       num_gru_blocks: 1
       num_gru_blocks_sim: 1
 
