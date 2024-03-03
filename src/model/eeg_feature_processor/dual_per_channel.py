@@ -23,6 +23,10 @@ class EegDualPerChannelFeatureProcessor(nn.Module):
         self.hidden_dim = hidden_dim
         self.eeg_channels = eeg_channels
         self.lr_mapping_type = lr_mapping_type
+        self.num_gru_blocks = num_gru_blocks
+        self.num_gru_blocks_sim = num_gru_blocks_sim
+        self.use_ff = use_ff
+        self.use_ff_sim = use_ff_sim
 
         self.similarity_encoder = nn.Sequential(
             nn.Conv1d(1, self.hidden_dim, kernel_size=1, bias=False),
@@ -46,10 +50,10 @@ class EegDualPerChannelFeatureProcessor(nn.Module):
             hidden_dim={self.hidden_dim},
             eeg_channels={self.eeg_channels},
             lr_mapping_type={self.lr_mapping_type},
-            num_gru_blocks={self.gru.num_layers},
-            num_gru_blocks_sim={self.gru_sim.num_layers},
-            use_ff={self.gru.use_ff},
-            use_ff_sim={self.gru_sim.use_ff}
+            num_gru_blocks={self.num_gru_blocks},
+            num_gru_blocks_sim={self.num_gru_blocks_sim},
+            use_ff={self.use_ff},
+            use_ff_sim={self.use_ff_sim}
         )"""
 
     @property
