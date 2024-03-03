@@ -26,7 +26,6 @@ defaults:
   - split: gkfold5
   - trainer/optimizer: adamw
   - trainer/pseudo_label: without_pl
-  - architecture/model: hms_model
   - architecture/model/sample_collator: simple_collator
   - architecture/model/feature_extractor: wave2spec_128x32
   - architecture/model/consistency_regularizer: identity
@@ -86,6 +85,10 @@ architecture:
     merger: null
     encoder:
       name: efficientnet_b0
+  model_class:
+    _target_: src.model.hms_model.HmsModel
+  model_checker:
+    _target_: src.model.hms_model.hms_model.check_model
   in_channels: 5
   out_channels: 6
   recover_dual: false

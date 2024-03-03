@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from omegaconf import DictConfig
@@ -109,6 +110,8 @@ class ArchitectureConfig:
     lr_mapping_type: str
     spec_cropped_duration: int
     bg_spec_mask_value: float
+    model_class: DictConfig
+    model_checker: Callable[..., None]
     model: DictConfig
 
 

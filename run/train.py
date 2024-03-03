@@ -18,20 +18,14 @@ from src.data_util import (
     train_valid_split,
 )
 from src.dataset.eeg import get_train_loader, get_valid_loader
-from src.model.hms_model import HmsModel, check_model
 from src.preprocess import (
     process_label,
 )
 from src.proc_util import trace
 from src.random_util import seed_everything, seed_worker
 from src.sampler import LossBasedSampler
+from src.train_util import check_model, get_model, move_device
 from src.trainer import Trainer
-
-
-def move_device(x: dict[str, torch.Tensor], input_keys: list[str], device: str):
-    for k, v in x.items():
-        if k in input_keys:
-            x[k] = v.to(device)
 
 
 @torch.no_grad()
@@ -49,7 +43,7 @@ def save_sample_spec(
     if not figure_path.exists():
         figure_path.mkdir(parents=True)
 
-    model = HmsModel(cfg.architecture, pretrained=False)
+    model = get_model(cfg.architecture, pretrained=False)
     model = model.to(device=device)
     model.train()
 
@@ -153,10 +147,10 @@ def main(cfg: MainConfig):
     ):
         print(f"train_df: {train_df.shape}, valid_df: {valid_df.shape}")
         with trace("check model"):
-            model = HmsModel(cfg.architecture, pretrained=False)
+            model = get_model(cfg.architecture, pretrained=False)
             model = model.to(device="cuda")
             with torch.no_grad():
-                check_model(model, device="cuda")
+                check_model(cfg.architecture, model, device="cuda")
             del model
 
         with trace("save sample images"):
@@ -227,7 +221,8 @@ def main(cfg: MainConfig):
                 num_workers=cfg.env.num_workers,
                 pin_memory=True,
             )
-            model = HmsModel(cfg.architecture)
+
+            model = get_model(cfg.architecture)
             model.to(device="cuda")
             trainer = Trainer(
                 cfg.trainer,
