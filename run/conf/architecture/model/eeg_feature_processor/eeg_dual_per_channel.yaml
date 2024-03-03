@@ -1,0 +1,8 @@
+_target_: src.model.eeg_feature_processor.EegDualPerChannelFeatureProcessor
+lr_mapping_type: max-min
+hidden_dim: ${architecture.hidden_dim}
+eeg_channels: 10
+num_gru_blocks: 0
+num_gru_blocks_sim: 0
+use_ff: false
+use_ff_sim: false
