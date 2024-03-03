@@ -40,6 +40,9 @@ class EegDualStackingCollator(nn.Module):
         super().__init__()
         self.drop_z = drop_z
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(drop_z={self.drop_z})"
+
     def forward(self, eeg: Tensor, eeg_mask: Tensor) -> tuple[Tensor, Tensor]:
         eeg = dual_stack_eeg_channels(eeg, drop_z=self.drop_z)
         eeg_mask = dual_stack_eeg_channels(eeg_mask, drop_z=self.drop_z)
@@ -57,6 +60,9 @@ class EegDualPerChannelCollator(nn.Module):
     def __init__(self, drop_z: bool = False):
         super().__init__()
         self.drop_z = drop_z
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(drop_z={self.drop_z})"
 
     def forward(self, eeg: Tensor, eeg_mask: Tensor) -> tuple[Tensor, Tensor]:
         eeg = dual_stack_eeg_channels(eeg, drop_z=self.drop_z)
