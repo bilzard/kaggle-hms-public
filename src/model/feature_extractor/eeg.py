@@ -42,21 +42,12 @@ class ChannelCollator(nn.Module):
             mask = torch.ones_like(x)
 
         for _, probes in PROBE_GROUPS.items():
-            channel = []
-            channel_mask = []
             for p1, p2 in zip(probes[:-1], probes[1:]):
                 x_diff = x[..., PROBE2IDX[p1]] - x[..., PROBE2IDX[p2]]
                 if self.apply_mask:
                     x_diff *= mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]]
-                channel.append(x_diff)
-                channel_mask.append(mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]])
-
-            channel = torch.stack(channel, dim=1)
-            channel_mask = torch.stack(channel_mask, dim=1)
-
-            for i, (p1, p2) in enumerate(zip(probes[:-1], probes[1:])):
-                eegs.append(channel[:, i, :])
-                eeg_masks.append(channel_mask[:, i, :])
+                eegs.append(x_diff)
+                eeg_masks.append(mask[..., PROBE2IDX[p1]] * mask[..., PROBE2IDX[p2]])
 
         eegs = torch.stack(eegs, dim=1)
         eeg_masks = torch.stack(eeg_masks, dim=1)
