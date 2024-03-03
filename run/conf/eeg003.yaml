@@ -1,20 +1,18 @@
 defaults:
-  - baseline_eeg_v1
+  - baseline_eeg_v1_drop_z
   - _self_
 
 exp_name: eeg003
 description: eeg002 + gru
 
 architecture:
-  eeg_adapter:
-    eeg_dual_per_channel_collator:
-      drop_z: true
-  eeg_encoder:
-    num_gru_blocks: 1
-  eeg_feature_processor:
-    eeg_channels: 8
-    num_gru_blocks: 1
-    num_gru_blocks_sim: 1
+  model:
+    eeg_encoder:
+      num_gru_blocks: 1
+    eeg_feature_processor:
+      eeg_channels: 8
+      num_gru_blocks: 1
+      num_gru_blocks_sim: 1
 
   in_channels: 2
   input_mask: true
