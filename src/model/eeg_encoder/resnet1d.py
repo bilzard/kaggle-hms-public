@@ -92,7 +92,7 @@ class ResNet1d(nn.Module):
         stem_conv_stride: int = 4,
         res_block_size: int = 6,
         stride_per_block: int = 1,
-        num_gru_layers: int = 1,
+        num_gru_blocks: int = 1,
     ):
         """
         output stride := `2 ** (res_block_size + 1) / len(sep_kernels_sizes)`
@@ -101,7 +101,7 @@ class ResNet1d(nn.Module):
         self.sep_kernel_sizes = sep_kernel_sizes
         self.hidden_dim = hidden_dim
         self.in_channels = in_channels
-        self.num_gru_layers = num_gru_layers
+        self.num_gru_blocks = num_gru_blocks
         self.num_sep_kernels = len(sep_kernel_sizes)
 
         self.sep_convs = nn.ModuleList(
@@ -131,7 +131,7 @@ class ResNet1d(nn.Module):
         self.gru = nn.Sequential(
             *[
                 GruBlock(hidden_dim, n_layers=1, bidirectional=True)
-                for _ in range(num_gru_layers)
+                for _ in range(num_gru_blocks)
             ]
         )
 
@@ -152,7 +152,7 @@ class ResNet1d(nn.Module):
         x = rearrange(x, "b c (s t) -> b (s c) t", s=len(self.sep_kernel_sizes))
         x = self.mapper(x)
 
-        if self.num_gru_layers > 0:
+        if self.num_gru_blocks > 0:
             x = rearrange(x, "b c t -> b t c")
             x = self.gru(x)
             x = rearrange(x, "b t c -> b c t")
