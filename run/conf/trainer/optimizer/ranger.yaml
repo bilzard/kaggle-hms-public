@@ -1,0 +1,9 @@
+_target_: src.external.over9000.Lookahead
+base_optimizer_factory:
+  _target_: torch.optim.RAdam
+  _partial_: true
+  decoupled_weight_decay: True
+  eps: 1e-4
+  betas: [0.9, 0.999]
+alpha: 0.5
+k: 6
