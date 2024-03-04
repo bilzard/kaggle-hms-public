@@ -91,6 +91,8 @@ def check_model(
     model: HmsModel1d,
     device="cpu",
 ):
+    from torchinfo import summary
+
     model.train()
     model = model.to(device)
     eeg = torch.randn(2, 2048, 19).to(device)
@@ -118,3 +120,7 @@ def check_model(
 
     x = model.head(x)
     print_shapes("Head", {"x": x})
+
+    print("=" * 80)
+    print("Encoder (detail):")
+    summary(model.eeg_encoder, input_size=(40, 2, 2048))
