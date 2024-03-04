@@ -1,0 +1,10 @@
+defaults:
+  - baseline_eeg_v1
+  - override architecture/model/eeg_encoder: resnet1d_s3
+  - _self_
+
+exp_name: eeg007_18ep
+description: eeg007 18 epoch
+
+trainer:
+  epochs: 18
