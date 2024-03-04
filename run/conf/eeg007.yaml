@@ -1,0 +1,7 @@
+defaults:
+  - baseline_eeg_v1
+  - override architecture/model/eeg_encoder: resnet1d_s3
+  - _self_
+
+exp_name: eeg007
+description: eeg baseline with faster training
