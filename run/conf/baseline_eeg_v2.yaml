@@ -1,0 +1,8 @@
+defaults:
+  - baseline_eeg_v1
+  - override architecture/model/eeg_encoder: resnet1d_v2
+  - override architecture/model/eeg_feature_processor: eeg_dual_per_channel_simple
+  - _self_
+
+exp_name: ???
+description: ???
