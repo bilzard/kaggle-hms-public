@@ -136,7 +136,7 @@ class ResNet1dV2(nn.Module):
         res_strides: list[int] = [8, 4, 4],
         res_hidden_dims: list[int] = [32, 16, 24, 40],
         se_ratio: int = 4,
-        aggregate_filters: bool = True,
+        aggregate_mode: str = "concat",
     ):
         """
         output stride := `2 ** (res_block_size + 1) / len(sep_kernels_sizes)`
@@ -149,7 +149,7 @@ class ResNet1dV2(nn.Module):
         self.res_strides = res_strides
         self.res_hidden_dims = res_hidden_dims
         self.sep_scale_factor = sep_scale_factor
-        self.aggregate_filters = aggregate_filters
+        self.aggregate_mode = aggregate_mode
 
         self.parallel_conv = ParallelConv(
             in_channels=in_channels,
@@ -178,11 +178,13 @@ class ResNet1dV2(nn.Module):
 
     @property
     def out_channels(self) -> int:
-        return (
-            self.res_hidden_dims[-1] * len(self.sep_kernels)
-            if self.aggregate_filters
-            else self.res_hidden_dims[-1]
-        )
+        match self.aggregate_mode:
+            case "concat":
+                return self.res_hidden_dims[-1] * len(self.sep_kernels)
+            case "sum" | "mean":
+                return self.res_hidden_dims[-1]
+            case _:
+                return self.res_hidden_dims[-1]
 
     def forward(self, x: Tensor) -> Tensor:
         """
@@ -191,8 +193,16 @@ class ResNet1dV2(nn.Module):
         """
         x = self.parallel_conv(x)  # 1/1
         x = self.resnet(x)  # 1/128
-        if self.aggregate_filters:
-            x = rearrange(x, "b c (s t) -> b (s c) t", s=len(self.sep_kernels))  # 1/4
+
+        match self.aggregate_mode:
+            case "concat":
+                x = rearrange(x, "b c (s t) -> b (s c) t", s=len(self.sep_kernels))
+            case "sum":
+                x = rearrange(x, "b c (s t) -> b c s t", s=len(self.sep_kernels))
+                x = x.sum(dim=2)
+            case "mean":
+                x = rearrange(x, "b c (s t) -> b c s t", s=len(self.sep_kernels))
+                x = x.mean(dim=2)
 
         return x
 

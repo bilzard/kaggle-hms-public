@@ -7,4 +7,4 @@ res_kernel_sizes: [4, 4, 4, 4, 4]
 res_strides: [2, 2, 2, 2, 2]
 res_hidden_dims: [32, 16, 24, 40, 80, 112]
 se_ratio: 4
-aggregate_filters: true
+aggregate_mode: concat
