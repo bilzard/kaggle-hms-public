@@ -5,6 +5,6 @@ sep_hidden_dim: 32
 sep_scale_factor: 4
 res_kernel_sizes: [4, 4, 4, 4, 4]
 res_strides: [2, 2, 2, 2, 2]
-res_hidden_dims: [32, 16, 24, 40, 80, 112]
+res_hidden_dims: [32, 24, 40, 80, 112, 192]
 se_ratio: 4
 aggregate_mode: concat
