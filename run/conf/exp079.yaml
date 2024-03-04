@@ -1,0 +1,27 @@
+defaults:
+  - baseline_v3_canvas
+  - override architecture/model/decoder: pick_last
+  - override trainer/optimizer: radam
+  - _self_
+
+exp_name: exp079
+description: exp078 + RAdam optimizer
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+        drop_z: true
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [0.5, 1.0]
+  in_channels: 2
+  input_mask: true
+  recover_dual: true
+  lr_mapping_type: max-min
+
+trainer:
+  epochs: 18
+  lr: 1e-3
+  weight_decay: 1e-3
+  batch_size: 32
