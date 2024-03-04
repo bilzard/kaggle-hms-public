@@ -1,0 +1,9 @@
+_target_: src.model.eeg_encoder.ResNet1dV2
+sep_kernels: [6, 12, 24, 48]
+sep_strides: [4, 8, 16, 32]
+sep_hidden_dim: 32
+sep_scale_factor: 4
+res_kernel_sizes: [4, 4, 4, 4, 4]
+res_strides: [2, 2, 2, 2, 2]
+res_hidden_dims: [32, 16, 24, 40, 80, 112]
+se_ratio: 4
