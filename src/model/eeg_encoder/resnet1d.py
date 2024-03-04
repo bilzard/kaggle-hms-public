@@ -12,6 +12,7 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 from torch import Tensor
+from torch.utils.checkpoint import checkpoint
 
 
 class SeBlock(nn.Module):
@@ -138,21 +139,24 @@ class ResNet1d(nn.Module):
             kernels=sep_kernels,
         )
         self.stem = ConvBnRelu1d(hidden_dim, hidden_dim, stem_kernel_size, stem_stride)
-        self.resnet = nn.Sequential(
-            *[
-                ResBlock1d(
-                    in_channels=hidden_dim,
-                    out_channels=hidden_dim,
-                    kernel_size=kernel_size,
-                    stride=stride,
-                    se_ratio=se_ratio,
-                )
-                for _ in range(num_res_blocks)
-            ],
+        self.layers = nn.ModuleList(
+            ResBlock1d(
+                in_channels=hidden_dim,
+                out_channels=hidden_dim,
+                kernel_size=kernel_size,
+                stride=stride,
+                se_ratio=se_ratio,
+            )
+            for _ in range(num_res_blocks)
         )
         self.mapper = nn.Sequential(
             ConvBnRelu1d(hidden_dim * len(self.sep_kernels), hidden_dim),
         )
+        self.grad_checkpointing = False
+
+    @torch.jit.unused
+    def set_grad_checkpointing(self, enable: bool = True):
+        self.grad_checkpointing = enable
 
     @property
     def out_channels(self) -> int:
@@ -163,9 +167,15 @@ class ResNet1d(nn.Module):
         x: (B, C, T)
         output: (B, C, T)
         """
-        x = self.parallel_conv(x)  # 1/1
+
+        x = self.parallel_conv(x)
         x = self.stem(x)
-        x = self.resnet(x)  # 1/128
+        for layer in self.layers:
+            if self.grad_checkpointing:
+                # save 20% VRAM, but 20% slower
+                x = checkpoint(layer, x, preserve_rng_state=True, use_reentrant=False)  # type: ignore
+            else:
+                x = layer(x)
         x = rearrange(x, "b c (s t) -> b (s c) t", s=len(self.sep_kernels))
         x = self.mapper(x)
 
