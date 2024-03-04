@@ -39,15 +39,14 @@ defaults:
 trainer:
   epochs: 4
   lr: 1e-3
-  lr_adjustments:
-    - pattern: ^encoder
-      ratio: 1.0
+  lr_adjustments: []
   weight_decay: 0.0
   batch_size: 32
   save_last: true
   save_best: false
   duration: 2048
   population_threshold: 0
+  no_decay_bias_params: false
   val:
     batch_size: 32
     duration: 2048
@@ -75,7 +74,6 @@ trainer:
     diversity_power: 0.0
     population_power: 1.0
     max_votes: 28
-
 
 architecture:
   model:

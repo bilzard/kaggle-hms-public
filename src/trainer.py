@@ -88,7 +88,12 @@ class Trainer(BaseTrainer):
         cfg = self.cfg
         max_steps = len(self.train_loader) * self.epochs
         base_lr = cfg.lr * (cfg.batch_size * cfg.num_samples_per_eeg) / 32.0
-        params = get_lr_params(self.model, base_lr, cfg.lr_adjustments)
+        params = get_lr_params(
+            self.model,
+            base_lr,
+            cfg.lr_adjustments,
+            no_decay_bias_params=cfg.no_decay_bias_params,
+        )
         self.optimizer = instantiate(
             self.cfg.optimizer,
             params=params,
