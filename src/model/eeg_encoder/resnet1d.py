@@ -129,10 +129,7 @@ class ResNet1d(nn.Module):
             ConvBnRelu1d(hidden_dim * self.num_sep_kernels, hidden_dim),
         )
         self.gru = nn.Sequential(
-            *[
-                GruBlock(hidden_dim, n_layers=1, bidirectional=True)
-                for _ in range(num_gru_blocks)
-            ]
+            *[GruBlock(hidden_dim, bidirectional=True) for _ in range(num_gru_blocks)]
         )
 
     @property
