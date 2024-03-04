@@ -8,6 +8,7 @@ from transformers import get_cosine_schedule_with_warmup
 from src.callback.base import Callback
 from src.config import TrainerConfig
 from src.logger import BaseLogger
+from src.train_util import get_lr_params
 
 
 class AverageMeter(object):
@@ -86,11 +87,14 @@ class Trainer(BaseTrainer):
     def configure_optimizers(self):
         cfg = self.cfg
         max_steps = len(self.train_loader) * self.epochs
+        base_lr = cfg.lr * (cfg.batch_size * cfg.num_samples_per_eeg) / 32.0
+        params = get_lr_params(self.model, base_lr, cfg.lr_adjustments)
         self.optimizer = instantiate(
             self.cfg.optimizer,
-            params=self.model.parameters(),
-            lr=cfg.lr * (cfg.batch_size * cfg.num_samples_per_eeg) / 32.0,
+            params=params,
+            lr=base_lr,
             weight_decay=cfg.weight_decay,
+            _convert_="object",
         )
         self.scheduler = get_cosine_schedule_with_warmup(
             self.optimizer,

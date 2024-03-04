@@ -74,9 +74,16 @@ class LabelConfig:
 
 
 @dataclass
+class LrAdjustmentConfig:
+    pattern: str
+    ratio: float
+
+
+@dataclass
 class TrainerConfig:
     epochs: int
     lr: float
+    lr_adjustments: list[LrAdjustmentConfig]
     weight_decay: float
     batch_size: int
     save_last: bool
