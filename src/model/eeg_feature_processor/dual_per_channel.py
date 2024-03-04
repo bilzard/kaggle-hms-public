@@ -3,7 +3,11 @@ import torch.nn as nn
 from einops import rearrange
 from torch import Tensor
 
-from src.model.basic_block import GruBlock, calc_similarity, vector_pair_mapping
+from src.model.basic_block import (
+    GruBlock,
+    calc_similarity,
+    vector_pair_mapping,
+)
 
 
 class EegDualPerChannelFeatureProcessor(nn.Module):
@@ -34,7 +38,10 @@ class EegDualPerChannelFeatureProcessor(nn.Module):
             nn.PReLU(),
         )
         self.gru = (
-            GruBlock(hidden_dim, n_layers=num_gru_blocks, use_ff=use_ff)
+            nn.Sequential(
+                nn.Linear(self.in_channels, hidden_dim),
+                GruBlock(hidden_dim, n_layers=num_gru_blocks, use_ff=use_ff),
+            )
             if num_gru_blocks > 0
             else nn.Identity()
         )
@@ -46,6 +53,8 @@ class EegDualPerChannelFeatureProcessor(nn.Module):
 
     @property
     def out_channels(self) -> int:
+        if self.num_gru_blocks > 0:
+            return 3 * self.hidden_dim
         return 2 * self.in_channels + self.hidden_dim
 
     def forward(self, x: Tensor) -> Tensor:
