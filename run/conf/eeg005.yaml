@@ -1,0 +1,6 @@
+defaults:
+  - baseline_eeg_v2
+  - _self_
+
+exp_name: eeg005
+description: eeg baseline v2

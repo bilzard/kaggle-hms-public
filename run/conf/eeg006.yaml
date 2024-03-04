@@ -1,0 +1,12 @@
+defaults:
+  - baseline_eeg_v2
+  - _self_
+
+exp_name: eeg006
+description: eeg baseline v2 (18-epoch)
+
+trainer:
+  epochs: 18
+  lr: 1e-3
+  weight_decay: 1e-2
+  batch_size: 32
