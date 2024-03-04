@@ -136,6 +136,7 @@ class ResNet1dV2(nn.Module):
         res_strides: list[int] = [8, 4, 4],
         res_hidden_dims: list[int] = [32, 16, 24, 40],
         se_ratio: int = 4,
+        aggregate_filters: bool = True,
     ):
         """
         output stride := `2 ** (res_block_size + 1) / len(sep_kernels_sizes)`
@@ -148,6 +149,7 @@ class ResNet1dV2(nn.Module):
         self.res_strides = res_strides
         self.res_hidden_dims = res_hidden_dims
         self.sep_scale_factor = sep_scale_factor
+        self.aggregate_filters = aggregate_filters
 
         self.parallel_conv = ParallelConv(
             in_channels=in_channels,
@@ -176,7 +178,11 @@ class ResNet1dV2(nn.Module):
 
     @property
     def out_channels(self) -> int:
-        return self.res_hidden_dims[-1] * len(self.sep_kernels)
+        return (
+            self.res_hidden_dims[-1] * len(self.sep_kernels)
+            if self.aggregate_filters
+            else self.res_hidden_dims[-1]
+        )
 
     def forward(self, x: Tensor) -> Tensor:
         """
@@ -185,7 +191,8 @@ class ResNet1dV2(nn.Module):
         """
         x = self.parallel_conv(x)  # 1/1
         x = self.resnet(x)  # 1/128
-        x = rearrange(x, "b c (s t) -> b (s c) t", s=len(self.sep_kernels))  # 1/4
+        if self.aggregate_filters:
+            x = rearrange(x, "b c (s t) -> b (s c) t", s=len(self.sep_kernels))  # 1/4
 
         return x
 
