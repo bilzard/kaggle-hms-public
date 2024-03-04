@@ -1,10 +1,9 @@
 _target_: src.model.eeg_encoder.ResNet1d
-sep_kernel_sizes: [3, 5, 7, 9]
-kernel_size: 3
+sep_kernels: [3, 5, 7, 9]
 hidden_dim: ${architecture.hidden_dim}
 se_ratio: 2
-stem_conv_kernel_size: 4
-stem_conv_stride: 2
-res_block_size: 6
-stride_per_block: 2
-num_gru_blocks: 0
+num_res_blocks: 6
+kernel_size: 3
+stride: 2
+stem_kernel_size: 4
+stem_stride: 2

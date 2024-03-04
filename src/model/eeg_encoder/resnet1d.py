@@ -13,8 +13,6 @@ import torch.nn as nn
 from einops import rearrange
 from torch import Tensor
 
-from src.model.basic_block import GruBlock
-
 
 class SeBlock(nn.Module):
     def __init__(self, hidden_dim: int, se_ratio: int = 4):
@@ -42,6 +40,9 @@ class ConvBnRelu1d(nn.Sequential):
         padding: int | None = None,
         groups: int = 1,
     ):
+        assert (
+            kernel_size >= stride
+        ), f"kernel_size must be greater than stride. Got {kernel_size} and {stride}."
         padding = (kernel_size - stride) // 2 if padding is None else padding
         super().__init__(
             nn.Conv1d(
@@ -80,56 +81,77 @@ class ResBlock1d(nn.Module):
         return self.stem_conv(x) + self.pool(x)
 
 
+class ParallelConv(nn.Module):
+    """
+    Parallel conv + upsample
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernels: list[int],
+    ):
+        super().__init__()
+        self.sep_convs = nn.ModuleList(
+            [ConvBnRelu1d(in_channels, out_channels, kernel_size=k) for k in kernels]
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        x: (B, C, T)
+        output: (B, C, T)
+        """
+        feats = []
+        for sep_conv in self.sep_convs:
+            feats.append(sep_conv(x))
+
+        x = torch.cat(feats, dim=2)
+        return x
+
+
 class ResNet1d(nn.Module):
     def __init__(
         self,
         in_channels: int,
-        sep_kernel_sizes: tuple[int, ...] = (3, 5, 7, 9),
-        kernel_size: int = 3,
+        sep_kernels: list[int] = [3, 5, 7, 9],
         hidden_dim: int = 64,
         se_ratio: int = 2,
-        stem_conv_kernel_size: int = 4,
-        stem_conv_stride: int = 4,
-        res_block_size: int = 6,
-        stride_per_block: int = 1,
-        num_gru_blocks: int = 1,
+        num_res_blocks: int = 6,
+        kernel_size: int = 3,
+        stride: int = 2,
+        stem_kernel_size: int = 4,
+        stem_stride: int = 2,
     ):
         """
         output stride := `2 ** (res_block_size + 1) / len(sep_kernels_sizes)`
         """
         super().__init__()
-        self.sep_kernel_sizes = sep_kernel_sizes
-        self.hidden_dim = hidden_dim
         self.in_channels = in_channels
-        self.num_gru_blocks = num_gru_blocks
-        self.num_sep_kernels = len(sep_kernel_sizes)
+        self.sep_kernels = sep_kernels
+        self.hidden_dim = hidden_dim
+        self.num_res_blocks = num_res_blocks
 
-        self.sep_convs = nn.ModuleList(
-            ConvBnRelu1d(in_channels, hidden_dim, k) for k in sep_kernel_sizes
+        self.parallel_conv = ParallelConv(
+            in_channels=in_channels,
+            out_channels=hidden_dim,
+            kernels=sep_kernels,
         )
-        self.stem_conv = ConvBnRelu1d(
-            hidden_dim,
-            hidden_dim,
-            kernel_size=stem_conv_kernel_size,
-            stride=stem_conv_stride,
-        )
+        self.stem = ConvBnRelu1d(hidden_dim, hidden_dim, stem_kernel_size, stem_stride)
         self.resnet = nn.Sequential(
             *[
                 ResBlock1d(
                     in_channels=hidden_dim,
                     out_channels=hidden_dim,
                     kernel_size=kernel_size,
-                    stride=stride_per_block,
+                    stride=stride,
                     se_ratio=se_ratio,
                 )
-                for _ in range(res_block_size)
+                for _ in range(num_res_blocks)
             ],
         )
         self.mapper = nn.Sequential(
-            ConvBnRelu1d(hidden_dim * self.num_sep_kernels, hidden_dim),
-        )
-        self.gru = nn.Sequential(
-            *[GruBlock(hidden_dim, bidirectional=True) for _ in range(num_gru_blocks)]
+            ConvBnRelu1d(hidden_dim * len(self.sep_kernels), hidden_dim),
         )
 
     @property
@@ -141,18 +163,11 @@ class ResNet1d(nn.Module):
         x: (B, C, T)
         output: (B, C, T)
         """
-        # NOTE: 元のコードにしたがってT方向にtilingしているが、batch方向のstackingでも同様の結果が得られるかもしれない.
-        # 他には、channel方向に結合してearly fusionにする選択肢がある.
-        x = torch.cat([sep_conv(x) for sep_conv in self.sep_convs], dim=2)
-        x = self.stem_conv(x)
-        x = self.resnet(x)
-        x = rearrange(x, "b c (s t) -> b (s c) t", s=len(self.sep_kernel_sizes))
+        x = self.parallel_conv(x)  # 1/1
+        x = self.stem(x)
+        x = self.resnet(x)  # 1/128
+        x = rearrange(x, "b c (s t) -> b (s c) t", s=len(self.sep_kernels))
         x = self.mapper(x)
-
-        if self.num_gru_blocks > 0:
-            x = rearrange(x, "b c t -> b t c")
-            x = self.gru(x)
-            x = rearrange(x, "b t c -> b c t")
 
         return x
 
