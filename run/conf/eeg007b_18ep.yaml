@@ -1,0 +1,13 @@
+defaults:
+  - baseline_eeg_v1
+  - override architecture/model/eeg_encoder: resnet1d_s3
+  - override trainer/optimizer: radam
+  - _self_
+
+exp_name: eeg007b_18ep
+description: eeg007 + RAdam
+
+trainer:
+  epochs: 18
+  lr: 3e-3
+  weight_decay: 1e-3
