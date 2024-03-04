@@ -41,9 +41,15 @@ class EegDualPerChannelFeatureProcessor(nn.Module):
             nn.BatchNorm1d(self.hidden_dim),
             nn.PReLU(),
         )
+
+        self.use_mapper = (
+            self.num_gru_blocks > 0
+            or self.num_gru_blocks_sim > 0
+            or num_gru_blocks_temp > 0
+        ) and (in_channels != hidden_dim)
         self.mapper = (
             nn.Conv1d(self.in_channels, hidden_dim, kernel_size=1)
-            if in_channels != hidden_dim
+            if self.use_mapper
             else nn.Identity()
         )
         self.gru_temp = (
@@ -70,7 +76,9 @@ class EegDualPerChannelFeatureProcessor(nn.Module):
 
     @property
     def out_channels(self) -> int:
-        return 3 * self.hidden_dim
+        if self.use_mapper:
+            return 3 * self.hidden_dim
+        return 2 * self.in_channels + self.hidden_dim
 
     def forward(self, x: Tensor) -> Tensor:
         """
