@@ -39,6 +39,9 @@ defaults:
 trainer:
   epochs: 4
   lr: 1e-3
+  lr_adjustments:
+    - pattern: ^encoder
+      ratio: 1.0
   weight_decay: 0.0
   batch_size: 32
   save_last: true
