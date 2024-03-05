@@ -1,0 +1,10 @@
+_target_: src.model.eeg_encoder.EegNet
+hidden_dim: 64
+depth_multiplier: 4
+stem_temporal_kernel_size: 65
+temporal_kernel_sizes: [3, 3, 5, 5, 3]
+temporal_pool_sizes: [2, 2, 2, 2, 2]
+temporal_layers: 3
+frame_offset: 744 # 800 - (512 - 400) // 2
+num_frames: 512
+se_ratio: 4
