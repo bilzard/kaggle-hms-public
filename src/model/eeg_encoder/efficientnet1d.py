@@ -4,9 +4,14 @@
 Implementation is similar to [1].
 
 [1] https://github.com/huggingface/pytorch-image-models/blob/main/timm/models/efficientnet.py
+
+NOTE: Implementing with 2D conv is 25~30% faster than 1D conv.
+1. 1D conv: 20.0 step/epoch (RTX 4090)
+2. 2D conv: 25.3 step/epoch (RTX 4090)
 """
 
 import torch.nn as nn
+from einops import rearrange
 from timm.layers import DropPath
 from torch import Tensor
 
@@ -21,10 +26,10 @@ class SqueezeExcite(nn.Module):
         super().__init__()
 
         self.se = nn.Sequential(
-            nn.AdaptiveAvgPool1d(output_size=1),
-            nn.Conv1d(hidden_dim, hidden_dim // se_ratio, kernel_size=1),
+            nn.AdaptiveAvgPool2d(output_size=1),
+            nn.Conv2d(hidden_dim, hidden_dim // se_ratio, kernel_size=1),
             activation(inplace=True),
-            nn.Conv1d(hidden_dim // se_ratio, hidden_dim, kernel_size=1),
+            nn.Conv2d(hidden_dim // se_ratio, hidden_dim, kernel_size=1),
             nn.Sigmoid(),
         )
 
@@ -32,7 +37,7 @@ class SqueezeExcite(nn.Module):
         return x * self.se(x)
 
 
-class ConvBnAct1d(nn.Module):
+class ConvBnAct2d(nn.Module):
     def __init__(
         self,
         in_channels: int,
@@ -60,16 +65,16 @@ class ConvBnAct1d(nn.Module):
 
         self.has_skip = skip and stride == 1 and in_channels == out_channels
         self.conv = nn.Sequential(
-            nn.Conv1d(
+            nn.Conv2d(
                 in_channels,
                 out_channels,
-                kernel_size,  # type: ignore
-                stride,  # type: ignore
-                padding,  # type: ignore
+                (1, kernel_size),  # type: ignore
+                (1, stride),  # type: ignore
+                (0, padding),  # type: ignore
                 groups=groups,
                 bias=False,
             ),
-            nn.BatchNorm1d(out_channels),
+            nn.BatchNorm2d(out_channels),
             activation(inplace=True) if activation is not None else nn.Identity(),
         )
         self.drop_path = (
@@ -99,14 +104,14 @@ class DepthWiseSeparableConv(nn.Module):
         self.has_skip = not no_skip
 
         self.conv = nn.Sequential(
-            ConvBnAct1d(
+            ConvBnAct2d(
                 hidden_dim,
                 hidden_dim,
                 kernel_size=kernel_size,
                 groups=hidden_dim,
                 activation=activation,
             ),
-            ConvBnAct1d(hidden_dim, hidden_dim, activation=activation),
+            ConvBnAct2d(hidden_dim, hidden_dim, activation=activation),
             SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation),
         )
 
@@ -137,15 +142,15 @@ class InvertedResidual(nn.Module):
         self.has_skip = not skip
 
         self.inv_res = nn.Sequential(
-            ConvBnAct1d(hidden_dim, hidden_dim, activation=activation),
-            ConvBnAct1d(
+            ConvBnAct2d(hidden_dim, hidden_dim, activation=activation),
+            ConvBnAct2d(
                 hidden_dim,
                 hidden_dim * depth_multiplier,
                 kernel_size=kernel_size,
                 groups=hidden_dim,
                 activation=activation,
             ),
-            ConvBnAct1d(
+            ConvBnAct2d(
                 hidden_dim * depth_multiplier, hidden_dim, activation=activation
             ),
             SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation),
@@ -162,7 +167,7 @@ class InvertedResidual(nn.Module):
         return x
 
 
-class ResBlock1d(nn.Module):
+class ResBlock2d(nn.Module):
     def __init__(
         self,
         layer: nn.Module,
@@ -171,10 +176,10 @@ class ResBlock1d(nn.Module):
     ):
         super().__init__()
         self.has_skip = skip
-        self.pool = nn.MaxPool1d(kernel_size=pool_size, stride=pool_size)
+        self.pool = nn.MaxPool2d(kernel_size=(1, pool_size), stride=(1, pool_size))
         self.layer = nn.Sequential(
             layer,
-            nn.MaxPool1d(kernel_size=pool_size, stride=pool_size),
+            nn.MaxPool2d(kernel_size=(1, pool_size), stride=(1, pool_size)),
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -199,6 +204,7 @@ class EfficientNet1d(nn.Module):
         skip: bool = True,
         activation=nn.ELU,
         drop_path_rate: float = 0.0,
+        use_ds_conv: bool = True,
     ):
         super().__init__()
         if isinstance(layers, int):
@@ -211,10 +217,11 @@ class EfficientNet1d(nn.Module):
         self.num_frames = num_frames
         self.temporal_pool_sizes = pool_sizes
         self.temporal_layers = layers
+        self.num_eeg_channels = in_channels // 2
         self.drop_path_rate = drop_path_rate
 
-        self.stem_conv = ConvBnAct1d(
-            in_channels,
+        self.stem_conv = ConvBnAct2d(
+            2,
             hidden_dim,
             kernel_size=stem_kernel_size,
             activation=activation,
@@ -222,7 +229,7 @@ class EfficientNet1d(nn.Module):
         )
         self.efficient_net = nn.Sequential(
             *[
-                ResBlock1d(
+                ResBlock2d(
                     layer=nn.Sequential(
                         *[
                             DepthWiseSeparableConv(
@@ -232,7 +239,7 @@ class EfficientNet1d(nn.Module):
                                 se_ratio=depth_multiplier,
                                 drop_path_rate=drop_path_rate,
                             )
-                            if i == 0
+                            if i == 0 and use_ds_conv
                             else InvertedResidual(
                                 hidden_dim=hidden_dim,
                                 depth_multiplier=depth_multiplier,
@@ -263,9 +270,10 @@ class EfficientNet1d(nn.Module):
         x = x[
             :, :, self.frame_offset : self.frame_offset + self.num_frames
         ]  # 中央の512 frame(12.8sec)に絞る
+        x = rearrange(x, "b (c ch) t -> b c ch t", c=2)
         x = self.stem_conv(x)
         x = self.efficient_net(x)  # b c ch t
-
+        x = rearrange(x, "(d b) c ch t -> (d ch b) c t", d=2, ch=self.num_eeg_channels)
         return x
 
 
