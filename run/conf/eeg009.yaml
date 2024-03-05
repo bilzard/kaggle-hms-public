@@ -1,0 +1,11 @@
+defaults:
+  - baseline_eeg_net_wo_cm
+  - _self_
+
+exp_name: eeg009
+description: EEGNet w/o channel mixing (stem_kernel=3)
+
+architecture:
+  model:
+    eeg_encoder:
+      stem_temporal_kernel_size: 3
