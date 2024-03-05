@@ -152,6 +152,7 @@ class EegNet(nn.Module):
         residual: bool = True,
         se_ratio: int = 4,
         activation=nn.ELU,
+        use_channel_mixer: bool = True,
     ):
         super().__init__()
         if isinstance(temporal_layers, int):
@@ -167,6 +168,7 @@ class EegNet(nn.Module):
         self.num_eeg_channels = in_channels // 2
         self.residual = residual
         self.se_ratio = se_ratio
+        self.use_channel_mixer = use_channel_mixer
 
         self.stem_conv = ConvBnAct2d(
             2,
@@ -191,19 +193,20 @@ class EegNet(nn.Module):
                 )
             ]
         )
-        self.eeg_channel_mixer = nn.Sequential(
-            ConvBnAct2d(
-                hidden_dim,
-                hidden_dim * depth_multiplier,
-                kernel_size=(self.num_eeg_channels, 1),
-                groups=hidden_dim,
-                padding="valid",
-                activation=activation,
-            ),
-            ConvBnAct2d(
-                hidden_dim * depth_multiplier, hidden_dim, activation=activation
-            ),
-        )
+        if use_channel_mixer:
+            self.eeg_channel_mixer = nn.Sequential(
+                ConvBnAct2d(
+                    hidden_dim,
+                    hidden_dim * depth_multiplier,
+                    kernel_size=(self.num_eeg_channels, 1),
+                    groups=hidden_dim,
+                    padding="valid",
+                    activation=activation,
+                ),
+                ConvBnAct2d(
+                    hidden_dim * depth_multiplier, hidden_dim, activation=activation
+                ),
+            )
 
     @property
     def out_channels(self) -> int:
@@ -212,7 +215,7 @@ class EegNet(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         """
         x: (B, C, T)
-        output: (B, C, T)
+        output: (B, C, T) if use_channel_mixer else (B, C, Ch, T)
         """
         x = x[
             :, :, self.frame_offset : self.frame_offset + self.num_frames
@@ -220,8 +223,15 @@ class EegNet(nn.Module):
         x = rearrange(x, "b (c ch) t -> b c ch t", c=2)
         x = self.stem_conv(x)
         x = self.temporal_mixer(x)  # b c ch t
-        x = self.eeg_channel_mixer(x)  # b c 1 t
-        x = rearrange(x, "b c 1 t -> b c t")
+
+        if self.use_channel_mixer:
+            x = self.eeg_channel_mixer(x)  # b c 1 t
+            x = rearrange(x, "b c 1 t -> b c t")
+        else:
+            # NOTE: channel方向の信号は混合してないので後段の処理はper-channel系のモジュールに任せる
+            x = rearrange(
+                x, "(d b) c ch t -> (d ch b) c t", d=2, ch=self.num_eeg_channels
+            )
 
         return x
 
