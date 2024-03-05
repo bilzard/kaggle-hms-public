@@ -1,0 +1,6 @@
+defaults:
+  - baseline_eeg_net
+  - _self_
+
+exp_name: eeg008
+description: EEGNet baseline
