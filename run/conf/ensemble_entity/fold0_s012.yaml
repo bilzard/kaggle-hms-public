@@ -1,0 +1,7 @@
+name: ???
+ensemble_seeds: [0, 1, 2]
+experiments:
+  - exp_name: ${ensemble_entity.name}
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
