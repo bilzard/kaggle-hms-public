@@ -1,0 +1,3 @@
+_target_: src.model.eeg_feature_processor.EegDualSimpleFeatureProcessor
+lr_mapping_type: max-min
+hidden_dim: ${architecture.hidden_dim}
