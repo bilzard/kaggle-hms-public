@@ -1,0 +1,16 @@
+defaults:
+  - baseline_eeg_v1
+  - override architecture/model/eeg_adapter: eeg_dual_stacking_collator
+  - override architecture/model/eeg_encoder: eeg_net
+  - override architecture/model/eeg_feature_processor: eeg_dual_per_channel
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    eeg_encoder:
+      use_channel_mixer: false
+      stem_temporal_kernel_size: 3
+  in_channels: 20
