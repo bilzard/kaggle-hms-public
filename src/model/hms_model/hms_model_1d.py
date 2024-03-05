@@ -112,6 +112,7 @@ def check_model(
     x = torch.cat([eeg, eeg_mask], dim=1)
     print_shapes("Merge Mask", {"x": x})
 
+    encoder_input_shape = x.shape
     x = model.eeg_encoder(x)
     print_shapes("Eeg Encoder", {"x": x})
 
@@ -123,4 +124,4 @@ def check_model(
 
     print("=" * 80)
     print("Encoder (detail):")
-    summary(model.eeg_encoder, input_size=(40, 2, 2048))
+    summary(model.eeg_encoder, input_size=encoder_input_shape)
