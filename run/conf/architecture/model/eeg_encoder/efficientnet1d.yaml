@@ -11,3 +11,4 @@ skip_in_block: true
 skip_in_layer: true
 drop_path_rate: 0.0
 use_ds_conv: false
+se_after_dw_conv: false
