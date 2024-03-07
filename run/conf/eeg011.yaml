@@ -1,0 +1,6 @@
+defaults:
+  - baseline_efficientnet
+  - _self_
+
+exp_name: eeg011
+description: EfficientNet1d baseline

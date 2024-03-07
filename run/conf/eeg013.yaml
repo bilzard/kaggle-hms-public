@@ -1,0 +1,12 @@
+defaults:
+  - baseline_efficientnet
+  - _self_
+
+exp_name: eeg013
+description: EfficientNet1d + w/o residual connection
+
+architecture:
+  model:
+    eeg_encoder:
+      skip_in_block: false
+      skip_in_layer: false

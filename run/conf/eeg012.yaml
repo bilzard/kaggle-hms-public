@@ -1,0 +1,11 @@
+defaults:
+  - baseline_efficientnet
+  - _self_
+
+exp_name: eeg012
+description: EfficientNet1d + ds conv
+
+architecture:
+  model:
+    eeg_encoder:
+      use_ds_conv: true
