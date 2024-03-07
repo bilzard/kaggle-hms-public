@@ -78,9 +78,12 @@ class HmsModel1d(nn.Module):
         return output
 
 
-def print_shapes(title: str, data: dict):
+def print_shapes(module_name: str, module: nn.Module | None, data: dict):
     print("-" * 80)
-    print(title)
+    if module is not None:
+        print(f"{module_name}: `{module.__class__.__name__}`")
+    else:
+        print(f"{module_name}")
     print("-" * 80)
     for key, value in data.items():
         print(f"{key}: {value.shape}")
@@ -98,30 +101,32 @@ def check_model(
     eeg = torch.randn(2, 2048, 19).to(device)
     cqf = torch.randn(2, 2048, 19).to(device)
 
-    print_shapes("Input", {"eeg": eeg, "cqf": cqf})
+    print_shapes("Input", None, {"eeg": eeg, "cqf": cqf})
 
     output = model.feature_extractor(eeg, cqf)
-    print_shapes("Feature Extractor", {k: v for k, v in output.items()})
+    print_shapes(
+        "Feature Extractor", model.feature_extractor, {k: v for k, v in output.items()}
+    )
 
     eeg = output["eeg"]
     eeg_mask = output["eeg_mask"]
 
     eeg, eeg_mask = model.eeg_adapter(eeg, eeg_mask)
-    print_shapes("Eeg Adapter", dict(eeg=eeg, eeg_mask=eeg_mask))
+    print_shapes("Eeg Adapter", model.eeg_adapter, dict(eeg=eeg, eeg_mask=eeg_mask))
 
     x = torch.cat([eeg, eeg_mask], dim=1)
-    print_shapes("Merge Mask", {"x": x})
+    print_shapes("Merge Mask", None, {"x": x})
 
     encoder_input_shape = x.shape
     x = model.eeg_encoder(x)
-    print_shapes("Eeg Encoder", {"x": x})
+    print_shapes("Eeg Encoder", model.eeg_encoder, {"x": x})
 
     x = model.eeg_feature_processor(x)
-    print_shapes("Eeg Feature Processor", {"x": x})
+    print_shapes("Eeg Feature Processor", model.eeg_feature_processor, {"x": x})
 
     x = model.head(x)
-    print_shapes("Head", {"x": x})
+    print_shapes("Head", model.head, {"x": x})
 
     print("=" * 80)
     print("Encoder (detail):")
-    summary(model.eeg_encoder, input_size=encoder_input_shape)
+    summary(model.eeg_encoder, input_size=encoder_input_shape, depth=5)
