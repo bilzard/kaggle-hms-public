@@ -1,5 +1,9 @@
 from .activation import ClampedSigmoid, ClampedTanh
 from .conv import ConvBnPReLu2d
+from .cosine_similarity_encoder import (
+    CosineSimilarityEncoder1d,
+    CosineSimilarityEncoder2d,
+)
 from .gated_attention import GatedMilAttention, GatedSpecAttention
 from .gem import GeMPool1d, GeMPool2d
 from .gru_block import GruBlock, GruDecoder
@@ -20,4 +24,6 @@ __all__ = [
     "norm_mean_std",
     "GruBlock",
     "GruDecoder",
+    "CosineSimilarityEncoder1d",
+    "CosineSimilarityEncoder2d",
 ]
