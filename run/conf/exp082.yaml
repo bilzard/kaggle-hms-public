@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v4_two_stage
+  - _self_
+
+exp_name: exp082
+description: baseline v4 + two stage GeM pooling
