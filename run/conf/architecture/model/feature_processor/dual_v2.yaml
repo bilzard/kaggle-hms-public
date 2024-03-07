@@ -1,0 +1,6 @@
+_target_: src.model.feature_processor.DualFeatureProcessorV2
+hidden_dim: ${architecture.hidden_dim}
+activation:
+  _target_: torch.nn.PReLU
+lr_mapping_type: ${architecture.lr_mapping_type}
+tile_size_per_channel: [4, 8]
