@@ -1,0 +1,12 @@
+defaults:
+  - baseline_efficientnet
+  - _self_
+
+exp_name: eeg015
+description: EfficientNet1d + w/o skip in layer
+
+architecture:
+  model:
+    eeg_encoder:
+      skip_in_block: true
+      skip_in_layer: false
