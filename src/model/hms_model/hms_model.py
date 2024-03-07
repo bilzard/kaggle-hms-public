@@ -222,7 +222,7 @@ def check_model(
     print_shapes("Decoder", model.decoder, {"x": x})
 
     x = model.feature_processor(dict(spec=x, spec_mask=spec_mask))
-    print_shapes("Feature Processor", model.feature_extractor, {"x": x})
+    print_shapes("Feature Processor", model.feature_processor, {"x": x})
 
     x = model.head(x)
     print_shapes("Head", model.head, {"x": x})
