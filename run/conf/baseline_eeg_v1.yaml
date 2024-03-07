@@ -4,6 +4,7 @@ defaults:
   - architecture/model/eeg_encoder: resnet1d
   - architecture/model/eeg_feature_processor: eeg_dual_per_channel
   - override architecture/model/feature_extractor: channel_collator
+  - override architecture/model/head: mlp_head
   - _self_
 
 exp_name: ???
