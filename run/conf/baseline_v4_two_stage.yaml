@@ -1,0 +1,31 @@
+defaults:
+  - baseline_v3
+  - override architecture/model/feature_processor: dual_two_stage
+  - override architecture/model/decoder: pick_last
+  - override architecture/model/head: mlp_head
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+        drop_z: true
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [0.5, 1.0]
+    encoder:
+      out_indices: [4,]
+    feature_processor:
+      tile_size_per_channel: [2, 4]
+  in_channels: 2
+  input_mask: true
+  recover_dual: true
+  lr_mapping_type: max-min
+
+trainer:
+  weight_decay: 1e-5
+  data:
+    input_keys: [eeg, cqf]
