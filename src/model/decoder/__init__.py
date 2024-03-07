@@ -1,3 +1,4 @@
+from .map_last import MapLast
 from .pick_last import PickLast
 from .pool_fpn import PoolFpn
 from .similarity_pooling import SimilarityPooling
@@ -14,4 +15,5 @@ __all__ = [
     "SimpleFpn",
     "PoolFpn",
     "SimilarityPooling",
+    "MapLast",
 ]
