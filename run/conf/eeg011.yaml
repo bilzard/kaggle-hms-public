@@ -4,3 +4,9 @@ defaults:
 
 exp_name: eeg011
 description: EfficientNet1d baseline
+
+architecture:
+  model:
+    eeg_encoder:
+      skip_in_block: true
+      skip_in_layer: true

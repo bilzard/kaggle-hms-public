@@ -5,3 +5,9 @@ defaults:
 
 exp_name: eeg014
 description: EfficientNet1d B0
+
+architecture:
+  model:
+    eeg_encoder:
+      skip_in_block: true
+      skip_in_layer: true

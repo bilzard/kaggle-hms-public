@@ -8,4 +8,6 @@ description: EfficientNet1d + ds conv
 architecture:
   model:
     eeg_encoder:
+      skip_in_block: true
+      skip_in_layer: true
       use_ds_conv: true
