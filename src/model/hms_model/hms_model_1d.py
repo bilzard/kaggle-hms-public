@@ -6,24 +6,6 @@ from torch import Tensor
 from src.config import ArchitectureConfig
 
 
-class Head(nn.Module):
-    def __init__(self, in_channels: int, bottleneck_ratio: int = 4):
-        super().__init__()
-        self.mlp = nn.Sequential(
-            nn.Linear(in_channels, in_channels // bottleneck_ratio),
-            nn.BatchNorm1d(in_channels // bottleneck_ratio),
-            nn.PReLU(),
-            nn.Linear(in_channels // bottleneck_ratio, 6, bias=True),
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        x: b c
-        return: b 6
-        """
-        return self.mlp(x)
-
-
 class HmsModel1d(nn.Module):
     def __init__(
         self,
@@ -46,7 +28,9 @@ class HmsModel1d(nn.Module):
         self.eeg_feature_processor = instantiate(
             cfg.model.eeg_feature_processor, in_channels=self.eeg_encoder.out_channels
         )
-        self.head = Head(in_channels=self.eeg_feature_processor.out_channels)
+        self.head = instantiate(
+            cfg.model.head, in_channels=self.eeg_feature_processor.out_channels
+        )
         self.feature_key = feature_key
         self.pred_key = pred_key
         self.mask_key = mask_key
