@@ -11,7 +11,7 @@ from src.model.basic_block import (
 from src.model.feature_processor.base import BaseFeatureProcessor
 
 
-class DualFeatureProcessorV2(BaseFeatureProcessor):
+class DualFeatureProcessorTwoStage(BaseFeatureProcessor):
     """
     Two-stage pooling:
     1. pool frequency-temporal embedding
@@ -84,7 +84,9 @@ if __name__ == "__main__":
     in_channels = 128
     hidden_dim = 64
     F, T = 16, 16
-    feature_processor = DualFeatureProcessorV2(in_channels, hidden_dim, nn.PReLU())
+    feature_processor = DualFeatureProcessorTwoStage(
+        in_channels, hidden_dim, nn.PReLU()
+    )
     spec = torch.randn(duality * batch_size, in_channels, F, T)
     inputs = dict(spec=spec)
     output = feature_processor(inputs)
