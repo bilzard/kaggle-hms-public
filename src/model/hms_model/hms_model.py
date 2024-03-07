@@ -145,9 +145,12 @@ class HmsModel(nn.Module):
         return torch.cat([spec, spec_mask], dim=1)
 
 
-def print_shapes(title: str, data: dict):
+def print_shapes(module_name: str, module: nn.Module | None, data: dict):
     print("-" * 80)
-    print(title)
+    if module is not None:
+        print(f"{module_name}: `{module.__class__.__name__}`")
+    else:
+        print(f"{module_name}")
     print("-" * 80)
     for key, value in data.items():
         print(f"{key}: {value.shape}")
@@ -158,41 +161,44 @@ def check_model(
     model: HmsModel,
     device="cpu",
 ):
+    from torchinfo import summary
+
     model.train()
     model = model.to(device)
     eeg = torch.randn(2, 2048, 19).to(device)
     cqf = torch.randn(2, 2048, 19).to(device)
     bg_spec = torch.randn(2, 4, 100, 256).to(device)
 
-    print_shapes("Input", {"eeg": eeg, "cqf": cqf})
+    print_shapes("Input", None, {"eeg": eeg, "cqf": cqf})
 
     output = model.feature_extractor(eeg, cqf)
-    print_shapes("Feature Extractor", {k: v for k, v in output.items()})
+    print_shapes(
+        "Feature Extractor", model.feature_extractor, {k: v for k, v in output.items()}
+    )
 
     spec = output["spec"]
     spec_mask = output["spec_mask"]
 
     if model.spec_transform is not None:
         spec = model.spec_transform(spec)
-        print_shapes(f"Spec Transform - {model.spec_transform}", {"spec": spec})
+        print_shapes("Spec Transform", model.spec_transform, {"spec": spec})
         if model.cfg.use_bg_spec:
             bg_spec = model.spec_transform(bg_spec)
             print_shapes(
-                f"Bg Spec Transform - {model.spec_transform}", {"bg_spec": bg_spec}
+                "Bg Spec Transform", model.spec_transform, {"bg_spec": bg_spec}
             )
 
     for i, adapter in enumerate(model.adapters):
         spec, spec_mask = adapter(spec, spec_mask)
         print_shapes(
-            f"Adapter[{i}] - {type(adapter).__name__}",
+            f"Adapter[{i}]",
+            adapter,
             dict(spec=spec, spec_mask=spec_mask),
         )
 
     for i, bg_adapter in enumerate(model.bg_adapters):
         bg_spec = bg_adapter(bg_spec)
-        print_shapes(
-            f"BgAdapter[{i}] - {type(bg_adapter).__name__}", dict(bg_spec=bg_spec)
-        )
+        print_shapes(f"BgAdapter[{i}]", adapter, dict(bg_spec=bg_spec))
 
     if model.cfg.use_bg_spec:
         assert model.merger is not None
@@ -200,19 +206,27 @@ def check_model(
             bg_spec.device
         )
         spec, spec_mask = model.merger(spec, spec_mask, bg_spec, bg_spec_mask)
-        print_shapes("Merger", dict(spec=spec, spec_mask=spec_mask))
+        print_shapes("Merger", model.merger, dict(spec=spec, spec_mask=spec_mask))
 
     if model.cfg.input_mask:
         spec = model.merge_spec_mask(spec, spec_mask)
+
+    encoder_input_shape = spec.shape
     features = model.encoder(spec)
     print_shapes(
-        "Encoder", {f"feature[{i}]": feature for i, feature in enumerate(features)}
+        "Encoder",
+        model.encoder,
+        {f"feature[{i}]": feature for i, feature in enumerate(features)},
     )
     x = model.decoder(features)
-    print_shapes("Decoder", {"x": x})
+    print_shapes("Decoder", model.decoder, {"x": x})
 
     x = model.feature_processor(dict(spec=x, spec_mask=spec_mask))
-    print_shapes("Feature Processor", {"x": x})
+    print_shapes("Feature Processor", model.feature_extractor, {"x": x})
 
     x = model.head(x)
-    print_shapes("Head", {"x": x})
+    print_shapes("Head", model.head, {"x": x})
+
+    print("=" * 80)
+    print("Encoder (detail):")
+    summary(model.encoder, input_size=encoder_input_shape, depth=4)
