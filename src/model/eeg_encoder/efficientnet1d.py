@@ -97,11 +97,11 @@ class DepthWiseSeparableConv(nn.Module):
         kernel_size: int,
         activation,
         se_ratio: int = 4,
-        no_skip: bool = False,
+        skip: bool = True,
         drop_path_rate: float = 0.0,
     ):
         super().__init__()
-        self.has_skip = not no_skip
+        self.has_skip = skip
 
         self.conv = nn.Sequential(
             ConvBnAct2d(
@@ -139,7 +139,7 @@ class InvertedResidual(nn.Module):
         drop_path_rate: float = 0.0,
     ):
         super().__init__()
-        self.has_skip = not skip
+        self.has_skip = skip
 
         self.inv_res = nn.Sequential(
             ConvBnAct2d(hidden_dim, hidden_dim, activation=activation),
@@ -151,7 +151,9 @@ class InvertedResidual(nn.Module):
                 activation=activation,
             ),
             ConvBnAct2d(
-                hidden_dim * depth_multiplier, hidden_dim, activation=activation
+                hidden_dim * depth_multiplier,
+                hidden_dim,
+                activation=activation,
             ),
             SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation),
         )
@@ -238,6 +240,7 @@ class EfficientNet1d(nn.Module):
                                 activation=activation,
                                 se_ratio=depth_multiplier,
                                 drop_path_rate=drop_path_rate,
+                                skip=skip,
                             )
                             if i == 0 and use_ds_conv
                             else InvertedResidual(
@@ -247,6 +250,7 @@ class EfficientNet1d(nn.Module):
                                 activation=activation,
                                 se_ratio=depth_multiplier,
                                 drop_path_rate=drop_path_rate,
+                                skip=skip,
                             )
                             for _ in range(nl)
                         ],
