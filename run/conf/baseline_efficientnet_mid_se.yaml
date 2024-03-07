@@ -1,0 +1,13 @@
+defaults:
+  - baseline_efficientnet
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    eeg_encoder:
+      skip_in_block: true
+      skip_in_layer: false
+      se_after_dw_conv: true
