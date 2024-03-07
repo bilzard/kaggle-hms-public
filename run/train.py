@@ -156,6 +156,8 @@ def main(cfg: MainConfig):
         with trace("check model"):
             model = get_model(cfg.architecture, pretrained=False)
             model = model.to(device="cuda")
+            if cfg.debug:
+                print(model)
             with torch.no_grad():
                 check_model(cfg.architecture, model, device="cuda")
             del model
