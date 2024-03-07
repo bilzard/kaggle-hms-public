@@ -40,9 +40,14 @@ class DualFeatureProcessor(BaseFeatureProcessor):
         return out_channels
 
     def forward(self, inputs: dict[str, Tensor]) -> Tensor:
+        """
+        inputs:
+        - spec: (d b) c f t
+        output: b c f t
+        """
         x = inputs["spec"]
         x = rearrange(x, "(d b) c f t -> d b c f t", d=2)
-        x_left, x_right = x[0], x[1]
+        x_left, x_right = x[0], x[1]  # (b c f t)
         feats = []
 
         if self.use_lr_feature:
