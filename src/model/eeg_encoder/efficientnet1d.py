@@ -203,7 +203,8 @@ class EfficientNet1d(nn.Module):
         layers: list[int] | int = [1, 2, 2, 3, 3],
         frame_offset: int = 744,  # 800 - (512 - 400) // 2
         num_frames: int = 512,
-        skip: bool = True,
+        skip_in_block: bool = True,
+        skip_in_layer: bool = True,
         activation=nn.ELU,
         drop_path_rate: float = 0.0,
         use_ds_conv: bool = True,
@@ -240,7 +241,7 @@ class EfficientNet1d(nn.Module):
                                 activation=activation,
                                 se_ratio=depth_multiplier,
                                 drop_path_rate=drop_path_rate,
-                                skip=skip,
+                                skip=skip_in_layer,
                             )
                             if i == 0 and use_ds_conv
                             else InvertedResidual(
@@ -250,13 +251,13 @@ class EfficientNet1d(nn.Module):
                                 activation=activation,
                                 se_ratio=depth_multiplier,
                                 drop_path_rate=drop_path_rate,
-                                skip=skip,
+                                skip=skip_in_layer,
                             )
                             for _ in range(nl)
                         ],
                     ),
                     pool_size=p,
-                    skip=skip,
+                    skip=skip_in_block,
                 )
                 for i, (k, p, nl) in enumerate(zip(kernel_sizes, pool_sizes, layers))
             ]

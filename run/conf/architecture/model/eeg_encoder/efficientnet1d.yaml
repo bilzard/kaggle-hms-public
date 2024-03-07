@@ -7,6 +7,7 @@ pool_sizes: [2, 2, 2, 2, 2]
 layers: 3
 frame_offset: 744 # 800 - (512 - 400) // 2
 num_frames: 512
-skip: true
+skip_in_block: true
+skip_in_layer: true
 drop_path_rate: 0.0
 use_ds_conv: false
