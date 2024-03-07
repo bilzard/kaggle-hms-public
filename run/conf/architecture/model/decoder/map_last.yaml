@@ -1,0 +1,4 @@
+_target_: src.model.decoder.MapLast
+hidden_dim: ${architecture.hidden_dim}
+activation:
+  _target_: torch.nn.PReLU
