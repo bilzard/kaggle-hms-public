@@ -1,0 +1,13 @@
+_target_: src.model.eeg_encoder.EfficientNet1d
+hidden_dim: 64
+depth_multiplier: 4
+stem_kernel_size: 3
+kernel_sizes: [3, 3, 5, 3, 5]
+pool_sizes: [2, 2, 2, 2, 2]
+layers: [1, 2, 2, 3, 3]
+frame_offset: 744 # 800 - (512 - 400) // 2
+num_frames: 512
+skip_in_block: true
+skip_in_layer: true
+drop_path_rate: 0.0
+use_ds_conv: true
