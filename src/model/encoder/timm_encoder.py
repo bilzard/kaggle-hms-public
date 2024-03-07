@@ -13,11 +13,12 @@ class TimmEncoder(nn.Module):
         **kwargs,
     ):
         super().__init__()
+        out_indices = kwargs.pop("out_indices", tuple(range(depth)))
         kwargs = dict(
             in_chans=in_channels,
             features_only=True,
             pretrained=pretrained,
-            out_indices=tuple(range(depth)),
+            out_indices=out_indices,
             **kwargs,
         )
 
