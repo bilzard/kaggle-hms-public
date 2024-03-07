@@ -99,22 +99,30 @@ class DepthWiseSeparableConv(nn.Module):
         se_ratio: int = 4,
         skip: bool = True,
         drop_path_rate: float = 0.0,
+        se_after_dw_conv: bool = False,
     ):
         super().__init__()
         self.has_skip = skip
-
-        self.conv = nn.Sequential(
+        modules: list[nn.Module] = [
             ConvBnAct2d(
                 hidden_dim,
                 hidden_dim,
                 kernel_size=kernel_size,
                 groups=hidden_dim,
                 activation=activation,
-            ),
-            ConvBnAct2d(hidden_dim, hidden_dim, activation=activation),
-            SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation),
-        )
+            )
+        ]
+        if se_after_dw_conv:
+            modules.append(
+                SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation)
+            )
+        modules.append(ConvBnAct2d(hidden_dim, hidden_dim, activation=activation))
+        if not se_after_dw_conv:
+            modules.append(
+                SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation)
+            )
 
+        self.conv = nn.Sequential(*modules)
         self.drop_path = (
             DropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
         )
@@ -137,11 +145,12 @@ class InvertedResidual(nn.Module):
         se_ratio: int = 4,
         skip: bool = True,
         drop_path_rate: float = 0.0,
+        se_after_dw_conv: bool = False,
     ):
         super().__init__()
         self.has_skip = skip
 
-        self.inv_res = nn.Sequential(
+        modules: list[nn.Module] = [
             ConvBnAct2d(hidden_dim, hidden_dim, activation=activation),
             ConvBnAct2d(
                 hidden_dim,
@@ -150,13 +159,28 @@ class InvertedResidual(nn.Module):
                 groups=hidden_dim,
                 activation=activation,
             ),
+        ]
+        if se_after_dw_conv:
+            modules.append(
+                SqueezeExcite(
+                    hidden_dim * depth_multiplier,
+                    se_ratio=se_ratio,
+                    activation=activation,
+                )
+            )
+        modules.append(
             ConvBnAct2d(
                 hidden_dim * depth_multiplier,
                 hidden_dim,
                 activation=activation,
             ),
-            SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation),
         )
+        if not se_after_dw_conv:
+            modules.append(
+                SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation)
+            )
+
+        self.inv_res = nn.Sequential(*modules)
         self.drop_path = (
             DropPath(drop_path_rate) if drop_path_rate > 0.0 else nn.Identity()
         )
@@ -208,6 +232,7 @@ class EfficientNet1d(nn.Module):
         activation=nn.ELU,
         drop_path_rate: float = 0.0,
         use_ds_conv: bool = True,
+        se_after_dw_conv: bool = False,
     ):
         super().__init__()
         if isinstance(layers, int):
@@ -242,6 +267,7 @@ class EfficientNet1d(nn.Module):
                                 se_ratio=depth_multiplier,
                                 drop_path_rate=drop_path_rate,
                                 skip=skip_in_layer,
+                                se_after_dw_conv=se_after_dw_conv,
                             )
                             if i == 0 and use_ds_conv
                             else InvertedResidual(
@@ -252,6 +278,7 @@ class EfficientNet1d(nn.Module):
                                 se_ratio=depth_multiplier,
                                 drop_path_rate=drop_path_rate,
                                 skip=skip_in_layer,
+                                se_after_dw_conv=se_after_dw_conv,
                             )
                             for _ in range(nl)
                         ],
