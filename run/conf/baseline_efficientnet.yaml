@@ -1,0 +1,11 @@
+defaults:
+  - baseline_eeg_v1
+  - override architecture/model/eeg_adapter: eeg_dual_stacking_collator
+  - override architecture/model/eeg_encoder: efficientnet1d
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  in_channels: 20
