@@ -1,7 +1,0 @@
-defaults:
-  - main
-  - override preprocess: with_cqf
-  - _self_
-
-preprocess:
-  clip_val: 10000
