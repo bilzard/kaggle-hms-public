@@ -84,7 +84,11 @@ def preprocess_eeg(
         eeg_ids = metadata["eeg_id"].unique().to_numpy()
         for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
             eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=phase)
-            eeg, pad_mask = process_eeg(eeg_df)
+            eeg, pad_mask = process_eeg(
+                eeg_df,
+                apply_filter=cfg.preprocess.apply_filter,
+                cutoff_freqs=cfg.preprocess.cutoff_freqs,
+            )
 
             eeg /= cfg.preprocess.ref_voltage
             eeg_df = pl.DataFrame(
