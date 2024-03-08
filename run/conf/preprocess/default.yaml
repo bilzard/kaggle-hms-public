@@ -1,3 +1,4 @@
 ref_voltage: 1000
 apply_filter: false
 cutoff_freqs: [null, null]
+device: cpu
