@@ -78,16 +78,23 @@ def process_single_eeg(
     data_dir: Path,
     output_dir: Path,
     phase: str,
+    clip_val: float,
     ref_voltage: float,
     process_cqf: bool,
     apply_filter: bool,
-    cutoff_freqs: tuple[float, float],
+    cutoff_freqs: tuple[float | None, float | None],
+    reject_freq: float | None,
     device: str,
     dry_run: bool = False,
 ) -> None:
     eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=phase)
     eeg, pad_mask = process_eeg(
-        eeg_df, apply_filter=apply_filter, cutoff_freqs=cutoff_freqs, device=device
+        eeg_df,
+        clip_val=clip_val,
+        apply_filter=apply_filter,
+        cutoff_freqs=cutoff_freqs,
+        reject_freq=reject_freq,
+        device=device,
     )
 
     eeg /= ref_voltage
@@ -125,10 +132,12 @@ def preprocess_eeg(
             data_dir=data_dir,
             output_dir=output_dir,
             phase=phase,
+            clip_val=cfg.preprocess.clip_val,
             ref_voltage=cfg.preprocess.ref_voltage,
             process_cqf=cfg.preprocess.process_cqf,
             apply_filter=cfg.preprocess.apply_filter,
             cutoff_freqs=cfg.preprocess.cutoff_freqs,
+            reject_freq=cfg.preprocess.reject_freq,
             device=cfg.preprocess.device,
             dry_run=cfg.dry_run,
         )

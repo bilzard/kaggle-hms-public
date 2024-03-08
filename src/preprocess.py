@@ -52,7 +52,8 @@ def process_eeg(
     clip_val: float = 5000.0,
     fill_nan_with: float = 0.0,
     apply_filter: bool = False,
-    cutoff_freqs: tuple[float, float] = (0.5, 60),
+    cutoff_freqs: tuple[float | None, float | None] = (None, None),
+    reject_freq: float | None = None,
     device: str = "cpu",
     sampling_rate: int = 200,
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -64,7 +65,11 @@ def process_eeg(
     if apply_filter:
         x = rearrange(x, "t c -> c t")
         x = do_apply_filter(
-            x, sampling_rate=sampling_rate, cutoff_freqs=cutoff_freqs, device=device
+            x,
+            sampling_rate=sampling_rate,
+            cutoff_freqs=cutoff_freqs,
+            reject_freq=reject_freq,
+            device=device,
         )
         x = rearrange(x, "c t -> t c")
 
@@ -89,7 +94,8 @@ def process_eeg(
 def do_apply_filter(
     xa: np.ndarray,
     sampling_rate: int = 40,
-    cutoff_freqs: tuple[float | None, float | None] = (0.5, 50),
+    cutoff_freqs: tuple[float | None, float | None] = (None, None),
+    reject_freq: float | None = 60,
     device="cpu",
 ):
     """
@@ -101,6 +107,9 @@ def do_apply_filter(
         x = AF.highpass_biquad(x, sampling_rate, cutoff_freqs[0])
     if cutoff_freqs[1] is not None:
         x = AF.lowpass_biquad(x, sampling_rate, cutoff_freqs[1])
+    if reject_freq is not None:
+        x = AF.bandreject_biquad(x, sampling_rate, reject_freq)
+
     x = x.squeeze(0).detach().cpu().numpy()
     return x
 

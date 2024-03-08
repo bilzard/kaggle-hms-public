@@ -3,5 +3,6 @@ defaults:
   - _self_
 
 apply_filter: true
-cutoff_freqs: [null, 60]
+cutoff_freqs: [null, null]
+reject_freq: 60
 device: cuda
