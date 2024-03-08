@@ -91,6 +91,8 @@ architecture:
   model_checker:
     _target_: src.model.hms_model.hms_model.check_model
   in_channels: 5
+  in_channels_eeg: -1
+  in_channels_spec: -1
   out_channels: 6
   recover_dual: false
   use_lr_feature: true

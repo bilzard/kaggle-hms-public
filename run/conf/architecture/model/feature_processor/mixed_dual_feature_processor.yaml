@@ -1,0 +1,10 @@
+_target_: src.model.feature_processor.MixedDualFeatureProcessor
+in_channels_spec: ${architecture.in_channels_spec}
+in_channels_eeg: ${architecture.in_channels_eeg}
+hidden_dim: ${architecture.hidden_dim}
+num_eeg_channels: ???
+activation_spec:
+  _target_: torch.nn.PReLU
+activation_eeg:
+  _target_: torch.nn.PReLU
+lr_mapping_type: ${architecture.lr_mapping_type}
