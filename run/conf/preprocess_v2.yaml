@@ -1,0 +1,4 @@
+defaults:
+  - main
+  - override preprocess: with_cqf_with_filter
+  - _self_
