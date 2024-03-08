@@ -1,0 +1,6 @@
+defaults:
+  - baseline_efficientnet_v2_mid_se
+  - _self_
+
+exp_name: eeg018
+description: eeg016 + mu-law encoding
