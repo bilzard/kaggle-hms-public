@@ -86,8 +86,7 @@ def save_sample_spec(
         print("model does not have preprocess method. skip generating sample image.")
         return
 
-    output = model.preprocess(batch)
-    specs = output["spec"]
+    specs = model.preprocess(batch)
     d = specs.shape[0] // num_samples
     specs = rearrange(specs, "(d b) c f t -> b (d c) f t", d=d, b=num_samples)
     specs = specs.detach().cpu().numpy()

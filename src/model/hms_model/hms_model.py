@@ -105,14 +105,18 @@ class HmsModel(nn.Module):
         return output
 
     @torch.no_grad()
-    def preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
+    def _preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         output = self.generate_spec(batch)
         output = self.compose_spec(batch, output)
         return output
 
+    @torch.no_grad()
+    def preprocess(self, batch: dict[str, Tensor]) -> Tensor:
+        output = self._preprocess(batch)
+        return output["spec"]
+
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        output = self.generate_spec(batch)
-        output = self.compose_spec(batch, output)
+        output = self._preprocess(batch)
         features = self.encoder(output["spec"])
         x = self.decoder(features)
         x = self.feature_processor(dict(spec=x, spec_mask=output["spec_mask"]))
