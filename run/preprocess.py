@@ -1,3 +1,4 @@
+from functools import partial
 from pathlib import Path
 
 import hydra
@@ -8,9 +9,9 @@ from tqdm import tqdm
 from src.config import MainConfig
 from src.constant import EEG_PROBES, PROBES
 from src.preprocess import (
+    do_process_cqf,
     load_eeg,
     load_spectrogram,
-    process_cqf,
     process_eeg,
     process_label,
     process_spectrogram,
@@ -68,6 +69,39 @@ def save_cqf(eeg_id: str, eeg_df: pl.DataFrame, output_dir: Path):
     np.save(output_file_path / "mask.npy", mask)
 
 
+def process_single_eeg(
+    eeg_id: int,
+    data_dir: Path,
+    output_dir: Path,
+    phase: str,
+    ref_voltage: float,
+    process_cqf: bool,
+    apply_filter: bool,
+    cutoff_freqs: tuple[float, float],
+    dry_run: bool = False,
+) -> None:
+    eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=phase)
+    eeg, pad_mask = process_eeg(
+        eeg_df,
+        apply_filter=apply_filter,
+        cutoff_freqs=cutoff_freqs,
+    )
+
+    eeg /= ref_voltage
+    eeg_df = pl.DataFrame(
+        {probe: pl.Series(v) for probe, v in zip(PROBES, np.transpose(eeg))}
+    )
+    if process_cqf:
+        eeg_df = do_process_cqf(eeg_df)
+
+    if not dry_run:
+        save_eeg(str(eeg_id), eeg_df, output_dir)
+        save_pad_mask(str(eeg_id), pad_mask, output_dir)
+
+        if process_cqf:
+            save_cqf(str(eeg_id), eeg_df, output_dir)
+
+
 def preprocess_eeg(
     metadata: pl.DataFrame,
     cfg: MainConfig,
@@ -80,29 +114,22 @@ def preprocess_eeg(
         return
 
     mkdir_if_not_exists(output_dir)
+
     with trace(f"process eeg (process_cqf={cfg.preprocess.process_cqf})"):
         eeg_ids = metadata["eeg_id"].unique().to_numpy()
+        process_fn = partial(
+            process_single_eeg,
+            data_dir=data_dir,
+            output_dir=output_dir,
+            phase=phase,
+            ref_voltage=cfg.preprocess.ref_voltage,
+            process_cqf=cfg.preprocess.process_cqf,
+            apply_filter=cfg.preprocess.apply_filter,
+            cutoff_freqs=cfg.preprocess.cutoff_freqs,
+            dry_run=cfg.dry_run,
+        )
         for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
-            eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=phase)
-            eeg, pad_mask = process_eeg(
-                eeg_df,
-                apply_filter=cfg.preprocess.apply_filter,
-                cutoff_freqs=cfg.preprocess.cutoff_freqs,
-            )
-
-            eeg /= cfg.preprocess.ref_voltage
-            eeg_df = pl.DataFrame(
-                {probe: pl.Series(v) for probe, v in zip(PROBES, np.transpose(eeg))}
-            )
-            if cfg.preprocess.process_cqf:
-                eeg_df = process_cqf(eeg_df)
-
-            if not cfg.dry_run:
-                save_eeg(eeg_id, eeg_df, output_dir)
-                save_pad_mask(eeg_id, pad_mask, output_dir)
-
-                if cfg.preprocess.process_cqf:
-                    save_cqf(eeg_id, eeg_df, output_dir)
+            process_fn(eeg_id)
 
 
 def preprocess_spectrogram(
@@ -112,7 +139,7 @@ def preprocess_spectrogram(
     output_dir: Path,
     phase: str,
 ):
-    if output_dir.exists():
+    if output_dir.exists() and not cfg.cleanup:
         print(
             f"The directory {output_dir} already exists. Skip processing spectrogram."
         )
