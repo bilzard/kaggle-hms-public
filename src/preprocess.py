@@ -51,11 +51,20 @@ def process_eeg(
     minimum_seq_length=2000,
     clip_val: float = 5000.0,
     fill_nan_with: float = 0.0,
+    apply_filter: bool = False,
+    cutoff_freqs: tuple[float, float] = (0.5, 60),
+    device: str = "cpu",
+    sampling_rate: int = 200,
 ) -> tuple[np.ndarray, np.ndarray]:
     eeg_df = eeg_df.select(PROBES)
     eeg_df = clip_val_to_nan(eeg_df, clip_val)
     eeg_df = eeg_df.interpolate()
     x = eeg_df.to_numpy()
+
+    if apply_filter:
+        x = do_apply_filter(
+            x, sampling_rate=sampling_rate, cutoff_freqs=cutoff_freqs, device=device
+        )
 
     # subsample
     x = rearrange(x, "(n k) c -> n k c", k=down_sampling_rate)

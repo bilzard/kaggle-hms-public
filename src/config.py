@@ -19,6 +19,8 @@ class EnvironmentConfig:
 class PreprocesssConfig:
     process_cqf: bool
     ref_voltage: float
+    apply_filter: bool
+    cutoff_freqs: tuple[float, float]
 
 
 @dataclass
