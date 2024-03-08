@@ -137,6 +137,16 @@ def preprocess_eeg(
             list(tqdm(pool.imap(process_fn, eeg_ids), total=eeg_ids.shape[0]))
 
 
+def process_single_spectrogram(
+    spectrogram_id: int, data_dir: Path, phase: str, output_dir: Path, dry_run: bool
+) -> None:
+    spectrogram_df = load_spectrogram(spectrogram_id, data_dir=data_dir, phase=phase)
+    spectrogram = process_spectrogram(spectrogram_df)
+
+    if not dry_run:
+        save_spectrogram(str(spectrogram_id), spectrogram, output_dir)
+
+
 def preprocess_spectrogram(
     metadata: pl.DataFrame,
     cfg: MainConfig,
@@ -155,14 +165,21 @@ def preprocess_spectrogram(
         spectrogram_ids = (
             metadata["spectrogram_id"].unique(maintain_order=True).to_numpy()
         )
-        for spectrogram_id in tqdm(spectrogram_ids, total=spectrogram_ids.shape[0]):
-            spectrogram_df = load_spectrogram(
-                spectrogram_id, data_dir=data_dir, phase=phase
+        process_fn = partial(
+            process_single_spectrogram,
+            data_dir=data_dir,
+            phase=phase,
+            output_dir=output_dir,
+            dry_run=cfg.dry_run,
+        )
+        with get_context("spawn").Pool(cfg.env.num_workers) as pool:
+            print(f"Start processing spectrogram with {cfg.env.num_workers} workers.")
+            list(
+                tqdm(
+                    pool.imap(process_fn, spectrogram_ids),
+                    total=spectrogram_ids.shape[0],
+                )
             )
-            spectrogram = process_spectrogram(spectrogram_df)
-
-            if not cfg.dry_run:
-                save_spectrogram(spectrogram_id, spectrogram, output_dir)
 
 
 @hydra.main(config_path="conf", config_name="main", version_base="1.2")
