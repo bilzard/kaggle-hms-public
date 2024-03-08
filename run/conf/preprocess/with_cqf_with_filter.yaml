@@ -1,0 +1,6 @@
+defaults:
+  - with_cqf
+  - _self_
+
+apply_filter: false
+cutoff_freqs: [0.5, 60]
