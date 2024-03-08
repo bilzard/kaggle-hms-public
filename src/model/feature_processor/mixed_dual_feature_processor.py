@@ -8,6 +8,7 @@ from src.model.basic_block import (
     GeMPool2d,
     vector_pair_mapping,
 )
+from src.model.head import Head
 
 
 class MixedDualFeatureProcessor(nn.Module):
@@ -24,6 +25,8 @@ class MixedDualFeatureProcessor(nn.Module):
         activation_spec: nn.Module,
         activation_eeg: nn.Module,
         lr_mapping_type: str = "identity",
+        bottleneck_ratio_eeg: int = 4,
+        bottleneck_ratio_spec: int = 4,
     ):
         super().__init__()
         self.in_channels_spec = in_channels_spec
@@ -39,6 +42,14 @@ class MixedDualFeatureProcessor(nn.Module):
         )
         self.spec_pool = GeMPool2d()
         self.sim_pool = GeMPool2d()
+        self.eeg_head = Head(
+            in_channels=2 * in_channels_eeg + hidden_dim,
+            bottleneck_ratio=bottleneck_ratio_eeg,
+        )
+        self.spec_head = Head(
+            in_channels=2 * in_channels_spec + hidden_dim,
+            bottleneck_ratio=bottleneck_ratio_spec,
+        )
 
     @property
     def out_channels(self) -> int:
@@ -62,6 +73,7 @@ class MixedDualFeatureProcessor(nn.Module):
         spec = torch.cat(spec_feats, dim=1)
         spec = self.spec_pool(spec)  # b c 1 1
         spec = rearrange(spec, "b c 1 1 -> b c")
+        spec_pred = self.spec_head(spec)
 
         eeg = inputs["eeg"]
         eeg = rearrange(
@@ -77,10 +89,9 @@ class MixedDualFeatureProcessor(nn.Module):
         eeg = torch.cat(eeg_feats, dim=1)
         eeg = self.sim_pool(eeg)  # b c 1 1
         eeg = rearrange(eeg, "b c 1 1 -> b c")
+        eeg_pred = self.eeg_head(eeg)
 
-        output = torch.cat([spec, eeg], dim=1)
-
-        return output
+        return (spec_pred + eeg_pred) / 2
 
 
 if __name__ == "__main__":
@@ -89,7 +100,7 @@ if __name__ == "__main__":
     duality = 2
     batch_size = 2
     eeg_channels = 10
-    in_channels_spec = 320
+    in_channels_spec = 64
     in_channels_eeg = 192
     hidden_dim = 64
     F_spec, T_spec = 8, 8
@@ -109,9 +120,6 @@ if __name__ == "__main__":
     inputs = dict(spec=spec, eeg=eeg)
     output = feature_processor(inputs)
     print(f"{output.shape=}")
-    assert output.shape == (
-        2,
-        2 * (in_channels_spec + in_channels_eeg + hidden_dim),
-    ), f"{output.shape=}"
+    assert output.shape == (2, 6), f"{output.shape=}"
 
     summary(feature_processor, input=inputs)

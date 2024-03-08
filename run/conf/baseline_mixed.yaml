@@ -3,7 +3,6 @@ defaults:
   - architecture/model/eeg_adapter: eeg_dual_stacking_collator
   - architecture/model/eeg_encoder: efficientnet1d
   - override architecture/model/feature_processor: mixed_dual_feature_processor
-  - override architecture/model/head: mlp_head
   - _self_
 
 exp_name: ???
@@ -15,8 +14,6 @@ architecture:
       se_after_dw_conv: true
     feature_processor:
       num_eeg_channels: 10
-    head:
-      bottleneck_ratio: 14
   in_channels: null
   in_channels_eeg: 20
   in_channels_spec: 2

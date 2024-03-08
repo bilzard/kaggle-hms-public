@@ -50,9 +50,6 @@ class HmsModelMixed(nn.Module):
             in_channels_spec=self.decoder.output_size,
             in_channels_eeg=self.eeg_encoder.out_channels,
         )
-        self.head = instantiate(
-            cfg.model.head, in_channels=self.feature_processor.out_channels
-        )
         self.feature_key = feature_key
         self.pred_key = pred_key
         self.mask_key = mask_key
@@ -133,10 +130,9 @@ class HmsModelMixed(nn.Module):
         # extract spec features
         output["spec"] = self.decoder(self.encoder(output["spec"]))
 
-        x = self.feature_processor(output)
-        x = self.head(x)
+        logit = self.feature_processor(output)
 
-        output = {self.pred_key: x}
+        output = {self.pred_key: logit}
         return output
 
     def _apply_consistency_regularizer(
@@ -261,9 +257,6 @@ def check_model(
         dict(eeg=eeg, eeg_mask=eeg_mask, spec=spec, spec_mask=spec_mask)
     )
     print_shapes("Feature Processor", model.feature_processor, {"x": x})
-
-    x = model.head(x)
-    print_shapes("Head", model.head, {"x": x})
 
     print("=" * 80)
     print("EEG Encoder (detail):")
