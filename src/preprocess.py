@@ -89,7 +89,7 @@ def process_eeg(
 def do_apply_filter(
     xa: np.ndarray,
     sampling_rate: int = 40,
-    cutoff_freqs: tuple[float, float] = (0.5, 50),
+    cutoff_freqs: tuple[float | None, float | None] = (0.5, 50),
     device="cpu",
 ):
     """
@@ -97,8 +97,10 @@ def do_apply_filter(
     x: ch t
     """
     x = torch.from_numpy(xa).float().to(device).unsqueeze(0)
-    x = AF.highpass_biquad(x, sampling_rate, cutoff_freqs[0])
-    x = AF.lowpass_biquad(x, sampling_rate, cutoff_freqs[1])
+    if cutoff_freqs[0] is not None:
+        x = AF.highpass_biquad(x, sampling_rate, cutoff_freqs[0])
+    if cutoff_freqs[1] is not None:
+        x = AF.lowpass_biquad(x, sampling_rate, cutoff_freqs[1])
     x = x.squeeze(0).detach().cpu().numpy()
     return x
 
