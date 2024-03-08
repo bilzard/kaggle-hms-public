@@ -62,9 +62,11 @@ def process_eeg(
     x = eeg_df.to_numpy()
 
     if apply_filter:
+        x = rearrange(x, "t c -> c t")
         x = do_apply_filter(
             x, sampling_rate=sampling_rate, cutoff_freqs=cutoff_freqs, device=device
         )
+        x = rearrange(x, "c t -> t c")
 
     # subsample
     x = rearrange(x, "(n k) c -> n k c", k=down_sampling_rate)
@@ -91,7 +93,8 @@ def do_apply_filter(
     device="cpu",
 ):
     """
-    x: (n_samples, )
+    xa: ch t
+    x: ch t
     """
     x = torch.from_numpy(xa).float().to(device).unsqueeze(0)
     x = AF.highpass_biquad(x, sampling_rate, cutoff_freqs[0])
