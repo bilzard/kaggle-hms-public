@@ -39,7 +39,7 @@ class HmsModel1d(nn.Module):
         self.weight_key = weight_key
 
     @torch.no_grad()
-    def _preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
+    def preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         eeg = batch[self.feature_key]
         eeg_mask = batch[self.mask_key]
 
@@ -51,14 +51,8 @@ class HmsModel1d(nn.Module):
 
         return output
 
-    @torch.no_grad()
-    def preprocess(self, batch: dict[str, Tensor]) -> Tensor:
-        output = self._preprocess(batch)
-
-        return output["eeg"]
-
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        output = self._preprocess(batch)
+        output = self.preprocess(batch)
         x = self.eeg_encoder(output["eeg"])
         x = self.eeg_feature_processor(x)
         x = self.head(x)
