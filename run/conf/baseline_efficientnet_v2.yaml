@@ -1,0 +1,20 @@
+defaults:
+  - baseline_efficientnet
+  - override architecture/model/eeg_adapter: compose_adapter
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    feature_extractor:
+      apply_mask: false
+    eeg_adapter:
+      _target_: src.model.eeg_adapter.Compose
+      targets:
+        - _target_: src.model.eeg_adapter.EegDualStackingCollator
+          drop_z: false
+        - _target_: src.model.eeg_adapter.MuLawEncoding
+          mu: 512
+          T: 0.6
