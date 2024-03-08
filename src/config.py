@@ -16,7 +16,7 @@ class EnvironmentConfig:
 
 
 @dataclass
-class PreprocesssConfig:
+class PreprocessConfig:
     process_cqf: bool
     ref_voltage: float
     apply_filter: bool
@@ -149,7 +149,7 @@ class MainConfig:
     cleanup: bool
     final_submission: bool
     check_only: bool
-    preprocess: PreprocesssConfig
+    preprocess: PreprocessConfig
     env: EnvironmentConfig
     split: SplitConfig
     architecture: ArchitectureConfig

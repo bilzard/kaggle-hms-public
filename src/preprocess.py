@@ -100,7 +100,7 @@ def do_apply_filter(
     return x
 
 
-def process_cqf(
+def do_process_cqf(
     eeg_df: pl.DataFrame,
     kernel_size: int = 13,
     top_k: int = 3,
