@@ -2,5 +2,6 @@ defaults:
   - with_cqf
   - _self_
 
-apply_filter: false
+apply_filter: true
 cutoff_freqs: [0.5, 60]
+device: cuda

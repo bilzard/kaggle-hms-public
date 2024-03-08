@@ -1,4 +1,6 @@
+import warnings
 from functools import partial
+from multiprocessing import get_context
 from pathlib import Path
 
 import hydra
@@ -18,6 +20,8 @@ from src.preprocess import (
     select_develop_samples,
 )
 from src.proc_util import trace
+
+warnings.filterwarnings("ignore", message="Mean of empty slice")
 
 
 def mkdir_if_not_exists(dir_path: Path):
@@ -78,13 +82,12 @@ def process_single_eeg(
     process_cqf: bool,
     apply_filter: bool,
     cutoff_freqs: tuple[float, float],
+    device: str,
     dry_run: bool = False,
 ) -> None:
     eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=phase)
     eeg, pad_mask = process_eeg(
-        eeg_df,
-        apply_filter=apply_filter,
-        cutoff_freqs=cutoff_freqs,
+        eeg_df, apply_filter=apply_filter, cutoff_freqs=cutoff_freqs, device=device
     )
 
     eeg /= ref_voltage
@@ -109,7 +112,7 @@ def preprocess_eeg(
     output_dir: Path,
     phase: str,
 ):
-    if output_dir.exists():
+    if output_dir.exists() and not cfg.cleanup:
         print(f"The directory {output_dir} already exists. Skip preprocessing eeg.")
         return
 
@@ -126,10 +129,12 @@ def preprocess_eeg(
             process_cqf=cfg.preprocess.process_cqf,
             apply_filter=cfg.preprocess.apply_filter,
             cutoff_freqs=cfg.preprocess.cutoff_freqs,
+            device=cfg.preprocess.device,
             dry_run=cfg.dry_run,
         )
-        for eeg_id in tqdm(eeg_ids, total=eeg_ids.shape[0]):
-            process_fn(eeg_id)
+        with get_context("spawn").Pool(cfg.env.num_workers) as pool:
+            print(f"Start processing eeg with {cfg.env.num_workers} workers.")
+            list(tqdm(pool.imap(process_fn, eeg_ids), total=eeg_ids.shape[0]))
 
 
 def preprocess_spectrogram(

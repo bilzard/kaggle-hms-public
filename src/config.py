@@ -21,6 +21,7 @@ class PreprocessConfig:
     ref_voltage: float
     apply_filter: bool
     cutoff_freqs: tuple[float, float]
+    device: str
 
 
 @dataclass
