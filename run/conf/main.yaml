@@ -16,6 +16,7 @@ hydra:
 defaults:
   - env: local
   - preprocess: with_cqf
+  - preprocess/cqf: default
   - split: gkfold5
   - _self_
 

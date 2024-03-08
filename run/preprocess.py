@@ -8,7 +8,7 @@ import numpy as np
 import polars as pl
 from tqdm import tqdm
 
-from src.config import MainConfig
+from src.config import CqfConfig, MainConfig
 from src.constant import EEG_PROBES, PROBES
 from src.preprocess import (
     do_process_cqf,
@@ -85,6 +85,7 @@ def process_single_eeg(
     cutoff_freqs: tuple[float | None, float | None],
     reject_freq: float | None,
     device: str,
+    cqf_conf: CqfConfig,
     dry_run: bool = False,
 ) -> None:
     eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=phase)
@@ -102,7 +103,15 @@ def process_single_eeg(
         {probe: pl.Series(v) for probe, v in zip(PROBES, np.transpose(eeg))}
     )
     if process_cqf:
-        eeg_df = do_process_cqf(eeg_df)
+        eeg_df = do_process_cqf(
+            eeg_df,
+            kernel_size=cqf_conf.kernel_size,
+            top_k=cqf_conf.top_k,
+            eps=cqf_conf.eps,
+            distance_threshold=cqf_conf.distance_threshold,
+            distance_metric=cqf_conf.distance_metric,
+            normalize_type=cqf_conf.normalize_type,
+        )
 
     if not dry_run:
         save_eeg(str(eeg_id), eeg_df, output_dir)
@@ -138,6 +147,7 @@ def preprocess_eeg(
             apply_filter=cfg.preprocess.apply_filter,
             cutoff_freqs=cfg.preprocess.cutoff_freqs,
             reject_freq=cfg.preprocess.reject_freq,
+            cqf_conf=cfg.preprocess.cqf,
             device=cfg.preprocess.device,
             dry_run=cfg.dry_run,
         )

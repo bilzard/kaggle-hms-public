@@ -1,0 +1,6 @@
+kernel_size: 13
+top_k: 3
+eps: 1e-4
+distance_threshold: 10.0
+distance_metric: l2
+normalize_type: top-k
