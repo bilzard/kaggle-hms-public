@@ -86,19 +86,22 @@ def save_sample_spec(
         print("model does not have preprocess method. skip generating sample image.")
         return
 
-    specs = model.preprocess(batch)
-    d = specs.shape[0] // num_samples
-    match specs.ndim:
-        case 4:
-            specs = rearrange(specs, "(d b) c f t -> b f t (d c)", d=d, b=num_samples)
-        case 3:
-            specs = rearrange(specs, "(d b) (c ch) t -> b ch t (d c)", d=2, c=2)
-        case _:
-            raise ValueError(f"invalid ndim: {specs.ndim}")
+    output = model.preprocess(batch)
+    eegs = output.get("eeg", None)
+    specs = output.get("spec", None)
 
-    specs = specs.detach().cpu().numpy()
-    for eeg_id, spec in zip(eeg_ids, specs):
-        np.save(figure_path / f"spec_{eeg_id}.npy", spec.astype(np.float16))
+    if eegs is not None:
+        eegs = rearrange(eegs, "(d b) (c ch) t -> b ch t (d c)", d=2, c=2)
+        eegs = eegs.detach().cpu().numpy()
+        for eeg_id, eeg in zip(eeg_ids, eegs):
+            np.save(figure_path / f"eeg_{eeg_id}.npy", eeg.astype(np.float16))
+
+    if specs is not None:
+        d = specs.shape[0] // num_samples
+        specs = rearrange(specs, "(d b) c f t -> b f t (d c)", d=d, b=num_samples)
+        specs = specs.detach().cpu().numpy()
+        for eeg_id, spec in zip(eeg_ids, specs):
+            np.save(figure_path / f"spec_{eeg_id}.npy", spec.astype(np.float16))
 
 
 @hydra.main(config_path="conf", config_name="baseline", version_base="1.2")

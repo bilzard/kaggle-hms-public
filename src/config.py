@@ -124,6 +124,8 @@ class TrainerConfig:
 @dataclass
 class ArchitectureConfig:
     in_channels: int
+    in_channels_eeg: int
+    in_channels_spec: int
     out_channels: int
     recover_dual: bool
     use_lr_feature: bool
