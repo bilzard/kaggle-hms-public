@@ -16,6 +16,16 @@ class EnvironmentConfig:
 
 
 @dataclass
+class CqfConfig:
+    kernel_size: int
+    top_k: int
+    eps: float
+    distance_threshold: float
+    distance_metric: str
+    normalize_type: str
+
+
+@dataclass
 class PreprocessConfig:
     process_cqf: bool
     clip_val: float
@@ -24,6 +34,7 @@ class PreprocessConfig:
     cutoff_freqs: tuple[float | None, float | None]
     reject_freq: float | None
     device: str
+    cqf: CqfConfig
 
 
 @dataclass
