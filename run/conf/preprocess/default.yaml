@@ -1,4 +1,6 @@
+clip_val: 5000
 ref_voltage: 1000
 apply_filter: false
 cutoff_freqs: [null, null]
+reject_freq: null
 device: cpu
