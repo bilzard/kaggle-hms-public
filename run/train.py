@@ -82,13 +82,11 @@ def save_sample_spec(
     input_keys = cfg.trainer.data.input_keys + ["label", "weight"]
     move_device(batch, input_keys=input_keys, device=device)
 
-    if not hasattr(model, "generate_and_compose_spec"):
-        print(
-            "model does not have generate_and_compose_spec method. skip generating sample image."
-        )
+    if not hasattr(model, "preprocess"):
+        print("model does not have preprocess method. skip generating sample image.")
         return
 
-    output = model.generate_and_compose_spec(batch)
+    output = model.preprocess(batch)
     specs = output["spec"]
     d = specs.shape[0] // num_samples
     specs = rearrange(specs, "(d b) c f t -> b (d c) f t", d=d, b=num_samples)
