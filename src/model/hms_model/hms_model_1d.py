@@ -39,22 +39,27 @@ class HmsModel1d(nn.Module):
         self.weight_key = weight_key
 
     @torch.no_grad()
-    def collate_channels(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
+    def _preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         eeg = batch[self.feature_key]
         eeg_mask = batch[self.mask_key]
 
         with torch.autocast(device_type="cuda", enabled=False):
             output = self.feature_extractor(eeg, eeg_mask)
+            eeg, eeg_mask = output["eeg"], output["eeg_mask"]
+            eeg, eeg_mask = self.eeg_adapter(eeg, eeg_mask)
+            output["eeg"] = torch.cat([eeg, eeg_mask], dim=1)
 
         return output
 
+    @torch.no_grad()
+    def preprocess(self, batch: dict[str, Tensor]) -> Tensor:
+        output = self._preprocess(batch)
+
+        return output["eeg"]
+
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        with torch.no_grad():
-            output = self.collate_channels(batch)
-            eeg, eeg_mask = output["eeg"], output["eeg_mask"]
-            eeg, eeg_mask = self.eeg_adapter(eeg, eeg_mask)
-            x = torch.cat([eeg, eeg_mask], dim=1)
-        x = self.eeg_encoder(x)
+        output = self._preprocess(batch)
+        x = self.eeg_encoder(output["eeg"])
         x = self.eeg_feature_processor(x)
         x = self.head(x)
 
