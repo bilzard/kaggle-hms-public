@@ -1,0 +1,6 @@
+defaults:
+  - baseline_mixed
+  - _self_
+
+exp_name: exp083
+description: 1D + 2D mixed model
