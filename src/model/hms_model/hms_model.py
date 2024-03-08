@@ -105,7 +105,7 @@ class HmsModel(nn.Module):
         return output
 
     @torch.no_grad()
-    def generate_and_compose_spec(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
+    def preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         output = self.generate_spec(batch)
         output = self.compose_spec(batch, output)
         return output
