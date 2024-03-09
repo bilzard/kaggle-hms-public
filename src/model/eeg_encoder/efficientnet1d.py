@@ -15,6 +15,8 @@ from einops import rearrange
 from timm.layers import DropPath
 from torch import Tensor
 
+from src.model.basic_block.transformer import SharedQkMultiHeadSelfAttention
+
 
 class SqueezeExcite(nn.Module):
     def __init__(
@@ -215,6 +217,30 @@ class ResBlock2d(nn.Module):
         return self.pool(x) + self.layer(x)
 
 
+class TransformerBlock(nn.Module):
+    def __init__(self, hidden_dims: int, num_heads: int, **kwargs):
+        super().__init__()
+        self.norm = nn.LayerNorm(hidden_dims)
+        self.mhsa = SharedQkMultiHeadSelfAttention(hidden_dims, num_heads, **kwargs)
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = x + self.mhsa(self.norm(x))
+        return x
+
+
+class TransformerChannelMixer(nn.Module):
+    def __init__(self, hidden_dims: int, num_heads: int, **kwargs):
+        super().__init__()
+        self.transformer = TransformerBlock(hidden_dims, num_heads, **kwargs)
+
+    def forward(self, x: Tensor) -> Tensor:
+        T = x.shape[-1]
+        x = rearrange(x, "b c ch t -> (b t) ch c")
+        x = self.transformer(x)
+        x = rearrange(x, "(b t) ch c -> b c ch t", t=T)
+        return x
+
+
 class EfficientNet1d(nn.Module):
     def __init__(
         self,
@@ -236,6 +262,7 @@ class EfficientNet1d(nn.Module):
         use_channel_mixer: bool = False,
         channel_mixer_kernel_size: int = 3,
         mixer_type: str = "sc",
+        transformer_merge_type: str = "add",
     ):
         super().__init__()
         if isinstance(layers, int):
@@ -295,12 +322,20 @@ class EfficientNet1d(nn.Module):
                                 se_after_dw_conv=se_after_dw_conv,
                             )
                             if mixer_type == "ir"
-                            else DepthWiseSeparableConv(
-                                hidden_dim=hidden_dim,
-                                kernel_size=(channel_mixer_kernel_size, 1),
-                                activation=activation,
-                                se_ratio=depth_multiplier,
-                                se_after_dw_conv=se_after_dw_conv,
+                            else (
+                                DepthWiseSeparableConv(
+                                    hidden_dim=hidden_dim,
+                                    kernel_size=(channel_mixer_kernel_size, 1),
+                                    activation=activation,
+                                    se_ratio=depth_multiplier,
+                                    se_after_dw_conv=se_after_dw_conv,
+                                )
+                                if mixer_type == "sc"
+                                else TransformerChannelMixer(
+                                    hidden_dim,
+                                    num_heads=depth_multiplier,
+                                    merge_type=transformer_merge_type,
+                                )
                             )
                         )
                         if use_channel_mixer
