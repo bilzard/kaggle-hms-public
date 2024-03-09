@@ -211,7 +211,7 @@ def main(cfg: MainConfig):
     if cfg.phase == "develop":
         columns_org = metadata.columns
         metadata = process_label(metadata)
-        metadata = select_develop_samples(metadata)
+        metadata = select_develop_samples(metadata, num_samples=cfg.infer.num_samples)
         metadata = metadata.select(columns_org)
 
     output_dir_eeg = Path("eeg")
