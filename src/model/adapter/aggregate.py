@@ -309,3 +309,47 @@ class DualCanvasWeightedMeanAggregator(CanvasWeightedMeanAggregator):
         mask = rearrange(mask, "b c f t -> (c b) 1 f t")
 
         return spec, mask
+
+
+def collate_dual_separated_channels(x: Tensor, drop_z: bool = False) -> Tensor:
+    """
+    input: b ch f t
+    output: (d ch b) 1 f t
+    """
+    x_ll = x[:, 0:4]
+    x_lp = x[:, 4:8]
+    x_z = x[:, 8:10]
+    x_rp = x[:, 10:14]
+    x_rl = x[:, 14:18]
+
+    x_left = torch.cat([x_ll, x_lp], dim=1)
+    x_right = torch.cat([x_rl, x_rp], dim=1)
+
+    if not drop_z:
+        x_left = torch.cat([x_left, x_z], dim=1)
+        x_right = torch.cat([x_right, x_z], dim=1)
+
+    x = torch.stack([x_left, x_right], dim=0)  # d b ch f t
+    x = rearrange(x, "d b ch f t -> (d ch b) 1 f t").contiguous()
+
+    return x
+
+
+class DualChannelSeparatedAggregator(nn.Module):
+    def __init__(self, drop_z: bool = False):
+        super().__init__()
+        self.drop_z = drop_z
+
+    @torch.no_grad()
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
+        """
+        input: b ch f t
+        output: (d ch b) 1 f t
+        """
+        B, C, F, T = spec.shape
+        mask = mask.expand(B, C, F, T)
+
+        spec = collate_dual_separated_channels(spec, drop_z=self.drop_z)
+        mask = collate_dual_separated_channels(mask, drop_z=self.drop_z)
+
+        return spec, mask
