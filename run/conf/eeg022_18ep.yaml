@@ -1,0 +1,10 @@
+defaults:
+  - eeg022
+  - _self_
+
+exp_name: eeg022_18ep
+description: eeg022 + 18 epochs
+
+trainer:
+  epochs: 18
+  weight_decay: 0.001

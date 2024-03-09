@@ -1,0 +1,10 @@
+defaults:
+  - exp083
+  - _self_
+
+exp_name: exp083_18ep
+description: 1D + 2D mixed model (18 epochs)
+
+trainer:
+  epochs: 18
+  weight_decay: 0.001
