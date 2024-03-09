@@ -1,5 +1,6 @@
 from .activation import ClampedSigmoid, ClampedTanh
 from .conv import ConvBnPReLu2d
+from .conv_block import ConvBnAct2d
 from .cosine_similarity_encoder import (
     CosineSimilarityEncoder1d,
     CosineSimilarityEncoder2d,
@@ -29,4 +30,5 @@ __all__ = [
     "CosineSimilarityEncoder1d",
     "CosineSimilarityEncoder2d",
     "CosineSimilarityEncoder3d",
+    "ConvBnAct2d",
 ]
