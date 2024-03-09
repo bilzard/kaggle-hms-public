@@ -1,0 +1,15 @@
+defaults:
+  - baseline_efficientnet
+  - override architecture/model/eeg_feature_processor: eeg_dual_per_channel_v2
+  - _self_
+
+exp_name: eeg021
+description: eeg016 + eeg_dual_per_channel_v2
+
+architecture:
+  model:
+    eeg_encoder:
+      se_after_dw_conv: true
+      use_channel_mixer: false
+    eeg_feature_processor:
+      num_eeg_channels: 10
