@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v4_channel_separated
+  - _self_
+
+exp_name: exp084
+description: 2D + channel separated

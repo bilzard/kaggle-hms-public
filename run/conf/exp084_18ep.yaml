@@ -1,0 +1,10 @@
+defaults:
+  - baseline_v4_channel_separated
+  - _self_
+
+exp_name: exp084_18ep
+description: 2D + channel separated
+
+trainer:
+  epochs: 18
+  weight_decay: 0.001
