@@ -1,4 +1,7 @@
 from .base import IdentityFeatureProcessor
+from .dual_channel_separated_feature_processor import (
+    DualChannelSeparatedFeatureProcessor,
+)
 from .dual_feature_processor import DualFeatureProcessor
 from .dual_feature_processor_two_stage import DualFeatureProcessorTwoStage
 from .dual_feature_processor_v2 import DualFeatureProcessorV2
@@ -14,4 +17,5 @@ __all__ = [
     "DualFeatureProcessorTwoStage",
     "DualFeatureProcessorV2",
     "MixedDualFeatureProcessor",
+    "DualChannelSeparatedFeatureProcessor",
 ]

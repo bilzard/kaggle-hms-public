@@ -1,0 +1,6 @@
+_target_: src.model.feature_processor.DualChannelSeparatedFeatureProcessor
+hidden_dim: ${architecture.hidden_dim}
+num_eeg_channels: ???
+activation:
+  _target_: torch.nn.PReLU
+lr_mapping_type: ${architecture.lr_mapping_type}
