@@ -5,6 +5,36 @@ from torch import Tensor
 from src.model.basic_block.util import calc_similarity
 
 
+class CosineSimilarityEncoder3d(nn.Module):
+    def __init__(
+        self,
+        hidden_dim: int,
+        activation: nn.Module,
+        channel_dim: int = 1,
+    ):
+        super().__init__()
+        self.hidden_dim = hidden_dim
+        self.channel_dim = channel_dim
+        self.similarity_encoder = nn.Sequential(
+            nn.Conv3d(1, self.hidden_dim, kernel_size=1, bias=False),
+            nn.BatchNorm3d(self.hidden_dim),
+            activation,
+        )
+
+    def forward(self, x_left: Tensor, x_right: Tensor) -> Tensor:
+        """
+        x_left: b c ch f t
+        x_right: b c ch f t
+        output: b c ch f t
+        """
+        assert x_left.shape == x_right.shape, f"{x_left.shape} != {x_right.shape}"
+        assert len(x_left.shape) == 5, f"dimension should be 5, got {x_left.shape}"
+
+        sim = calc_similarity(x_left, x_right)
+        sim = self.similarity_encoder(sim)
+        return sim
+
+
 class CosineSimilarityEncoder2d(nn.Module):
     def __init__(
         self,
