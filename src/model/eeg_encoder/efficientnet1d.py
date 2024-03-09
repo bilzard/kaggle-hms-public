@@ -94,7 +94,7 @@ class DepthWiseSeparableConv(nn.Module):
     def __init__(
         self,
         hidden_dim: int,
-        kernel_size: int,
+        kernel_size: tuple[int, ...],
         activation: type[nn.Module],
         se_ratio: int = 4,
         skip: bool = True,
@@ -107,7 +107,7 @@ class DepthWiseSeparableConv(nn.Module):
             ConvBnAct2d(
                 hidden_dim,
                 hidden_dim,
-                kernel_size=(1, kernel_size),
+                kernel_size=kernel_size,
                 groups=hidden_dim,
                 activation=activation,
             )
@@ -140,7 +140,7 @@ class InvertedResidual(nn.Module):
         self,
         hidden_dim: int,
         depth_multiplier: int,
-        kernel_size: int,
+        kernel_size: tuple[int, ...],
         activation: type[nn.Module],
         se_ratio: int = 4,
         skip: bool = True,
@@ -155,7 +155,7 @@ class InvertedResidual(nn.Module):
             ConvBnAct2d(
                 hidden_dim,
                 hidden_dim * depth_multiplier,
-                kernel_size=(1, kernel_size),
+                kernel_size=kernel_size,
                 groups=hidden_dim,
                 activation=activation,
             ),
@@ -215,90 +215,6 @@ class ResBlock2d(nn.Module):
         return self.pool(x) + self.layer(x)
 
 
-class ChannelMixerSc(nn.Module):
-    def __init__(
-        self,
-        kernel_size: int,
-        hidden_dim: int,
-        se_ratio: int,
-        activation: type[nn.Module],
-    ):
-        super().__init__()
-        self.mixer = nn.Sequential(
-            ConvBnAct2d(
-                hidden_dim,
-                hidden_dim,
-                activation=activation,
-            ),
-            ConvBnAct2d(
-                hidden_dim,
-                hidden_dim,
-                kernel_size=(kernel_size, 1),
-                activation=activation,
-                groups=hidden_dim,
-            ),
-            SqueezeExcite(
-                hidden_dim,
-                se_ratio=se_ratio,
-                activation=activation,
-            ),
-            ConvBnAct2d(
-                hidden_dim,
-                hidden_dim,
-                activation=activation,
-            ),
-        )
-
-    def forward(self, x: Tensor) -> Tensor:
-        """
-        x: b c ch t
-        output: b c ch t
-        """
-        return x + self.mixer(x)
-
-
-class ChannelMixerIr(nn.Module):
-    def __init__(
-        self,
-        kernel_size: int,
-        hidden_dim: int,
-        depth_multiplier: int,
-        activation: type[nn.Module],
-    ):
-        super().__init__()
-        self.mixer = nn.Sequential(
-            ConvBnAct2d(
-                hidden_dim,
-                hidden_dim,
-                activation=activation,
-            ),
-            ConvBnAct2d(
-                hidden_dim,
-                hidden_dim * depth_multiplier,
-                kernel_size=(kernel_size, 1),
-                activation=activation,
-                groups=hidden_dim,
-            ),
-            SqueezeExcite(
-                hidden_dim * depth_multiplier,
-                se_ratio=depth_multiplier,
-                activation=activation,
-            ),
-            ConvBnAct2d(
-                hidden_dim * depth_multiplier,
-                hidden_dim,
-                activation=activation,
-            ),
-        )
-
-    def forward(self, x: Tensor) -> Tensor:
-        """
-        x: b c ch t
-        output: b c ch t
-        """
-        return x + self.mixer(x)
-
-
 class EfficientNet1d(nn.Module):
     def __init__(
         self,
@@ -349,7 +265,7 @@ class EfficientNet1d(nn.Module):
                         *[
                             DepthWiseSeparableConv(
                                 hidden_dim=hidden_dim,
-                                kernel_size=k,
+                                kernel_size=(1, k),
                                 activation=activation,
                                 se_ratio=depth_multiplier,
                                 drop_path_rate=drop_path_rate,
@@ -360,7 +276,7 @@ class EfficientNet1d(nn.Module):
                             else InvertedResidual(
                                 hidden_dim=hidden_dim,
                                 depth_multiplier=depth_multiplier,
-                                kernel_size=k,
+                                kernel_size=(1, k),
                                 activation=activation,
                                 se_ratio=depth_multiplier,
                                 drop_path_rate=drop_path_rate,
@@ -370,18 +286,21 @@ class EfficientNet1d(nn.Module):
                             for _ in range(nl)
                         ],
                         (
-                            ChannelMixerIr(
-                                channel_mixer_kernel_size,
-                                hidden_dim,
+                            InvertedResidual(
+                                hidden_dim=hidden_dim,
+                                kernel_size=(channel_mixer_kernel_size, 1),
                                 activation=activation,
                                 depth_multiplier=depth_multiplier,
+                                se_ratio=depth_multiplier,
+                                se_after_dw_conv=se_after_dw_conv,
                             )
                             if mixer_type == "ir"
-                            else ChannelMixerSc(
-                                channel_mixer_kernel_size,
-                                hidden_dim,
+                            else DepthWiseSeparableConv(
+                                hidden_dim=hidden_dim,
+                                kernel_size=(channel_mixer_kernel_size, 1),
                                 activation=activation,
                                 se_ratio=depth_multiplier,
+                                se_after_dw_conv=se_after_dw_conv,
                             )
                         )
                         if use_channel_mixer
