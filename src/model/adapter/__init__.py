@@ -17,7 +17,7 @@ from .normalize import (
     InstanceNormalizer,
     LayerNormalizer,
 )
-from .transform import ResizeTransform
+from .transform import ResizeTransform, TimeCroppingTransform
 
 __all__ = [
     "WeightedMeanStackingAggregator",
@@ -36,4 +36,5 @@ __all__ = [
     "CanvasWeightedMeanAggregator",
     "DualCanvasWeightedMeanAggregator",
     "DualChannelSeparatedAggregator",
+    "TimeCroppingTransform",
 ]
