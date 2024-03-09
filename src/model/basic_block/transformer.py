@@ -19,12 +19,20 @@ def scaled_dot_product_attention(query: Tensor, key: Tensor, value: Tensor) -> T
 
 
 class MultiHeadSelfAttention(nn.Module):
-    def __init__(self, d_model: int, num_heads: int, merge_type: str = "concat"):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        merge_type: str = "concat",
+        bottleneck_ratio: int = 1,
+    ):
         super().__init__()
+        input_dim = d_model
+        d_model = d_model // bottleneck_ratio
         self.num_heads = num_heads
-        self.qkv = nn.Linear(d_model, d_model * 3)
+        self.qkv = nn.Linear(input_dim, d_model * 3)
         self.o = nn.Linear(
-            d_model // num_heads if merge_type == "mean" else d_model, d_model
+            d_model // num_heads if merge_type == "mean" else d_model, input_dim
         )
         self.merge_type = merge_type
 
@@ -47,12 +55,21 @@ class MultiHeadSelfAttention(nn.Module):
 
 
 class SharedQkMultiHeadSelfAttention(nn.Module):
-    def __init__(self, d_model: int, num_heads: int, merge_type: str = "concat"):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        merge_type: str = "concat",
+        bottleneck_ratio: int = 1,
+    ):
         super().__init__()
+        input_dim = d_model
+        d_model = d_model // bottleneck_ratio
+
         self.num_heads = num_heads
-        self.qv = nn.Linear(d_model, d_model * 2)
+        self.qv = nn.Linear(input_dim, d_model * 2)
         self.o = nn.Linear(
-            d_model // num_heads if merge_type == "mean" else d_model, d_model
+            d_model // num_heads if merge_type == "mean" else d_model, input_dim
         )
         self.merge_type = merge_type
 
@@ -75,12 +92,20 @@ class SharedQkMultiHeadSelfAttention(nn.Module):
 
 
 class SharedQkvMultiHeadSelfAttention(nn.Module):
-    def __init__(self, d_model: int, num_heads: int, merge_type: str = "concat"):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        merge_type: str = "concat",
+        bottleneck_ratio: int = 1,
+    ):
         super().__init__()
+        input_dim = d_model
+        d_model = d_model // bottleneck_ratio
         self.num_heads = num_heads
-        self.v = nn.Linear(d_model, d_model)
+        self.v = nn.Linear(input_dim, d_model)
         self.o = nn.Linear(
-            d_model // num_heads if merge_type == "mean" else d_model, d_model
+            d_model // num_heads if merge_type == "mean" else d_model, input_dim
         )
         self.merge_type = merge_type
 
