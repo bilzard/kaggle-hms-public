@@ -3,6 +3,7 @@ from .aggregate import (
     CanvasWeightedMeanAggregator,
     DualCanvasAggregator,
     DualCanvasWeightedMeanAggregator,
+    DualChannelSeparatedAggregator,
     DualTilingAggregator,
     DualWeightedMeanStackingAggregator,
     DualWeightedMeanTilingAggregator,
@@ -34,4 +35,5 @@ __all__ = [
     "WeightedMeanTilingAggregator",
     "CanvasWeightedMeanAggregator",
     "DualCanvasWeightedMeanAggregator",
+    "DualChannelSeparatedAggregator",
 ]
