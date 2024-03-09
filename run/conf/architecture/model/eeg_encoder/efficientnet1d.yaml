@@ -12,3 +12,6 @@ skip_in_layer: false
 drop_path_rate: 0.0
 use_ds_conv: false
 se_after_dw_conv: false
+use_channel_mixer: false
+channel_mixer_kernel_size: 3
+mixer_type: sc
