@@ -1,0 +1,14 @@
+defaults:
+  - baseline_efficientnet
+  - _self_
+
+exp_name: eeg019
+description: eeg016 + channel mixer(sep conv)
+
+architecture:
+  model:
+    eeg_encoder:
+      se_after_dw_conv: true
+      use_channel_mixer: true
+      channel_mixer_kernel_size: 3
+      mixer_type: sc
