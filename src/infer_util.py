@@ -30,9 +30,9 @@ def load_metadata(
             fold_split_df = pl.read_parquet(fold_split_dir / "fold_split.pqt")
             if fold >= 0:
                 fold_split_df = fold_split_df.filter(pl.col("fold").eq(fold))
-            eeg_ids = fold_split_df.select("eeg_id").unique()
+            target_fold = fold_split_df.select("eeg_id", "fold").unique()
             metadata = pl.read_csv(data_dir / "train.csv")
-            metadata = metadata.join(eeg_ids, on="eeg_id")
+            metadata = metadata.join(target_fold, on="eeg_id")
             metadata = process_label(metadata)
             if group_by_eeg:
                 metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
