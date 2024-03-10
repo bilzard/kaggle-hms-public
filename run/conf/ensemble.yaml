@@ -19,7 +19,7 @@ hydra:
 
 defaults:
   - env: local
-  - ensemble_entity: cross_fold_single_3_seeds
+  - ensemble_entity: f01234_s012
   - _self_
 
 job_name: ensemble
