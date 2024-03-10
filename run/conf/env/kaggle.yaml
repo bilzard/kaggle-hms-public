@@ -1,3 +1,4 @@
+name: kaggle
 num_workers: 4
 
 data_dir: /kaggle/input/hms-harmful-brain-activity-classification

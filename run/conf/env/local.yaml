@@ -1,3 +1,4 @@
+name: local
 num_workers: 24
 
 data_dir: /ml-docker/input/hms-harmful-brain-activity-classification
