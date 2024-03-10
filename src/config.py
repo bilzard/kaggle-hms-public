@@ -6,8 +6,8 @@ from omegaconf import DictConfig
 
 @dataclass
 class EnvironmentConfig:
+    name: str
     num_workers: int
-
     data_dir: str
     working_dir: str
     output_dir: str
