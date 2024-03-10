@@ -9,6 +9,7 @@ class EnvironmentConfig:
     name: str
     num_workers: int
     infer_batch_size: int
+    grad_checkpointing: bool
     data_dir: str
     working_dir: str
     output_dir: str
