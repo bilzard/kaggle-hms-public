@@ -105,7 +105,7 @@ architecture:
   bg_spec_mask_value: 1.0
 
 infer:
-  batch_size: 32
+  batch_size: ${env.infer_batch_size}
   num_samples: 2640
   model_choice: last
   log_name: infer_pipeline.txt
