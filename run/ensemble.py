@@ -125,6 +125,7 @@ def main(cfg: EnsembleMainConfig):
                     fold_split_dir=fold_split_dir,
                     group_by_eeg=True,
                     weight_key="weight_per_eeg",
+                    num_samples=cfg.dev.num_samples,
                 )
                 do_evaluate(metadata, predictions)
 

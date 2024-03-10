@@ -159,6 +159,7 @@ def main(cfg: EnsembleMainConfig):
         data_dir=data_dir,
         phase=cfg.phase,
         fold_split_dir=fold_split_dir,
+        num_samples=cfg.dev.num_samples,
     )
     with trace("** load eeg"):
         eeg_ids = metadata["eeg_id"].unique().to_list()
@@ -193,6 +194,7 @@ def main(cfg: EnsembleMainConfig):
                     fold_split_dir=fold_split_dir,
                     group_by_eeg=True,
                     weight_key="weight_per_eeg",
+                    num_samples=cfg.dev.num_samples,
                 )
                 do_evaluate(metadata, pred_df)
 
