@@ -1,5 +1,6 @@
 name: local
 num_workers: 24
+infer_batch_size: 32
 
 data_dir: /ml-docker/input/hms-harmful-brain-activity-classification
 working_dir: /ml-docker/working/kaggle-hms-bilzard/data

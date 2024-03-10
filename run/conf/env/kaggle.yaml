@@ -1,5 +1,6 @@
 name: kaggle
 num_workers: 4
+infer_batch_size: 24
 
 data_dir: /kaggle/input/hms-harmful-brain-activity-classification
 working_dir: /kaggle/temp/kaggle-hms-bilzard/data
