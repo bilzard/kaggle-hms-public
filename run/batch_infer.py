@@ -22,12 +22,28 @@ from .ensemble import do_evaluate
 from .infer import get_loader, load_checkpoint, predict
 
 
-def load_config(config_name) -> MainConfig:
+def load_config(config_name, parent_cfg: EnsembleMainConfig) -> MainConfig:
     if GlobalHydra.instance().is_initialized():
         GlobalHydra.instance().clear()
 
-    hydra.initialize(config_path="conf", version_base="1.2")
-    return cast(MainConfig, hydra.compose(config_name=config_name))
+    with hydra.initialize(config_path="conf", version_base="1.2"):
+        cfg = hydra.compose(
+            config_name=config_name,
+            overrides=[
+                f"phase={parent_cfg.phase}",
+                f"env={parent_cfg.env.name}",
+                f"infer.batch_size={parent_cfg.env.infer_batch_size}",
+                f"architecture.model.encoder.grad_checkpointing={parent_cfg.env.grad_checkpointing}",
+            ],
+        )
+        print("** phase:", cfg.phase)
+        print("** env:", cfg.env.name)
+        print("** infer_batch_size:", cfg.infer.batch_size)
+        print(
+            "** grad_checkpointing:", cfg.architecture.model.encoder.grad_checkpointing
+        )
+
+    return cast(MainConfig, cfg)
 
 
 def infer_per_seed(
@@ -65,6 +81,7 @@ def infer_per_seed(
 
 
 def infer_per_experiment(
+    parent_config: EnsembleMainConfig,
     experiment: EnsembleExperimentConfig,
     metadata: pl.DataFrame,
     id2eeg: dict[int, np.ndarray],
@@ -78,7 +95,7 @@ def infer_per_experiment(
     3. for each fold and seed:
         - load model weight and do inference
     """
-    cfg = load_config(experiment.exp_name)
+    cfg = load_config(experiment.exp_name, parent_config)
     logger = BaseLogger(log_file_name=cfg.infer.log_name, clear=True)
     model = get_model(cfg.architecture, pretrained=False)
     check_model(cfg.architecture, model)
@@ -157,7 +174,7 @@ def main(cfg: EnsembleMainConfig):
         for experiment in cfg.ensemble_entity.experiments:
             print(f"*** exp_name: {experiment.exp_name} ***")
             pred_df = infer_per_experiment(
-                experiment, metadata, id2eeg, id2cqf, spec_id2spec
+                cfg, experiment, metadata, id2eeg, id2cqf, spec_id2spec
             )
             pred_dfs.append(pred_df)
 
