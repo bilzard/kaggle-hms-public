@@ -4,11 +4,11 @@ experiments:
   - exp_name: exp069
     folds:
       - split: 0
-        seeds: [0, 1, 42]
+        seeds: ${ensemble_entity.ensemble_seeds}
       - split: 1
-        seeds: [0, 1, 42]
+        seeds: ${ensemble_entity.ensemble_seeds}
       - split: 2
-        seeds: [0, 1, 42]
+        seeds: ${ensemble_entity.ensemble_seeds}
   - exp_name: exp083
     folds:
       - split: 0
