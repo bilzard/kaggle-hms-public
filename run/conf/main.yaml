@@ -18,6 +18,7 @@ defaults:
   - preprocess: with_cqf
   - preprocess/cqf: default
   - split: gkfold5
+  - dev: small
   - _self_
 
 job_name: ???

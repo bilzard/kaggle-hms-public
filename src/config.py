@@ -144,9 +144,13 @@ class ArchitectureConfig:
 
 
 @dataclass
+class DevelopmentConfig:
+    num_samples: int
+
+
+@dataclass
 class InferConfig:
     batch_size: int
-    num_samples: int
     model_choice: str
     log_name: str
     tta_iterations: int
@@ -174,6 +178,7 @@ class MainConfig:
     trainer: TrainerConfig
     infer: InferConfig
     wandb: WandbConfig
+    dev: DevelopmentConfig
 
 
 @dataclass
@@ -204,3 +209,4 @@ class EnsembleMainConfig:
     cleanup: bool
     final_submission: bool
     env: EnvironmentConfig
+    dev: DevelopmentConfig
