@@ -19,6 +19,7 @@ hydra:
 
 defaults:
   - env: local
+  - dev: small
   - ensemble_entity: f01234_s012
   - _self_
 

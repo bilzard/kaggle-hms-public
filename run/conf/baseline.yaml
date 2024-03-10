@@ -24,6 +24,7 @@ defaults:
   - env: local
   - preprocess: with_cqf
   - split: gkfold5
+  - dev: small
   - trainer/optimizer: adamw
   - trainer/pseudo_label: without_pl
   - architecture/model/sample_collator: simple_collator
@@ -106,7 +107,6 @@ architecture:
 
 infer:
   batch_size: ${env.infer_batch_size}
-  num_samples: 2640
   model_choice: last
   log_name: infer_pipeline.txt
   tta_iterations: 1
