@@ -15,6 +15,7 @@ def load_metadata(
     fold: int = -1,
     group_by_eeg: bool = False,
     weight_key: str = "weight_per_eeg",
+    num_samples: int = 128,
 ) -> pl.DataFrame:
     """
     phaseに応じてmetadataをロードする
@@ -51,7 +52,7 @@ def load_metadata(
         case "develop":
             metadata = pl.read_csv(data_dir / "train.csv")
             metadata = process_label(metadata)
-            return select_develop_samples(metadata)
+            return select_develop_samples(metadata, num_samples=num_samples)
         case _:
             raise ValueError(f"Invalid phase: {phase}")
 

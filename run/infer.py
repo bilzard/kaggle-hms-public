@@ -132,7 +132,11 @@ def main(cfg: MainConfig):
     fold_split_dir = Path(working_dir / "fold_split" / cfg.phase)
 
     metadata = load_metadata(
-        data_dir=data_dir, phase=cfg.phase, fold_split_dir=fold_split_dir, fold=cfg.fold
+        data_dir=data_dir,
+        phase=cfg.phase,
+        fold_split_dir=fold_split_dir,
+        fold=cfg.fold,
+        num_samples=cfg.dev.num_samples,
     )
 
     logger = BaseLogger(log_file_name=cfg.infer.log_name, clear=True)
