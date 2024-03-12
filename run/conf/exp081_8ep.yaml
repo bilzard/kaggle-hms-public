@@ -1,0 +1,9 @@
+defaults:
+  - exp081
+  - _self_
+
+exp_name: exp081_8ep
+description: exp081 + 8 epochs
+
+trainer:
+  epochs: 8
