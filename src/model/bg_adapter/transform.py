@@ -20,7 +20,9 @@ class BgResizeTransform(nn.Module):
             size=self.size,
             scale_factor=self.scale_factor,
             mode=mode,
-            align_corners=False,
+            align_corners=False
+            if mode in {"bilinear", "bicubic", "trilinear"}
+            else None,
         )
 
     def forward(self, spec: Tensor) -> Tensor:

@@ -20,13 +20,17 @@ class ResizeTransform(nn.Module):
             size=self.size,
             scale_factor=self.scale_factor,
             mode=mode,
-            align_corners=False,
+            align_corners=False
+            if mode in {"bilinear", "bicubic", "trilinear"}
+            else None,
         )
         self.resize_mask = nn.Upsample(
             size=self.size,
             scale_factor=self.scale_factor,
             mode=mode,
-            align_corners=False,
+            align_corners=False
+            if mode in {"bilinear", "bicubic", "trilinear"}
+            else None,
         )
 
     @torch.no_grad()
