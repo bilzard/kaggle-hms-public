@@ -36,7 +36,6 @@ class HmsModelMixed(nn.Module):
             instantiate(cfg.model.spec_transform) if cfg.model.spec_transform else None
         )
         self.merger = instantiate(cfg.model.merger) if cfg.use_bg_spec else None
-        self.consistency_regularizer = instantiate(cfg.model.consistency_regularizer)
         self.encoder = instantiate(
             cfg.model.encoder,
             pretrained=pretrained,
@@ -99,9 +98,6 @@ class HmsModelMixed(nn.Module):
 
         output = dict(spec=spec, spec_mask=spec_mask, eeg=eeg, eeg_mask=eeg_mask)
 
-        if self.training:
-            self._apply_consistency_regularizer(output, batch)
-
         if self.cfg.input_mask:
             output["spec"] = self.merge_spec_mask(output["spec"], output["spec_mask"])
 
@@ -134,24 +130,6 @@ class HmsModelMixed(nn.Module):
 
         output = {self.pred_key: logit}
         return output
-
-    def _apply_consistency_regularizer(
-        self, output: dict[str, Tensor], batch: dict[str, Tensor]
-    ) -> None:
-        """
-        batchとoutputをinplaceに更新する
-        """
-        spec = output["spec"]
-        spec_mask = output["spec_mask"]
-        label = batch[self.label_key]
-        weight = batch[self.weight_key]
-        eeg = output["eeg"]
-        eeg_mask = output["eeg_mask"]
-        spec, spec_mask, eeg, eeg_mask, label, weight = self.consistency_regularizer(
-            spec, spec_mask, eeg, eeg_mask, label, weight
-        )
-        output.update(dict(spec=spec, spec_mask=spec_mask, eeg=eeg, eeg_mask=eeg_mask))
-        batch.update(dict(label=label, weight=weight))
 
     def merge_spec_mask(self, spec: Tensor, spec_mask: Tensor) -> Tensor:
         B, C, F, T = spec.shape
