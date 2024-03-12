@@ -1,0 +1,16 @@
+defaults:
+  - baseline_v4
+  - _self_
+
+exp_name: exp089
+description: exp069 + same-class cutmix (p=0.4, thr=0.5)
+
+architecture:
+  model:
+    augmentation:
+      _target_: src.model.augmentation.CutMixSameClassForSpec
+      p: 0.4
+      prob_thr: 0.5
+      min_size: 10
+      max_size: 50
+      max_frames: 125
