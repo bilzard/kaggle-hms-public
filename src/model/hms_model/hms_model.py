@@ -22,6 +22,7 @@ class HmsModel(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
+        self.augmentation = instantiate(cfg.model.augmentation)
         self.adapters = [instantiate(adapter) for adapter in cfg.model.adapters]
         self.bg_adapters = (
             [instantiate(adapter) for adapter in cfg.model.bg_adapters]
@@ -107,6 +108,8 @@ class HmsModel(nn.Module):
     @torch.no_grad()
     def preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         output = self.generate_spec(batch)
+        if self.training:
+            self.augmentation(batch, output)
         output = self.compose_spec(batch, output)
         output.pop("eeg")
         return output
