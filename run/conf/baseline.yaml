@@ -78,6 +78,8 @@ trainer:
 
 architecture:
   model:
+    augmentation:
+      _target_: src.model.augmentation.Identity
     spec_transform: null
     adapters:
       - _target_: src.model.adapter.WeightedMeanStackingAggregator
