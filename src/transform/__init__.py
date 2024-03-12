@@ -1,5 +1,5 @@
 from .base import BaseTransform, Compose
-from .eeg_channel import ChannelPermutation, SwapFr, SwapLr
+from .eeg_channel import ChannelDrop, ChannelPermutation, SwapFr, SwapLr
 from .sequence import Cutout1d, ReverseSequence
 
 __all__ = [
@@ -10,4 +10,5 @@ __all__ = [
     "ChannelPermutation",
     "ReverseSequence",
     "Cutout1d",
+    "ChannelDrop",
 ]
