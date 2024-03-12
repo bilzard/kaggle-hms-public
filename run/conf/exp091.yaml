@@ -1,0 +1,9 @@
+defaults:
+  - baseline_v4
+  - _self_
+
+exp_name: exp091
+description: baseline v4 + w class weights(alpha=0.2)
+
+trainer:
+  class_weight_exponent: 0.2
