@@ -50,7 +50,7 @@ trainer:
   no_decay_bias_params: false
   val:
     batch_size: 32
-    duration: 2048
+    duration: ${trainer.duration}
     stride: 1024
     aggregation_fn: max
     agg_policy: per_eeg_weighted
@@ -114,7 +114,7 @@ infer:
   test_dataset:
     _target_: src.dataset.eeg.PerEegSubsampleDataset
     num_samples_per_eeg: 1
-    duration: 2048
+    duration: ${trainer.duration}
 
 wandb:
   project: kaggle-hms
