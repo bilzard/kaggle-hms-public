@@ -1,0 +1,13 @@
+defaults:
+  - baseline_v4
+  - _self_
+
+exp_name: exp093
+description: baseline v4 + channel drop
+
+architecture:
+  model:
+    augmentation:
+      _target_: src.model.augmentation.ChannelDrop
+      drop_rate: 0.15
+      batch_prob: 0.6
