@@ -114,6 +114,7 @@ class TrainerConfig:
     random_seed_offset: int
     population_threshold: float
     no_decay_bias_params: bool
+    class_weights: list[float]
     transform: DictConfig | None
     train_dataset: DictConfig
     valid_dataset: DictConfig

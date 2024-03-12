@@ -73,6 +73,8 @@ class Trainer(BaseTrainer):
 
         self._train_loss_meter = AverageMeter()
         self._valid_loss_meter = AverageMeter()
+        assert len(cfg.class_weights) == 6
+        print(f"{cfg.class_weights=}")
 
         self.configure_optimizers()
         self.clear_log()
@@ -147,8 +149,15 @@ class Trainer(BaseTrainer):
         """
         pred = torch.log_softmax(pred, dim=1)
         weight_sum = weight.sum().item()
-        loss = self.criterion(pred, target).sum(dim=1) * weight.squeeze(1)
+        loss = self.criterion(pred, target)
+
+        if self.model.training:
+            for c in range(6):
+                loss[:, c] *= self.cfg.class_weights[c]
+
+        loss = loss.sum(dim=1) * weight.squeeze(1)
         loss = loss.sum() / weight_sum
+
         return loss, weight_sum
 
     def _calc_loss(
