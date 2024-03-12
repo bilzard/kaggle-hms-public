@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
@@ -74,7 +75,11 @@ class Trainer(BaseTrainer):
         self._train_loss_meter = AverageMeter()
         self._valid_loss_meter = AverageMeter()
         assert len(cfg.class_weights) == 6
-        print(f"{cfg.class_weights=}")
+        self.class_weights = np.array(cfg.class_weights) ** cfg.class_weight_exponent
+        self.class_weights /= self.class_weights.sum()
+        self.class_weights *= 6
+
+        print(f"** class_weights: {self.class_weights}")
 
         self.configure_optimizers()
         self.clear_log()
@@ -153,7 +158,7 @@ class Trainer(BaseTrainer):
 
         if self.model.training:
             for c in range(6):
-                loss[:, c] *= self.cfg.class_weights[c]
+                loss[:, c] *= self.class_weights[c]
 
         loss = loss.sum(dim=1) * weight.squeeze(1)
         loss = loss.sum() / weight_sum
