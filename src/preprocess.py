@@ -56,6 +56,8 @@ def process_eeg(
     reject_freq: float | None = None,
     device: str = "cpu",
     sampling_rate: int = 200,
+    drop_leftmost_nulls: bool = False,
+    pad_mode: str = "constant",
 ) -> tuple[np.ndarray, np.ndarray]:
     eeg_df = eeg_df.select(PROBES)
     eeg_df = clip_val_to_nan(eeg_df, clip_val)
@@ -80,14 +82,14 @@ def process_eeg(
     # calc pad mask
     pad_mask = ~np.isnan(x).any(axis=1)
 
-    # drop leftmost and rightmost nulls
-    x, pad_left = drop_leftmost_nulls_in_array(x)
+    # drop left/rightmost nulls
+    x, pad_left = drop_leftmost_nulls_in_array(x) if drop_leftmost_nulls else (x, 0)
     x, pad_right = drop_rightmost_nulls_in_array(x)
     num_frames, _ = x.shape
     pad_right = max(0, minimum_seq_length - num_frames)
-    x = np.pad(x, ((pad_left, pad_right), (0, 0)), mode="reflect")
-    x = np.nan_to_num(x, nan=fill_nan_with)
+    x = np.pad(x, ((pad_left, pad_right), (0, 0)), mode=pad_mode)  # type: ignore
 
+    x = np.nan_to_num(x, nan=fill_nan_with)
     return x, pad_mask
 
 

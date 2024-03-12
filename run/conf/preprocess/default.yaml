@@ -3,4 +3,6 @@ ref_voltage: 1000
 apply_filter: false
 cutoff_freqs: [null, null]
 reject_freq: null
+drop_leftmost_nulls: false
+pad_mode: constant
 device: cuda

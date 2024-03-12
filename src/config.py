@@ -35,6 +35,8 @@ class PreprocessConfig:
     apply_filter: bool
     cutoff_freqs: tuple[float | None, float | None]
     reject_freq: float | None
+    drop_leftmost_nulls: bool
+    pad_mode: str
     device: str
     cqf: CqfConfig
 
