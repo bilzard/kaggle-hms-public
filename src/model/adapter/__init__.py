@@ -2,6 +2,7 @@ from .aggregate import (
     CanvasAggregator,
     CanvasWeightedMeanAggregator,
     DualCanvasAggregator,
+    DualCanvasAggregatorWithWeightedMean,
     DualCanvasWeightedMeanAggregator,
     DualChannelSeparatedAggregator,
     DualTilingAggregator,
@@ -37,4 +38,5 @@ __all__ = [
     "DualCanvasWeightedMeanAggregator",
     "DualChannelSeparatedAggregator",
     "TimeCroppingTransform",
+    "DualCanvasAggregatorWithWeightedMean",
 ]

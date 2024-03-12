@@ -35,6 +35,42 @@ def collate_lr_channels(
     return spec, mask
 
 
+def collate_weighted_mean(
+    spec: Tensor,
+    mask: Tensor,
+    drop_z: bool = False,
+    norm_mask: bool = True,
+    eps: float = 1e-4,
+) -> tuple[Tensor, Tensor]:
+    """
+    spec: (B, 20, H, W)
+    mask: (B, 19, H, W)
+
+    returns
+    -------
+    spec: (B, 5, H, W)
+    mask: (B, 5, H, W)
+    """
+    sum_specs = []
+    sum_masks = []
+    ranges = [0, 4, 8, 10, 14, 18]
+    for i, (start, end) in enumerate(zip(ranges[:-1], ranges[1:])):
+        if drop_z and i == 2:
+            continue
+        sum_spec = (spec[:, start:end] * mask[:, start:end]).sum(dim=1, keepdim=True)
+        sum_mask = mask[:, start:end].sum(dim=1, keepdim=True)
+
+        sum_specs.append(sum_spec / (sum_mask + eps))
+        if norm_mask:
+            sum_mask /= end - start
+        sum_masks.append(sum_mask)
+
+    specs = torch.concat(sum_specs, dim=1)
+    masks = torch.concat(sum_masks, dim=1)
+
+    return specs, masks
+
+
 class WeightedMeanStackingAggregator(nn.Module):
     def __init__(self, drop_z: bool = False, norm_mask: bool = True, eps=1e-4):
         super().__init__()
@@ -51,26 +87,9 @@ class WeightedMeanStackingAggregator(nn.Module):
         specs: (B, 5, H, W)
         masks: (B, 5, H, W)
         """
-        sum_specs = []
-        sum_masks = []
-        ranges = [0, 4, 8, 10, 14, 18]
-        for i, (start, end) in enumerate(zip(ranges[:-1], ranges[1:])):
-            if self.drop_z and i == 2:
-                continue
-            sum_spec = (spec[:, start:end] * mask[:, start:end]).sum(
-                dim=1, keepdim=True
-            )
-            sum_mask = mask[:, start:end].sum(dim=1, keepdim=True)
-
-            sum_specs.append(sum_spec / (sum_mask + self.eps))
-            if self.norm_mask:
-                sum_mask /= end - start
-            sum_masks.append(sum_mask)
-
-        specs = torch.concat(sum_specs, dim=1)
-        masks = torch.concat(sum_masks, dim=1)
-
-        return specs, masks
+        return collate_weighted_mean(
+            spec, mask, drop_z=self.drop_z, norm_mask=self.norm_mask, eps=self.eps
+        )
 
 
 class DualWeightedMeanStackingAggregator(WeightedMeanStackingAggregator):
@@ -179,7 +198,9 @@ class DualTilingAggregator(TilingAggregator):
         return collate_lr_channels(spec, mask, drop_z=self.drop_z)
 
 
-def fill_canvas(spec: Tensor, drop_z: bool = False) -> Tensor:
+def fill_canvas(
+    spec: Tensor, drop_z: bool = False, with_weighted_mean: bool = False
+) -> Tensor:
     """
     全てのチャネルを1枚のキャンバスに敷き詰める
 
@@ -265,6 +286,37 @@ class DualCanvasAggregator(CanvasAggregator):
 
         spec = rearrange(spec, "b c f t -> (c b) 1 f t")
         mask = rearrange(mask, "b c f t -> (c b) 1 f t")
+
+        return spec, mask
+
+
+class DualCanvasAggregatorWithWeightedMean(DualCanvasAggregator):
+    def __init__(self):
+        super().__init__(drop_z=True)
+
+    def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
+        """
+        Zの代わりにweighted meanを追加する
+
+        input: (B, 18, F, T)
+        output: (B, 1, 5F, 2T)
+        """
+        spec_wm, mask_wm = collate_weighted_mean(spec, mask, drop_z=True)  # b 4 f t
+        assert spec_wm.shape[1] == 4, f"{spec_wm.shape=}"
+        assert mask_wm.shape[1] == 4, f"{mask_wm.shape=}"
+        spec_wm_left = spec_wm[:, [0, 1]]  # b 2 f t
+        spec_wm_right = spec_wm[:, [3, 2]]  # b 2 f t
+        mask_wm_left = mask_wm[:, [0, 1]]  # b 2 f t
+        mask_wm_right = mask_wm[:, [3, 2]]  # b 2 f t
+
+        spec_wm = torch.cat([spec_wm_left, spec_wm_right], dim=0)  # 2b 2 f t
+        mask_wm = torch.cat([mask_wm_left, mask_wm_right], dim=0)  # 2b 2 f t
+        spec_wm = rearrange(spec_wm, "b c f t -> b 1 f (c t)", c=2)  # 2b 1 f 2t
+        mask_wm = rearrange(mask_wm, "b c f t -> b 1 f (c t)", c=2)  # 2b 1 f 2t
+
+        spec, mask = super().forward(spec, mask)  # 2b 1 4f 2t
+        spec = torch.cat([spec, spec_wm], dim=2)  # 2b 1 5f 2t
+        mask = torch.cat([mask, mask_wm], dim=2)  # 2b 1 5f 2t
 
         return spec, mask
 
