@@ -26,11 +26,12 @@ def train_valid_split(metadata: pl.DataFrame, fold_split_df: pl.DataFrame, fold:
 def preload_eegs(
     eeg_ids: list[int],
     preprocess_dir: Path,
+    max_channels: int = 19,
 ):
     id2eeg = dict()
     for eeg_id in tqdm(eeg_ids):
         eeg = np.load(preprocess_dir / str(eeg_id) / "eeg.npy")
-        id2eeg[eeg_id] = eeg
+        id2eeg[eeg_id] = eeg[..., :max_channels]
 
     return id2eeg
 
