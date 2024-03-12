@@ -84,6 +84,8 @@ def process_single_eeg(
     apply_filter: bool,
     cutoff_freqs: tuple[float | None, float | None],
     reject_freq: float | None,
+    drop_leftmost_nulls: bool,
+    pad_mode: str,
     device: str,
     cqf_conf: CqfConfig,
     dry_run: bool = False,
@@ -95,6 +97,8 @@ def process_single_eeg(
         apply_filter=apply_filter,
         cutoff_freqs=cutoff_freqs,
         reject_freq=reject_freq,
+        drop_leftmost_nulls=drop_leftmost_nulls,
+        pad_mode=pad_mode,
         device=device,
     )
 
@@ -148,6 +152,8 @@ def preprocess_eeg(
             cutoff_freqs=cfg.preprocess.cutoff_freqs,
             reject_freq=cfg.preprocess.reject_freq,
             cqf_conf=cfg.preprocess.cqf,
+            drop_leftmost_nulls=cfg.preprocess.drop_leftmost_nulls,
+            pad_mode=cfg.preprocess.pad_mode,
             device=cfg.preprocess.device,
             dry_run=cfg.dry_run,
         )
