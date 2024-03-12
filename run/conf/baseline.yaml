@@ -75,7 +75,8 @@ trainer:
     diversity_power: 0.0
     population_power: 1.0
     max_votes: 28
-  class_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+  class_weights: [1.151, 0.706, 1.039, 1.681, 1.17, 0.253]
+  class_weight_exponent: 0.0
 
 architecture:
   model:

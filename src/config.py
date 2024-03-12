@@ -115,6 +115,7 @@ class TrainerConfig:
     population_threshold: float
     no_decay_bias_params: bool
     class_weights: list[float]
+    class_weight_exponent: float
     transform: DictConfig | None
     train_dataset: DictConfig
     valid_dataset: DictConfig
