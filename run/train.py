@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import hydra
@@ -39,8 +40,12 @@ def save_sample_spec(
     seed: int = 0,
     device: str = "cuda",
     figure_path: Path = Path("figure"),
+    cleanup: bool = True,
 ):
+    seed_everything(seed)
     if not figure_path.exists():
+        if cleanup:
+            shutil.rmtree(figure_path, ignore_errors=True)
         figure_path.mkdir(parents=True)
 
     model = get_model(cfg.architecture, pretrained=False)
@@ -175,7 +180,7 @@ def main(cfg: MainConfig):
                 id2eeg,
                 id2cqf,
                 spec_id2spec,
-                num_samples=5,
+                num_samples=cfg.trainer.batch_size,
                 figure_path=Path("figure"),
             )
 
