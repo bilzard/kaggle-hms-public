@@ -1,0 +1,15 @@
+defaults:
+  - baseline_v4_channel_separated
+  - override architecture/model/encoder: efficientnet_encoder_with_mixer
+  - _self_
+
+exp_name: exp095
+description: baseline v4 + channel mixer + drop_path=0.5 + bottleneck=16
+
+architecture:
+  model:
+    encoder:
+      num_eeg_channels: 8
+      drop_path_rate: 0.5
+    head:
+      bottleneck_ratio: 16
