@@ -421,7 +421,7 @@ class PerEegDataset(HmsBaseDataset):
             spectrogram_id = row["spectrogram_id"]
             spec_start_frame = 0
             spec_end_frame = int(self.spec_duration_sec * self.spec_sampling_rate)
-            spec = self.spec_id2spec[spectrogram_id][
+            bg_spec = self.spec_id2spec[spectrogram_id][
                 :, spec_start_frame:spec_end_frame, :
             ].astype(np.float32)
             crop_frames = spec_end_frame - spec_start_frame - self.spec_cropped_duration
@@ -429,12 +429,12 @@ class PerEegDataset(HmsBaseDataset):
             if crop_frames > 0:
                 crop_left = crop_frames // 2
                 crop_right = crop_frames - crop_left
-                spec = spec[:, crop_left:-crop_right, :]
+                bg_spec = bg_spec[:, crop_left:-crop_right, :]
                 assert (
-                    spec.shape[1] == self.spec_cropped_duration
-                ), f"spec shape mismatch: {spec.shape}"
+                    bg_spec.shape[1] == self.spec_cropped_duration
+                ), f"spec shape mismatch: {bg_spec.shape}"
 
-            data |= dict(spec=spec)
+            data |= dict(bg_spec=bg_spec)
 
         #
         # label & weight
