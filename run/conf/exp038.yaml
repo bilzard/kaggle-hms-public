@@ -30,4 +30,4 @@ architecture:
 trainer:
   weight_decay: 1e-5
   data:
-    input_keys: [eeg, cqf, spec]
+    input_keys: [eeg, cqf, bg_spec]
