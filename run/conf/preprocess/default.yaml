@@ -1,4 +1,4 @@
-clip_val: 5000
+clip_val: 65504 # 65504 is the maximum value for 16-bit signed integer
 ref_voltage: 1000
 apply_filter: false
 cutoff_freqs: [null, null]
