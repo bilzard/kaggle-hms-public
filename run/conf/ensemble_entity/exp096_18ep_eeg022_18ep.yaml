@@ -1,0 +1,19 @@
+name: exp096_18ep_eeg022_18ep
+ensemble_seeds: [0, 1, 2]
+experiments:
+  - exp_name: exp096_18ep
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: eeg022_18ep
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
