@@ -1,0 +1,16 @@
+_target_: src.model.encoder.EfficientNet2d
+hidden_dim: 64
+depth_multiplier: 4
+ds_conv_se_ratio: 4
+ir_conv_se_ratio: 16
+stem_kernel_size: 3
+stem_pool_size: 2
+kernel_sizes: [3, 3, 5, 5, 3]
+pool_sizes: [1, 2, 2, 2, 2]
+layers: [1, 2, 3, 3, 3]
+hidden_dims: [32, 16, 24, 40, 64, 64]
+skip_in_block: true
+skip_in_layer: false
+drop_path_rate: 0.0
+use_ds_conv: false
+se_after_dw_conv: true
