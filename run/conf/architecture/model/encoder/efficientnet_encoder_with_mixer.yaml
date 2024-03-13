@@ -1,0 +1,11 @@
+_target_: src.model.encoder.EfficientNetEncoder
+name: ???
+grad_checkpointing: ${env.grad_checkpointing}
+num_eeg_channels: ???
+post_stem_adapter_factory: null
+post_block_adapter_factory:
+  _target_: src.model.encoder.adapter.ChannelMixer
+  kernel_size: 3
+  bottleneck_ratio: 8
+  _partial_: true
+  tensor_arrangement: dual_channel_separated
