@@ -1,0 +1,12 @@
+defaults:
+  - baseline_v4_channel_separated
+  - override architecture/model/encoder: efficientnet_encoder_with_mixer
+  - _self_
+
+exp_name: exp094
+description: baseline v4 + channel mixer
+
+architecture:
+  model:
+    encoder:
+      num_eeg_channels: 8
