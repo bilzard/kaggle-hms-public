@@ -35,21 +35,11 @@ def drop_rightmost_nulls_in_array(x: np.ndarray) -> tuple[np.ndarray, int]:
     return x[::-1], first_non_null_idx
 
 
-def clip_val_to_nan(df: pl.DataFrame, clip_val: float) -> pl.DataFrame:
-    return df.with_columns(
-        pl.when(pl.col(col).abs().ge(clip_val))
-        .then(None)
-        .otherwise(pl.col(col))
-        .alias(col)
-        for col in df.columns
-    )
-
-
 def process_eeg(
     eeg_df: pl.DataFrame,
     down_sampling_rate=5,
     minimum_seq_length=2000,
-    clip_val: float = 5000.0,
+    clip_val: float = 65504,  # np.finfo(np.float16).max
     fill_nan_with: float = 0.0,
     apply_filter: bool = False,
     cutoff_freqs: tuple[float | None, float | None] = (None, None),
@@ -60,7 +50,6 @@ def process_eeg(
     pad_mode: str = "constant",
 ) -> tuple[np.ndarray, np.ndarray]:
     eeg_df = eeg_df.select(PROBES)
-    eeg_df = clip_val_to_nan(eeg_df, clip_val)
     eeg_df = eeg_df.interpolate()
     x = eeg_df.to_numpy()
 
@@ -78,6 +67,8 @@ def process_eeg(
     # subsample
     x = rearrange(x, "(n k) c -> n k c", k=down_sampling_rate)
     x = np.nanmean(x, axis=1)
+    x[:, :19] = x[:, :19] - np.nanmedian(x[:, :19])
+    x = np.clip(x, -clip_val, clip_val)
 
     # calc pad mask
     pad_mask = ~np.isnan(x).any(axis=1)
