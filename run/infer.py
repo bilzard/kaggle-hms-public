@@ -71,6 +71,7 @@ def get_loader(
                 spec_id2spec=spec_id2spec,
                 with_label=False,
                 spec_cropped_duration=cfg.architecture.spec_cropped_duration,
+                duration=cfg.infer.test_dataset.duration,
                 transform_enabled=True,
                 transform=instantiate(cfg.infer.tta)
                 if cfg.infer.tta is not None
