@@ -1,0 +1,10 @@
+defaults:
+  - exp096
+  - _self_
+
+exp_name: exp096_18ep
+description: efficientnet2d_b0 + bottleneck=16
+
+trainer:
+  epochs: 18
+  weight_decay: 0.001
