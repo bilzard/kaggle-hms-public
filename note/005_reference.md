@@ -10,9 +10,16 @@
 
 - **CA-MKD**[4]: 複数の教師ネットワークによるKnowledge Distillation(KD)タスクで、教師の予測値のconfidenceをもとに重みづけ平均をとる。また、生徒ネットーワークのembeddingを教師ネットワークのembeddingに近づけるような修飾lossを追加。この手法では「生徒のembeddingを教師のheadに入力した場合のloss」をembeddingの蒸留ラベルの重みとして用いていて、単純に教師の予測値と正解ラベルとのlossを重みとするよりも精度が高かったとのこと。「多少embeddingがずれていても正確な予測ができる教師」を選びやすいはずなので、正確性に加えてロバストさも加味した選別指標と言える。
 
+## GNN(Graph Neural Network)
+
+- **EEG-GNN**[5]
+- **Dist/Corr-DCRNN**[6]
+
 ## Reference
 
 - [1] [Co-teaching: Robust Training of Deep Neural Networks with Extremely Noisy Labels](https://arxiv.org/abs/1804.06872)
 - [2] [How does Disagreement Help Generalization against Label Corruption?](https://arxiv.org/abs/1901.04215)
 - [3] [Combating noisy labels by agreement: A joint training method with co-regularization](https://arxiv.org/abs/2003.02752)
 - [4] [Confidence-Aware Multi-Teacher Knowledge Distillation](https://arxiv.org/abs/2201.00007)
+- [5] [EEG-GNN: Graph Neural Networks for Classification of Electroencephalogram (EEG) Signals](https://arxiv.org/abs/2106.09135)
+- [6] [Self-Supervised Graph Neural Networks for Improved Electroencephalographic Seizure Analysis](https://arxiv.org/abs/2104.08336)
