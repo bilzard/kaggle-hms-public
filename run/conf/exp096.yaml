@@ -1,0 +1,6 @@
+defaults:
+  - baseline_efficientnet2d_b0
+  - _self_
+
+exp_name: exp096
+description: efficientnet2d_b0 + bottleneck=16
