@@ -13,7 +13,7 @@
 ## GNN(Graph Neural Network)
 
 - **EEG-GNN**[5]
-- **Dist/Corr-DCRNN**[6]
+- **Dist/Corr-DCRNN**[6] (c.f. DCRNN[7])
 
 ## Reference
 
@@ -23,3 +23,4 @@
 - [4] [Confidence-Aware Multi-Teacher Knowledge Distillation](https://arxiv.org/abs/2201.00007)
 - [5] [EEG-GNN: Graph Neural Networks for Classification of Electroencephalogram (EEG) Signals](https://arxiv.org/abs/2106.09135)
 - [6] [Self-Supervised Graph Neural Networks for Improved Electroencephalographic Seizure Analysis](https://arxiv.org/abs/2104.08336)
+- [7] [Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting](https://arxiv.org/abs/1707.01926)
