@@ -1,0 +1,10 @@
+defaults:
+  - exp094
+  - _self_
+
+exp_name: exp094_18ep
+description: baseline v4 + channel mixer
+
+trainer:
+  epochs: 18
+  weight_decay: 0.001
