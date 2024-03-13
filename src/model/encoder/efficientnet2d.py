@@ -271,6 +271,7 @@ class EfficientNet2d(nn.Module):
         drop_path_rate: float = 0.0,
         use_ds_conv: bool = True,
         se_after_dw_conv: bool = False,
+        grad_checkpointing: bool = False,
         **kwargs,
     ):
         super().__init__()
