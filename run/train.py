@@ -76,13 +76,13 @@ def save_sample_spec(
         [torch.from_numpy(sample["weight"]) for sample in sample_dataset]
     )
     bg_spec = (
-        torch.stack([torch.from_numpy(sample["spec"]) for sample in sample_dataset])
+        torch.stack([torch.from_numpy(sample["bg_spec"]) for sample in sample_dataset])
         if cfg.architecture.use_bg_spec
         else None
     )
     batch = dict(eeg=eeg, cqf=cqf, label=label, weight=weight)
     if bg_spec is not None:
-        batch |= dict(spec=bg_spec)
+        batch |= dict(bg_spec=bg_spec)
 
     input_keys = cfg.trainer.data.input_keys + ["label", "weight"]
     move_device(batch, input_keys=input_keys, device=device)
