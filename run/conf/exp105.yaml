@@ -1,0 +1,6 @@
+defaults:
+  - baseline_contrastive_v3
+  - _self_
+
+exp_name: exp105
+description: contrastive v3 (use efficientnet1d_cm)

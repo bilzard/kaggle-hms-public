@@ -1,0 +1,9 @@
+defaults:
+  - exp105
+  - _self_
+
+exp_name: exp105_18ep
+description: contrastive v3 (use efficientnet1d_cm)
+
+trainer:
+  epochs: 18
