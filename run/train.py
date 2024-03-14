@@ -29,7 +29,6 @@ from src.proc_util import trace
 from src.random_util import seed_everything, seed_worker
 from src.sampler import LossBasedSampler
 from src.train_util import check_model, get_model, move_device
-from src.trainer import Trainer
 
 
 def load_checkpoint(
@@ -299,7 +298,8 @@ def main(cfg: MainConfig):
 
             model = get_model(cfg.architecture)
             model.to(device="cuda")
-            trainer = Trainer(
+            trainer = instantiate(
+                cfg.trainer.trainer_class,
                 cfg.trainer,
                 model,
                 device="cuda",

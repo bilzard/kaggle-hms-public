@@ -38,6 +38,8 @@ defaults:
   - _self_
 
 trainer:
+  trainer_class:
+    _target_: src.trainer.Trainer
   epochs: 4
   lr: 1e-3
   lr_adjustments: []
@@ -83,6 +85,8 @@ trainer:
     target_epochs: 0
     target_forget_rate: 1.0
     use_loss_weights: false
+  contrastive:
+    lambd: 0.0
 
 architecture:
   model:

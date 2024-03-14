@@ -109,7 +109,13 @@ class DistillationConfig:
 
 
 @dataclass
+class ContrastiveConfig:
+    lambd: float
+
+
+@dataclass
 class TrainerConfig:
+    trainer_class: DictConfig
     epochs: int
     lr: float
     lr_adjustments: list[LrAdjustmentConfig]
@@ -136,6 +142,7 @@ class TrainerConfig:
     pseudo_label: PseudoLabelConfig
     label: LabelConfig
     distillation: DistillationConfig
+    contrastive: ContrastiveConfig
 
 
 @dataclass
