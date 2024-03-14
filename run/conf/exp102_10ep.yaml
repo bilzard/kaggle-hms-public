@@ -1,0 +1,9 @@
+defaults:
+  - exp102
+  - _self_
+
+exp_name: exp102_10ep
+description: train with contrastive loss (10 epoch)
+
+trainer:
+  epochs: 10
