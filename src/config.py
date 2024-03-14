@@ -105,6 +105,7 @@ class DistillationConfig:
     teacher_seed: int
     target_forget_rate: float
     target_epochs: int
+    use_loss_weights: bool
 
 
 @dataclass

@@ -82,6 +82,7 @@ trainer:
     teacher_exp_name: null
     target_epochs: 0
     target_forget_rate: 1.0
+    use_loss_weights: false
 
 architecture:
   model:
