@@ -1,0 +1,7 @@
+defaults:
+  - baseline_contrastive_v2
+  - override architecture/model/eeg_encoder: efficientnet1d_cm
+  - _self_
+
+exp_name: ???
+description: ???
