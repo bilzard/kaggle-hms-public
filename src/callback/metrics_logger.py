@@ -37,6 +37,9 @@ class MetricsLogger(Callback):
                     f"step/lr{i}": lr
                     for i, lr in enumerate(trainer.scheduler.get_last_lr())
                 }
+                | {
+                    "step/forget_rate": trainer.forget_rate_scheduler.value,
+                }
             )
 
     @torch.no_grad()
@@ -66,6 +69,7 @@ class MetricsLogger(Callback):
                         f"epoch/val_loss_{label}": loss
                         for label, loss in val_loss_per_label.items()
                     },
+                    "epoch/forget_rate": trainer.forget_rate_scheduler.value,
                     "epoch": epoch,
                 }
             )

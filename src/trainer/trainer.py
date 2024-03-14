@@ -2,17 +2,24 @@ import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
+from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import get_cosine_schedule_with_warmup
 
 from src.callback.base import Callback
 from src.config import TrainerConfig
+from src.scheduler import LinearScheduler
 from src.train_util import AverageMeter, get_lr_params
 from src.trainer.base import BaseTrainer
 
 
 class Trainer(BaseTrainer):
+    """
+    teacherモデルの予測値から算出されるlossを使ってbatch内のサンプルを間引きするtrainer。
+    間引き率は学習step/epochごとにスケジュールされる。
+    """
+
     def __init__(
         self,
         cfg: TrainerConfig,
@@ -23,9 +30,11 @@ class Trainer(BaseTrainer):
         epochs: int,
         callbacks: list[Callback] = [],
         mixed_precision=True,
+        teacher_model: nn.Module | None = None,
     ):
         super().__init__(cfg)
         self.model = model
+        self.teacher_model = teacher_model
         self.criterion = nn.KLDivLoss(reduction="none")
         self.device = device
         self.epochs = epochs
@@ -83,6 +92,14 @@ class Trainer(BaseTrainer):
             num_warmup_steps=int(max_steps * cfg.scheduler.warmup_ratio),
             num_cycles=0.5,
         )
+        self.forget_rate_scheduler = LinearScheduler(
+            initial_value=0.0,
+            target_value=cfg.distillation.target_forget_rate,
+            target_step=len(self.train_loader) * cfg.distillation.target_epochs,
+        )
+        print(f"* target_step: {self.forget_rate_scheduler.target_step}")
+        print(f"* target_forget_rate: {self.forget_rate_scheduler.target_value}")
+        print(f"* teacher_model: {self.teacher_model is not None}")
 
     def fit(self):
         for epoch in range(self.epochs):
@@ -94,13 +111,13 @@ class Trainer(BaseTrainer):
                     f"epoch: {epoch}, num_samples: {self.train_loader.sampler.num_samples}"  # type: ignore
                 )
 
-            self.train_epoch()
+            self.train_epoch(epoch)
             for callback in self.callbacks:
                 callback.on_train_epoch_end(self, epoch, self._train_loss_meter.mean)
 
             self._valid_loss_meter.reset()
             self.valid_loader.dataset.reset()  # type: ignore
-            self.valid_epoch()
+            self.valid_epoch(epoch)
             for callback in self.callbacks:
                 callback.on_valid_epoch_end(
                     self,
@@ -113,8 +130,12 @@ class Trainer(BaseTrainer):
             if k in self.input_keys + [self.target_key, self.weight_key]:
                 x[k] = v.to(self.device)
 
-    def _calc_loss_with_weight(
-        self, pred: torch.Tensor, target: torch.Tensor, weight: torch.Tensor
+    def _calc_loss(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor,
+        weight: torch.Tensor | None = None,
+        aggregate: bool = True,
     ) -> tuple[torch.Tensor, float]:
         """
         pred: (B, C)
@@ -122,44 +143,75 @@ class Trainer(BaseTrainer):
         weight: (B, 1)
         """
         pred = torch.log_softmax(pred, dim=1)
-        weight_sum = weight.sum().item()
+        weight_sum = weight.sum().item() if weight is not None else pred.shape[0]
         loss = self.criterion(pred, target)
 
         if self.model.training:
             for c in range(6):
                 loss[:, c] *= self.class_weights[c]
 
-        loss = loss.sum(dim=1) * weight.squeeze(1)
-        loss = loss.sum() / weight_sum
+        loss = loss.sum(dim=1)  # point-wise KL divergence
+
+        if weight is not None:
+            loss *= weight.squeeze(1)
+
+        if aggregate:
+            loss = loss.sum() / weight_sum
 
         return loss, weight_sum
 
-    def _calc_loss(
-        self, pred: torch.Tensor, target: torch.Tensor
-    ) -> tuple[torch.Tensor, float]:
-        """
-        pred: (B, C)
-        target: (B, C)
-        """
-        pred = torch.log_softmax(pred, dim=1)
-        batch_size = pred.shape[0]
-        loss = self.criterion(pred, target).sum(dim=1)
-        loss = loss.sum() / batch_size
-        return loss, batch_size
+    @torch.no_grad()
+    def pruning_samples(self, batch: dict[str, Tensor], forget_rate: float) -> Tensor:
+        if self.teacher_model is None:
+            raise ValueError("teacher_model is not set.")
 
-    def train_epoch(self):
+        output = self.teacher_model(batch)
+        loss, _ = self._calc_loss(
+            output[self.pred_key],
+            batch[self.target_key],
+            aggregate=False,
+        )
+        sorted_indices = torch.argsort(loss.data)
+        loss_sorted = loss[sorted_indices]
+
+        remain_rate = 1.0 - forget_rate
+        num_remain = int(remain_rate * len(loss_sorted))
+        indices_to_update = sorted_indices[:num_remain]
+
+        return indices_to_update
+
+    def train_epoch(self, epoch: int):
         self.model.train()
+
+        if self.teacher_model is not None:
+            self.teacher_model.eval()
+
         with tqdm(self.train_loader, unit="step") as pbar:
             for batch in pbar:
                 self.optimizer.zero_grad()
                 self._move_device(batch)
                 with torch.autocast(device_type="cuda", enabled=self.mixed_precision):
+                    if self.teacher_model is not None:
+                        indices_to_update = self.pruning_samples(
+                            batch, self.forget_rate_scheduler.value
+                        )
+                        self.forget_rate_scheduler.step()
+
                     output = self.model(batch)
-                    loss, weight_sum = self._calc_loss_with_weight(
+                    loss, weight_sum = self._calc_loss(
                         output[self.pred_key],
                         batch[self.target_key],
-                        batch[self.weight_key],
+                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
+                        aggregate=False,
                     )
+                    if self.teacher_model is not None:
+                        loss = loss[indices_to_update]
+                        weight_sum = (
+                            (batch[self.weight_key][indices_to_update].sum().item())
+                            if self.cfg.use_loss_weights
+                            else len(indices_to_update)
+                        )
+                    loss = loss.sum() / weight_sum
                     self._train_loss_meter.update(loss.item(), weight_sum)
 
                 if self.scaler is not None:
@@ -175,17 +227,22 @@ class Trainer(BaseTrainer):
                     callback.on_train_step_end(
                         self, batch, output, self._train_loss_meter.mean
                     )
-                pbar.set_postfix({"loss": self._train_loss_meter.mean})
+                pbar.set_postfix(
+                    {
+                        "loss": self._train_loss_meter.mean,
+                        "forget_rate": self.forget_rate_scheduler.value,
+                    }
+                )
 
-    def valid_epoch(self):
+    def valid_epoch(self, epoch: int):
         self.model.eval()
         with torch.no_grad():
             with tqdm(self.valid_loader, unit="step") as pbar:
                 for batch in pbar:
+                    self._move_device(batch)
                     with torch.autocast(device_type="cuda", enabled=True):
-                        self._move_device(batch)
                         output = self.model(batch)
-                        loss, weight_sum = self._calc_loss_with_weight(
+                        loss, weight_sum = self._calc_loss(
                             output[self.pred_key],
                             batch[self.target_key],
                             batch[self.weight_key],
