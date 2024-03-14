@@ -52,27 +52,44 @@ class MetricsLogger(Callback):
             + ")"
         )
         if self.wandb_enabled:
-            wandb.log(
-                {
-                    "epoch/val_loss": val_loss,
-                    "epoch/val_loss_per_chunk": loss,
-                    "epoch/table_val_loss_per_label": wandb.Table(
-                        columns=["label", "loss"],
-                        data=list(
-                            zip(
-                                list(val_loss_per_label.keys()),
-                                list(val_loss_per_label.values()),
-                            ),
+            data = {
+                "epoch/val_loss": val_loss,
+                "epoch/val_loss_per_chunk": loss,
+                "epoch/table_val_loss_per_label": wandb.Table(
+                    columns=["label", "loss"],
+                    data=list(
+                        zip(
+                            list(val_loss_per_label.keys()),
+                            list(val_loss_per_label.values()),
                         ),
                     ),
-                    **{
-                        f"epoch/val_loss_{label}": loss
-                        for label, loss in val_loss_per_label.items()
-                    },
-                    "epoch/forget_rate": trainer.forget_rate_scheduler.value,
-                    "epoch": epoch,
+                ),
+                **{
+                    f"epoch/val_loss_{label}": loss
+                    for label, loss in val_loss_per_label.items()
+                },
+                "epoch/forget_rate": trainer.forget_rate_scheduler.value,
+                "epoch": epoch,
+            }
+
+            if (
+                hasattr(trainer, "_train_loss_meter_eeg")
+                and hasattr(trainer, "_train_loss_meter_spec")
+                and hasattr(trainer, "_train_loss_meter_contrastive")
+            ):
+                data |= {
+                    "epoch/train_loss_eeg": getattr(
+                        trainer, "_train_loss_meter_eeg"
+                    ).mean,
+                    "epoch/train_loss_spec": getattr(
+                        trainer, "_train_loss_meter_spec"
+                    ).mean,
+                    "epoch/train_loss_contrastive": getattr(
+                        trainer, "_train_loss_meter_contrastive"
+                    ).mean,
                 }
-            )
+
+            wandb.log(data)
 
     @torch.no_grad()
     def on_valid_step_end(
