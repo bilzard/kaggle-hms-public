@@ -9,6 +9,25 @@ from hydra.utils import call, instantiate
 from src.config import ArchitectureConfig, LrAdjustmentConfig
 
 
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.current: float = 0.0
+        self.mean: float = 0.0
+        self.sum: float = 0.0
+        self.count: float = 0
+
+    def update(self, val: float, count: float):
+        self.current = val
+        self.sum += val * count
+        self.count += count
+        self.mean = self.sum / self.count
+
+
 def move_device(x: dict[str, torch.Tensor], input_keys: list[str], device: str):
     for k, v in x.items():
         if k in input_keys:
