@@ -169,6 +169,7 @@ class Trainer(BaseTrainer):
         loss, _ = self._calc_loss(
             output[self.pred_key],
             batch[self.target_key],
+            batch[self.weight_key] if self.cfg.distillation.use_loss_weights else None,
             aggregate=False,
         )
         sorted_indices = torch.argsort(loss.data)
