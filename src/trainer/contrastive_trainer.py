@@ -1,0 +1,303 @@
+import numpy as np
+import torch
+import torch.nn as nn
+from hydra.utils import instantiate
+from torch import Tensor
+from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
+from transformers import get_cosine_schedule_with_warmup
+
+from src.callback.base import Callback
+from src.config import TrainerConfig
+from src.scheduler import LinearScheduler
+from src.train_util import AverageMeter, get_lr_params
+from src.trainer.base import BaseTrainer
+
+
+class ContrastiveTrainer(BaseTrainer):
+    """
+    以下の3つをlossとして加算する
+    1. 1d model の予測値
+    2. 2d model の予測値
+    3. 1d/2dの予測値のsymmetric kl divergence
+
+    さらに、上記のlossを使ってbatch内のサンプルを間引きする。
+    """
+
+    def __init__(
+        self,
+        cfg: TrainerConfig,
+        model: nn.Module,
+        device,
+        train_loader: DataLoader,
+        valid_loader: DataLoader,
+        epochs: int,
+        callbacks: list[Callback] = [],
+        mixed_precision=True,
+        teacher_model: nn.Module | None = None,
+    ):
+        super().__init__(cfg)
+        self.model = model
+        self.teacher_model = teacher_model
+        self.criterion = nn.KLDivLoss(reduction="none")
+        self.device = device
+        self.epochs = epochs
+        self.mixed_precision = mixed_precision
+        self.scaler = torch.cuda.amp.GradScaler() if self.mixed_precision else None
+        self.callbacks = callbacks
+
+        self.target_key = cfg.data.target_key
+        self.pred_key = cfg.data.pred_key
+        self.weight_key = cfg.data.weight_key
+        self.input_keys = cfg.data.input_keys
+
+        self.train_loader = train_loader
+        self.valid_loader = valid_loader
+
+        self._train_loss_meter = AverageMeter()
+        self._train_loss_meter_eeg = AverageMeter()
+        self._train_loss_meter_spec = AverageMeter()
+        self._train_loss_meter_contrastive = AverageMeter()
+
+        self._valid_loss_meter = AverageMeter()
+        assert len(cfg.class_weights) == 6
+        self.class_weights = np.array(cfg.class_weights) ** cfg.class_weight_exponent
+        self.class_weights /= self.class_weights.sum()
+        self.class_weights *= 6
+
+        print(f"** class_weights: {self.class_weights}")
+
+        self.configure_optimizers()
+        self.clear_log()
+        self.log_architecture()
+
+    def log_architecture(self):
+        self.write_log("Optimizer", str(self.optimizer))
+        self.write_log("Train dataset", str(self.train_loader.dataset))
+        self.write_log("Valid dataset", str(self.valid_loader.dataset))
+        self.write_log("Model:", str(self.model))
+
+    def configure_optimizers(self):
+        cfg = self.cfg
+        max_steps = len(self.train_loader) * self.epochs
+        base_lr = cfg.lr * (cfg.batch_size * cfg.num_samples_per_eeg) / 32.0
+        params = get_lr_params(
+            self.model,
+            base_lr,
+            cfg.lr_adjustments,
+            no_decay_bias_params=cfg.no_decay_bias_params,
+        )
+        self.optimizer = instantiate(
+            self.cfg.optimizer,
+            params=params,
+            lr=base_lr,
+            weight_decay=cfg.weight_decay,
+            _convert_="object",
+        )
+        self.scheduler = get_cosine_schedule_with_warmup(
+            self.optimizer,
+            num_training_steps=max_steps,
+            num_warmup_steps=int(max_steps * cfg.scheduler.warmup_ratio),
+            num_cycles=0.5,
+        )
+        self.forget_rate_scheduler = LinearScheduler(
+            initial_value=0.0,
+            target_value=cfg.distillation.target_forget_rate,
+            target_step=len(self.train_loader) * cfg.distillation.target_epochs,
+        )
+        print(f"* target_step: {self.forget_rate_scheduler.target_step}")
+        print(f"* target_forget_rate: {self.forget_rate_scheduler.target_value}")
+        print(f"* teacher_model: {self.teacher_model is not None}")
+
+    def fit(self):
+        for epoch in range(self.epochs):
+            self._train_loss_meter.reset()
+            self._train_loss_meter_eeg.reset()
+            self._train_loss_meter_spec.reset()
+            self._train_loss_meter_contrastive.reset()
+
+            if self.cfg.pseudo_label.enabled:
+                self.train_loader.sampler.set_epoch(epoch)  # type: ignore
+                print(
+                    f"epoch: {epoch}, num_samples: {self.train_loader.sampler.num_samples}"  # type: ignore
+                )
+
+            self.train_epoch(epoch)
+            for callback in self.callbacks:
+                callback.on_train_epoch_end(self, epoch, self._train_loss_meter.mean)
+
+            self._valid_loss_meter.reset()
+            self.valid_loader.dataset.reset()  # type: ignore
+            self.valid_epoch(epoch)
+            for callback in self.callbacks:
+                callback.on_valid_epoch_end(
+                    self,
+                    epoch,
+                    self._valid_loss_meter.mean,
+                )
+
+    def _move_device(self, x: dict[str, torch.Tensor]):
+        for k, v in x.items():
+            if k in self.input_keys + [self.target_key, self.weight_key]:
+                x[k] = v.to(self.device)
+
+    def _calc_loss(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor,
+        weight: torch.Tensor | None = None,
+        aggregate: bool = True,
+        softmax_target: bool = False,
+    ) -> tuple[torch.Tensor, float]:
+        """
+        pred: (B, C)
+        target: (B, C)
+        weight: (B, 1)
+        """
+        pred = torch.log_softmax(pred, dim=1)
+        if softmax_target:
+            target = torch.softmax(target, dim=1)
+
+        weight_sum = weight.sum().item() if weight is not None else pred.shape[0]
+        loss = self.criterion(pred, target)
+
+        if self.model.training:
+            for c in range(6):
+                loss[:, c] *= self.class_weights[c]
+
+        loss = loss.sum(dim=1)  # point-wise KL divergence
+
+        if weight is not None:
+            loss *= weight.squeeze(1)
+
+        if aggregate:
+            loss = loss.sum() / weight_sum
+
+        return loss, weight_sum
+
+    @torch.no_grad()
+    def pruning_samples(self, loss: Tensor, forget_rate: float) -> Tensor:
+        sorted_indices = torch.argsort(loss.data)
+        loss_sorted = loss[sorted_indices]
+
+        remain_rate = 1.0 - forget_rate
+        num_remain = int(remain_rate * len(loss_sorted))
+        indices_to_update = sorted_indices[:num_remain]
+
+        return indices_to_update
+
+    def train_epoch(self, epoch: int):
+        self.model.train()
+
+        if self.teacher_model is not None:
+            self.teacher_model.eval()
+
+        with tqdm(self.train_loader, unit="step") as pbar:
+            for batch in pbar:
+                self.optimizer.zero_grad()
+                self._move_device(batch)
+                with torch.autocast(device_type="cuda", enabled=self.mixed_precision):
+                    output = self.model(batch)
+                    loss_eeg, _ = self._calc_loss(
+                        output["logit_eeg"],
+                        batch[self.target_key],
+                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
+                        aggregate=False,
+                    )
+                    loss_spec, _ = self._calc_loss(
+                        output["logit_spec"],
+                        batch[self.target_key],
+                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
+                        aggregate=False,
+                    )
+                    loss_eeg_spec, _ = self._calc_loss(
+                        output["logit_eeg"],
+                        output["logit_spec"],
+                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
+                        aggregate=False,
+                        softmax_target=True,
+                    )
+                    loss_spec_eeg, _ = self._calc_loss(
+                        output["logit_spec"],
+                        output["logit_eeg"],
+                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
+                        aggregate=False,
+                        softmax_target=True,
+                    )
+                    loss = (loss_eeg + loss_spec) / 2.0 + self.cfg.contrastive.lambd * (
+                        (loss_eeg_spec + loss_spec_eeg) / 2.0
+                    )
+                    indices_to_update = self.pruning_samples(
+                        loss, self.forget_rate_scheduler.value
+                    )
+                    loss = loss[indices_to_update]
+                    weight_sum = (
+                        (batch[self.weight_key][indices_to_update].sum().item())
+                        if self.cfg.use_loss_weights
+                        else len(indices_to_update)
+                    )
+                    loss = loss.sum() / weight_sum
+
+                    with torch.no_grad():
+                        self._train_loss_meter.update(loss.item(), weight_sum)
+                        self._train_loss_meter_eeg.update(
+                            loss_eeg[indices_to_update].sum().item() / weight_sum,
+                            weight_sum,
+                        )
+                        self._train_loss_meter_spec.update(
+                            loss_spec[indices_to_update].sum().item() / weight_sum,
+                            weight_sum,
+                        )
+                        self._train_loss_meter_contrastive.update(
+                            ((loss_eeg_spec + loss_eeg_spec)[indices_to_update] / 2.0)
+                            .sum()
+                            .item()
+                            / weight_sum,
+                            weight_sum,
+                        )
+
+                self.forget_rate_scheduler.step()
+
+                if self.scaler is not None:
+                    self.scaler.scale(loss).backward()
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                else:
+                    loss.backward()
+                    self.optimizer.step()
+                self.scheduler.step()
+
+                for callback in self.callbacks:
+                    callback.on_train_step_end(
+                        self, batch, output, self._train_loss_meter.mean
+                    )
+                pbar.set_postfix(
+                    {
+                        "loss": self._train_loss_meter.mean,
+                        "loss_eeg": self._train_loss_meter_eeg.mean,
+                        "loss_spec": self._train_loss_meter_spec.mean,
+                        "loss_contrastive": self._train_loss_meter_contrastive.mean,
+                        "forget_rate": self.forget_rate_scheduler.value,
+                    }
+                )
+
+    def valid_epoch(self, epoch: int):
+        self.model.eval()
+        with torch.no_grad():
+            with tqdm(self.valid_loader, unit="step") as pbar:
+                for batch in pbar:
+                    self._move_device(batch)
+                    with torch.autocast(device_type="cuda", enabled=True):
+                        output = self.model(batch)
+                        loss, weight_sum = self._calc_loss(
+                            output[self.pred_key],
+                            batch[self.target_key],
+                            batch[self.weight_key],
+                        )
+                        self._valid_loss_meter.update(loss.item(), weight_sum)
+
+                        for callback in self.callbacks:
+                            callback.on_valid_step_end(
+                                self, batch, output, self._valid_loss_meter.mean
+                            )
+                        pbar.set_postfix({"loss": self._valid_loss_meter.mean})
