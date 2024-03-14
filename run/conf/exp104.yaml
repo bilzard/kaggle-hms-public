@@ -1,0 +1,6 @@
+defaults:
+  - baseline_contrastive_v2_lite
+  - _self_
+
+exp_name: exp104
+description: train with contrastive loss v2 lite
