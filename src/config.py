@@ -100,6 +100,14 @@ class LrAdjustmentConfig:
 
 
 @dataclass
+class DistillationConfig:
+    teacher_exp_name: str
+    teacher_seed: int
+    target_forget_rate: float
+    target_epochs: int
+
+
+@dataclass
 class TrainerConfig:
     epochs: int
     lr: float
@@ -116,6 +124,7 @@ class TrainerConfig:
     no_decay_bias_params: bool
     class_weights: list[float]
     class_weight_exponent: float
+    use_loss_weights: bool
     transform: DictConfig | None
     train_dataset: DictConfig
     valid_dataset: DictConfig
@@ -125,6 +134,7 @@ class TrainerConfig:
     val: EvalConfig
     pseudo_label: PseudoLabelConfig
     label: LabelConfig
+    distillation: DistillationConfig
 
 
 @dataclass

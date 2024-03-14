@@ -1,12 +1,15 @@
 import shutil
 from pathlib import Path
+from typing import cast
 
 import hydra
 import numpy as np
 import polars as pl
 import torch
+import torch.nn as nn
 import wandb
 from einops import rearrange
+from hydra.core.global_hydra import GlobalHydra
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
@@ -27,6 +30,40 @@ from src.random_util import seed_everything, seed_worker
 from src.sampler import LossBasedSampler
 from src.train_util import check_model, get_model, move_device
 from src.trainer import Trainer
+
+
+def load_checkpoint(
+    model: nn.Module, checkpoint_path: Path, checkpoint_key="checkpoint"
+):
+    state_dict = torch.load(checkpoint_path, map_location="cpu")
+    model.load_state_dict(state_dict[checkpoint_key])
+    return model
+
+
+def load_config(config_name: str, parent_cfg: MainConfig) -> MainConfig:
+    if GlobalHydra.instance().is_initialized():
+        GlobalHydra.instance().clear()
+
+    with hydra.initialize(config_path="conf", version_base="1.2"):
+        cfg = hydra.compose(
+            config_name=config_name,
+            overrides=[
+                f"phase={parent_cfg.phase}",
+                f"env={parent_cfg.env.name}",
+                f"infer.batch_size={parent_cfg.env.infer_batch_size}",
+                f"architecture.model.encoder.grad_checkpointing={parent_cfg.env.grad_checkpointing}",
+                f"fold={parent_cfg.fold}",
+                f"seed={parent_cfg.seed}",
+            ],
+        )
+        print("** phase:", cfg.phase)
+        print("** env:", cfg.env.name)
+        print("** infer_batch_size:", cfg.infer.batch_size)
+        print(
+            "** grad_checkpointing:", cfg.architecture.model.encoder.grad_checkpointing
+        )
+
+    return cast(MainConfig, cfg)
 
 
 @torch.no_grad()
@@ -242,6 +279,24 @@ def main(cfg: MainConfig):
                 pin_memory=True,
             )
 
+            if cfg.trainer.distillation.teacher_exp_name:
+                teacher_cfg = load_config(
+                    cfg.trainer.distillation.teacher_exp_name, cfg
+                )
+                teacher_model = get_model(teacher_cfg.architecture, pretrained=False)
+                weight_path = (
+                    Path(cfg.env.checkpoint_dir)
+                    / cfg.trainer.distillation.teacher_exp_name
+                    / f"fold_{cfg.fold}"
+                    / f"seed_{cfg.trainer.distillation.teacher_seed}"
+                    / "model"
+                    / f"{teacher_cfg.infer.model_choice}_model.pth"
+                )
+                load_checkpoint(teacher_model, weight_path)
+                teacher_model.to(device="cuda")
+            else:
+                teacher_model = None
+
             model = get_model(cfg.architecture)
             model.to(device="cuda")
             trainer = Trainer(
@@ -259,6 +314,7 @@ def main(cfg: MainConfig):
                     ),
                 ],
                 epochs=cfg.trainer.epochs,
+                teacher_model=teacher_model,
             )
             trainer.fit()
 

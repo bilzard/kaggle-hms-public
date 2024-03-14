@@ -77,6 +77,11 @@ trainer:
     max_votes: 28
   class_weights: [1.151, 0.706, 1.039, 1.681, 1.17, 0.253]
   class_weight_exponent: 0.0
+  use_loss_weights: true
+  distillation:
+    teacher_exp_name: null
+    target_epochs: 0
+    target_forget_rate: 1.0
 
 architecture:
   model:
