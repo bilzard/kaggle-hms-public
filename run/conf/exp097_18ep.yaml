@@ -1,0 +1,20 @@
+defaults:
+  - baseline_efficientnet2d_b0
+  - _self_
+
+exp_name: exp097_18ep
+description: efficientnet2d_b0 + distillation(teacher=exp069 forget_rate=0.2)
+
+architecture:
+  model:
+    encoder:
+      num_eeg_channels: 8
+
+trainer:
+  epochs: 18
+  use_loss_weights: true
+  distillation:
+    teacher_exp_name: exp069
+    teacher_seed: ${seed}
+    target_forget_rate: 0.2
+    target_epochs: 4
