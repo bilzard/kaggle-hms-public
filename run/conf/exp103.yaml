@@ -1,0 +1,6 @@
+defaults:
+  - baseline_contrastive_v2
+  - _self_
+
+exp_name: exp103
+description: train with contrastive loss v2

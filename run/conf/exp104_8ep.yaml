@@ -1,0 +1,9 @@
+defaults:
+  - exp104
+  - _self_
+
+exp_name: exp104_8ep
+description: train with contrastive loss v2
+
+trainer:
+  epochs: 8
