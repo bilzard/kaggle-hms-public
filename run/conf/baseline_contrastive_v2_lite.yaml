@@ -1,0 +1,7 @@
+defaults:
+  - baseline_contrastive_v2
+  - override architecture/model/encoder: efficientnet2d_b0
+  - _self_
+
+exp_name: ???
+description: ???

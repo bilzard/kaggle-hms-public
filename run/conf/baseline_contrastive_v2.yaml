@@ -1,0 +1,24 @@
+defaults:
+  - baseline_contrastive
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    feature_processor:
+      num_eeg_channels: 10
+      bottleneck_ratio_eeg: 4
+      bottleneck_ratio_spec: 10
+
+trainer:
+  use_loss_weights: true
+  distillation:
+    teacher_exp_name: null
+    teacher_seed: null
+    target_forget_rate: 0.0
+    target_epochs: 0
+    use_loss_weights: true
+  contrastive:
+    lambd: 1.0
