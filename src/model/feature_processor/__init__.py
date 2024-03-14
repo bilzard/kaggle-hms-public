@@ -1,4 +1,5 @@
 from .base import IdentityFeatureProcessor
+from .contrastive_dual_feature_processor import ContrastiveDualFeatureProcessor
 from .dual_channel_separated_feature_processor import (
     DualChannelSeparatedFeatureProcessor,
 )
@@ -18,4 +19,5 @@ __all__ = [
     "DualFeatureProcessorV2",
     "MixedDualFeatureProcessor",
     "DualChannelSeparatedFeatureProcessor",
+    "ContrastiveDualFeatureProcessor",
 ]
