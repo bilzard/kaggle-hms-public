@@ -8,39 +8,8 @@ from transformers import get_cosine_schedule_with_warmup
 
 from src.callback.base import Callback
 from src.config import TrainerConfig
-from src.logger import BaseLogger
-from src.train_util import get_lr_params
-
-
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.current: float = 0.0
-        self.mean: float = 0.0
-        self.sum: float = 0.0
-        self.count: float = 0
-
-    def update(self, val: float, count: float):
-        self.current = val
-        self.sum += val * count
-        self.count += count
-        self.mean = self.sum / self.count
-
-
-class BaseTrainer:
-    def __init__(self, cfg: TrainerConfig):
-        self.cfg = cfg
-        self.logger = BaseLogger(cfg.log_file_name)
-
-    def clear_log(self):
-        self.logger.clear()
-
-    def write_log(self, *args, sep=" ", end="\n"):
-        self.logger.write_log(*args, sep=sep, end=end)
+from src.train_util import AverageMeter, get_lr_params
+from src.trainer.base import BaseTrainer
 
 
 class Trainer(BaseTrainer):
