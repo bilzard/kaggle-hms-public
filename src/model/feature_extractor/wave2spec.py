@@ -1,9 +1,5 @@
-from importlib import import_module
-
 import torch
 import torch.nn as nn
-import torchaudio.functional as AF
-from torchaudio.transforms import MelSpectrogram
 
 from src.model.feature_extractor.eeg import ChannelCollator
 from src.model.tensor_util import rolling_mean, same_padding_1d
@@ -12,70 +8,28 @@ from src.model.tensor_util import rolling_mean, same_padding_1d
 class Wave2Spectrogram(nn.Module):
     def __init__(
         self,
-        sampling_rate: int = 40,
-        n_fft: int = 128,
-        win_length: int = 64,
-        hop_length: int = 16,
+        wave2spec: nn.Module,
         cutoff_freqs: tuple[float, float] = (0.5, 50),
-        frequency_lim: tuple[int, int] = (0, 20),
-        db_cutoff: int = 60,
-        db_offset: int = 0,
-        n_mels: int = 128,
-        window_fn: str = "hann_window",
         apply_mask: bool = True,
         downsample_mode: str = "linear",
         expand_mask: bool = True,
     ):
         super().__init__()
-        torch_module = import_module("torch")
 
-        self.sampling_rate = sampling_rate
-        self.n_fft = n_fft
-        self.win_length = win_length
-        self.hop_length = hop_length
         self.cutoff_freqs = cutoff_freqs
-        self.frequency_lim = frequency_lim
-        self.db_cutoff = db_cutoff
-        self.db_offset = db_offset
-        self.n_mels = n_mels
-        self.window_fn = window_fn
         self.apply_mask = apply_mask
         self.downsample_mode = downsample_mode
         self.expand_mask = expand_mask
 
+        self.win_length = wave2spec.win_length
+        self.hop_length = wave2spec.hop_length
+
         self.collate_channels = ChannelCollator(
-            sampling_rate=sampling_rate,
+            sampling_rate=wave2spec.sampling_rate,
             cutoff_freqs=cutoff_freqs,
             apply_mask=apply_mask,
         )
-        self.wave2spec = MelSpectrogram(
-            sample_rate=sampling_rate,
-            n_mels=n_mels,
-            n_fft=n_fft,
-            win_length=win_length,
-            hop_length=hop_length,
-            f_min=frequency_lim[0],
-            f_max=frequency_lim[1],
-            center=False,
-            window_fn=getattr(torch_module, window_fn),
-        )
-
-    def __repr__(self):
-        return f"""{self.__class__.__name__}(
-            sampling_rate={self.sampling_rate},
-            n_fft={self.n_fft},
-            win_length={self.win_length},
-            hop_length={self.hop_length},
-            cutoff_freqs={self.cutoff_freqs},
-            frequency_lim={self.frequency_lim},
-            db_cutoff={self.db_cutoff},
-            db_offset={self.db_offset},
-            n_mels={self.n_mels},
-            window_fn={self.window_fn},
-            apply_mask={self.apply_mask},
-            downsample_mode={self.downsample_mode},
-            expand_mask={self.expand_mask},
-        )"""
+        self.wave2spec = wave2spec
 
     @torch.no_grad()
     def downsample_mask(self, x: torch.Tensor, mode="nearest") -> torch.Tensor:
@@ -122,21 +76,7 @@ class Wave2Spectrogram(nn.Module):
         spec_mask = self.downsample_mask(eeg_mask, mode=self.downsample_mode)
         spec_mask = spec_mask.unsqueeze(dim=2)
 
-        spec = same_padding_1d(
-            eeg, kernel_size=self.n_fft, stride=self.hop_length, mode="reflect"
-        )
-        with torch.autocast(device_type="cuda", enabled=False):
-            spec = self.wave2spec(spec)
-            spec = (
-                AF.amplitude_to_DB(
-                    spec,
-                    multiplier=10.0,
-                    amin=1e-8,
-                    top_db=self.db_cutoff,
-                    db_multiplier=0,
-                )
-                + self.db_offset
-            )
+        spec = self.wave2spec(eeg)
         B, C, F, T = spec.shape
         spec_mask = spec_mask[..., :T]
         BM, CM, FM, TM = spec_mask.shape
@@ -156,15 +96,21 @@ class Wave2Spectrogram(nn.Module):
 if __name__ == "__main__":
     from torchinfo import summary
 
+    from src.model.feature_extractor.module import MelSpec
+
     batch_size = 2
     num_probes = 19
     num_channels = num_probes - 1
     num_frames = 2048
-    n_fft = 128
+    sampling_rate = 40
+    n_fft = 256
+    win_length = 64
     hop_length = 16
     eeg = torch.randn(batch_size, num_frames, num_probes)
     mask = torch.randn(batch_size, num_frames, num_probes)
-    model = Wave2Spectrogram(n_fft=n_fft, hop_length=hop_length)
+    wave2spec = MelSpec(n_fft=n_fft, win_length=win_length, hop_length=hop_length)
+    print(wave2spec)
+    model = Wave2Spectrogram(wave2spec)
     output = model(eeg, mask)
     assert output["spec"].shape == (
         batch_size,
