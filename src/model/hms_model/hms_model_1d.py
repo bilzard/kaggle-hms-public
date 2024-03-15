@@ -38,16 +38,14 @@ class HmsModel1d(nn.Module):
         self.label_key = label_key
         self.weight_key = weight_key
 
-    @torch.no_grad()
     def preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         eeg = batch[self.feature_key]
         eeg_mask = batch[self.mask_key]
 
-        with torch.autocast(device_type="cuda", enabled=False):
-            output = self.feature_extractor(eeg, eeg_mask)
-            eeg, eeg_mask = output["eeg"], output["eeg_mask"]
-            eeg, eeg_mask = self.eeg_adapter(eeg, eeg_mask)
-            output["eeg"] = torch.cat([eeg, eeg_mask], dim=1)
+        output = self.feature_extractor(eeg, eeg_mask)
+        eeg, eeg_mask = output["eeg"], output["eeg_mask"]
+        eeg, eeg_mask = self.eeg_adapter(eeg, eeg_mask)
+        output["eeg"] = torch.cat([eeg, eeg_mask], dim=1)
 
         return output
 
