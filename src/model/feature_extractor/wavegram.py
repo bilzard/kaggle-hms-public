@@ -135,9 +135,16 @@ class Wavegram(nn.Module):
                 for c_in, c_out in zip(hidden_dims, hidden_dims[1:])
             ]
         )
-        self.mapper = Conv2dBlock(
-            in_channels=hidden_dims[-1] // num_filter_banks,
-            out_channels=out_channels,
+        self.mapper = nn.Sequential(
+            nn.Conv2d(
+                hidden_dims[-1] // self.num_filter_banks,
+                out_channels,
+                kernel_size=3,
+                padding=1,
+                bias=False,
+            ),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -156,12 +163,11 @@ class Wavegram(nn.Module):
 if __name__ == "__main__":
     from torchinfo import summary
 
-    # Test Wavegram
     batch_size = 2
     num_frames = 2048
     num_filter_banks = 64
     in_channels = 2
-    out_channels = 32
+    out_channels = 1
     hidden_dims = [64, 64, 64, 128, 128]
     num_blocks = len(hidden_dims) - 1
 
