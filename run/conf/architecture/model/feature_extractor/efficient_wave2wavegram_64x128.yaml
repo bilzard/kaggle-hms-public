@@ -1,0 +1,19 @@
+_target_: src.model.feature_extractor.Wave2Wavegram
+wavegram:
+  _target_: src.model.feature_extractor.EfficientWavegram
+  in_channels: 1
+  out_channels: 1
+  stem_kernel_size: 3
+  stem_stride: 1
+  num_filter_banks: 64
+  layers: [1, 2, 2, 3]
+  kernel_sizes: [3, 3, 3, 5]
+  hidden_dims: [32, 16, 24, 40, 64]
+  strides: [2, 2, 2, 2]
+  depth_multiplier: 4
+  se_ratio: 16
+win_length: 64
+cutoff_freqs: [0.5, 50]
+apply_mask: true
+downsample_mode: linear
+expand_mask: true
