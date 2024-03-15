@@ -122,12 +122,12 @@ class Wavegram(nn.Module):
                 in_channels,
                 hidden_dims[0],
                 kernel_size=stem_kernel_size,
-                stride=stem_stride,
-                padding=(stem_kernel_size - stem_stride) // 2,
+                padding=(stem_kernel_size - 1) // 2,
                 bias=False,
             ),
             nn.BatchNorm1d(hidden_dims[0]),
             nn.ReLU(),
+            nn.MaxPool1d(kernel_size=stem_stride) if stem_stride > 1 else nn.Identity(),
         )
         self.wave_blocks = nn.ModuleList(
             [
