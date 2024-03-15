@@ -1,0 +1,7 @@
+defaults:
+  - baseline_wavegram
+  - override architecture/model/feature_extractor: efficient_wave2wavegram_64x128
+  - _self_
+
+exp_name: ???
+description: ???
