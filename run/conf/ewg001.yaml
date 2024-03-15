@@ -1,0 +1,6 @@
+defaults:
+  - baseline_wavegram
+  - _self_
+
+exp_name: ewg001
+description: wavegram baseline
