@@ -3,7 +3,6 @@ import torch.nn as nn
 from einops import rearrange
 
 from src.model.feature_extractor import ChannelCollator
-from src.model.feature_extractor.wavegram import Wavegram
 from src.model.tensor_util import rolling_mean, same_padding_1d
 
 
@@ -103,6 +102,8 @@ class Wave2Wavegram(nn.Module):
 
 if __name__ == "__main__":
     from torchinfo import summary
+
+    from src.model.feature_extractor.module import Wavegram
 
     batch_size = 2
     num_frames = 2048
