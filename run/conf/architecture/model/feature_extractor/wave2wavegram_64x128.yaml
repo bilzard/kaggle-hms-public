@@ -7,6 +7,7 @@ wavegram:
   stem_stride: 1
   hidden_dims: [64, 64, 64, 128, 128]
   num_filter_banks: 64
+sampling_rate: 40
 win_length: 64
 cutoff_freqs: [0.5, 50]
 apply_mask: true
