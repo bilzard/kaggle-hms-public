@@ -105,7 +105,6 @@ class MixUp(nn.Module):
     def __repr__(self):
         return f"{self.__class__.__name__}({self.alpha=}, {self.p=}, {self.eps=})"
 
-    @torch.no_grad()
     def forward(
         self,
         spec: Tensor,
@@ -160,7 +159,6 @@ class MixUpFixedRatio(nn.Module):
     def __repr__(self):
         return f"{self.__class__.__name__}({self.alpha=}, {self.p=}, {self.eps=})"
 
-    @torch.no_grad()
     def forward(
         self,
         spec: Tensor,
@@ -234,7 +232,6 @@ class MixUpPerGroup(nn.Module):
     def __repr__(self):
         return f"{self.__class__.__name__}({self.alpha=}, {self.p_clean=}, {self.p_noisy=}, {self.weight_threshold=}, {self.eps=})"
 
-    @torch.no_grad()
     def forward(
         self,
         spec: Tensor,

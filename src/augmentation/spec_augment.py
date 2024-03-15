@@ -52,7 +52,6 @@ class NaiveTimeFreqMasking(nn.Module):
         self.mask_value = mask_value
         self.iid_masks = iid_masks
 
-    @torch.no_grad()
     def forward(self, spec: Tensor) -> Tensor:
         B, C, F, T = spec.shape
         time_mask_param = int(T * self.time_mask_ratio)
@@ -97,7 +96,6 @@ class ChannelSyncedTimeFreqMasking(nn.Module):
         self.p = p
         self.mask_value = mask_value
 
-    @torch.no_grad()
     def forward(self, spec: Tensor) -> Tensor:
         B, C, F, T = spec.shape
         time_mask_param = int(T * self.time_mask_ratio)

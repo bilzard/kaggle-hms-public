@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 from torch import Tensor
 
@@ -33,7 +32,6 @@ class ResizeTransform(nn.Module):
             else None,
         )
 
-    @torch.no_grad()
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         spec = self.resize(spec)
         mask = self.resize_mask(mask)
@@ -50,7 +48,6 @@ class TimeCroppingTransform(nn.Module):
         self.start = start
         self.size = size
 
-    @torch.no_grad()
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         spec: b c f t

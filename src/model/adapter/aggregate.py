@@ -392,7 +392,6 @@ class DualChannelSeparatedAggregator(nn.Module):
         super().__init__()
         self.drop_z = drop_z
 
-    @torch.no_grad()
     def forward(self, spec: Tensor, mask: Tensor) -> tuple[Tensor, Tensor]:
         """
         input: b ch f t

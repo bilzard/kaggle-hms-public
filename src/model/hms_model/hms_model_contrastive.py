@@ -63,7 +63,6 @@ class HmsModelContrastive(nn.Module):
 
         return output
 
-    @torch.no_grad()
     def compose_spec(
         self, batch: dict[str, Tensor], output: dict[str, Tensor]
     ) -> dict[str, Tensor]:
