@@ -9,7 +9,6 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 from timm.layers import DropPath
-from timm.models._efficientnet_builder import efficientnet_init_weights
 from torch import Tensor
 
 
@@ -278,7 +277,6 @@ class EfficientWavegram(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
         )
-        efficientnet_init_weights(self)
 
     @property
     def hop_length(self):
