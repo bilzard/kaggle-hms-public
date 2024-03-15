@@ -1,0 +1,15 @@
+defaults:
+  - baseline_v4
+  - override architecture/model/feature_extractor: wave2panns_128x128
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.DualCanvasAggregator
+        drop_z: true
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 1.0]
