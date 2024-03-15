@@ -63,9 +63,10 @@ class Evaluator:
             valid_dataset.reset()
 
             for batch in tqdm(valid_loader, unit="step"):
-                self._move_device(batch)
-                output = model(batch)
-                self.process_batch(batch, output)
+                with torch.autocast(device_type="cuda", enabled=True):
+                    self._move_device(batch)
+                    output = model(batch)
+                    self.process_batch(batch, output)
 
         return self.aggregate()
 

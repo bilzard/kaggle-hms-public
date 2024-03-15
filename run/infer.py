@@ -103,14 +103,15 @@ def predict(
     for i in range(iterations):
         print(f"iteration: {i+1}/{iterations}")
         for batch in tqdm(test_loader, unit="step"):
-            move_device(batch, input_keys, device)
-            eeg_ids = batch["eeg_id"].detach().cpu().numpy()
-            output = model(batch)
-            logits = output["pred"].detach().cpu().numpy()
+            with torch.autocast(device_type="cuda", enabled=True):
+                move_device(batch, input_keys, device)
+                eeg_ids = batch["eeg_id"].detach().cpu().numpy()
+                output = model(batch)
+                logits = output["pred"].detach().cpu().numpy()
 
-            for eeg_id, logit in zip(eeg_ids, logits):
-                if eeg_id not in eeg_id2logits:
-                    eeg_id2logits[eeg_id].append(logit)
+                for eeg_id, logit in zip(eeg_ids, logits):
+                    if eeg_id not in eeg_id2logits:
+                        eeg_id2logits[eeg_id].append(logit)
 
     # aggregate per EEG ID
     for eeg_id, logits in tqdm(eeg_id2logits.items()):
