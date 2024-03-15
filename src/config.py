@@ -114,6 +114,12 @@ class ContrastiveConfig:
 
 
 @dataclass
+class LossWeightConfig:
+    norm_policy: str
+    global_mean: float
+
+
+@dataclass
 class TrainerConfig:
     trainer_class: DictConfig
     epochs: int
@@ -143,6 +149,7 @@ class TrainerConfig:
     label: LabelConfig
     distillation: DistillationConfig
     contrastive: ContrastiveConfig
+    loss_weight: LossWeightConfig
 
 
 @dataclass

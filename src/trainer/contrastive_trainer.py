@@ -12,6 +12,7 @@ from src.config import TrainerConfig
 from src.scheduler import LinearScheduler
 from src.train_util import AverageMeter, get_lr_params
 from src.trainer.base import BaseTrainer
+from src.trainer.util import calc_weight_sum
 
 
 class ContrastiveTrainer(BaseTrainer):
@@ -158,7 +159,11 @@ class ContrastiveTrainer(BaseTrainer):
         if softmax_target:
             target = torch.softmax(target, dim=1)
 
-        weight_sum = weight.sum().item() if weight is not None else pred.shape[0]
+        weight_sum = (
+            calc_weight_sum(weight, self.cfg.loss_weight)
+            if weight is not None
+            else pred.shape[0]
+        )
         loss = self.criterion(pred, target)
 
         if self.model.training:
@@ -231,10 +236,8 @@ class ContrastiveTrainer(BaseTrainer):
                         loss, self.forget_rate_scheduler.value
                     )
                     loss = loss[indices_to_update]
-                    weight_sum = (
-                        (batch[self.weight_key][indices_to_update].sum().item())
-                        if self.cfg.use_loss_weights
-                        else len(indices_to_update)
+                    weight_sum = calc_weight_sum(
+                        batch[self.weight_key][indices_to_update], self.cfg.loss_weight
                     )
                     loss = loss.sum() / weight_sum
 
