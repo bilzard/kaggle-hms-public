@@ -97,6 +97,7 @@ class DepthWiseSeparableConv(nn.Module):
         kernel_size: tuple[int, ...],
         activation: type[nn.Module],
         stride: tuple[int, ...] = (1, 1),
+        dilation: tuple[int, ...] = (1, 1),
         se_ratio: int = 4,
         skip: bool = True,
         drop_path_rate: float = 0.0,
@@ -111,6 +112,8 @@ class DepthWiseSeparableConv(nn.Module):
                 in_channels,
                 in_channels,
                 kernel_size=kernel_size,
+                dilation=dilation,
+                stride=stride,
                 groups=in_channels,
                 activation=activation,
             )
@@ -124,7 +127,6 @@ class DepthWiseSeparableConv(nn.Module):
                 in_channels,
                 out_channels,
                 activation=activation,
-                stride=stride,
             )
         )
         if not se_after_dw_conv:
@@ -151,20 +153,20 @@ class InvertedResidual(nn.Module):
         in_channels: int,
         out_channels: int,
         kernel_size: tuple[int, ...],
-        activation: type[nn.Module],
-        stride: tuple[int, ...],
+        dilation: tuple[int, ...] = (1, 1),
+        stride: tuple[int, ...] = (1, 1),
         depth_multiplier: int = 4,
         se_ratio: int = 16,
         skip: bool = True,
         drop_path_rate: float = 0.0,
         se_after_dw_conv: bool = False,
+        activation: type[nn.Module] = nn.SiLU,
     ):
         super().__init__()
 
         self.has_skip = (
             skip and all([s == 1 for s in stride]) and in_channels == out_channels
         )
-
         modules: list[nn.Module] = [
             ConvBnAct2d(
                 in_channels, in_channels * depth_multiplier, activation=activation
@@ -174,6 +176,7 @@ class InvertedResidual(nn.Module):
                 in_channels * depth_multiplier,
                 kernel_size=kernel_size,
                 stride=stride,
+                dilation=dilation,
                 padding=tuple([k // 2 for k in kernel_size]),
                 groups=in_channels * depth_multiplier,
                 activation=activation,
@@ -251,12 +254,12 @@ class EfficientWavegram(nn.Module):
                         InvertedResidual(
                             c_in if j == 0 else c_out,
                             c_out,
-                            (1, k),
-                            activation,
+                            kernel_size=(1, k),
                             stride=(1, s) if j == 0 else (1, 1),
                             depth_multiplier=depth_multiplier,
                             se_ratio=se_ratio,
                             se_after_dw_conv=se_after_dw_conv,
+                            activation=activation,
                         )
                         for j in range(nl)
                     ]
@@ -275,7 +278,7 @@ class EfficientWavegram(nn.Module):
                 bias=False,
             ),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
+            activation(),
         )
 
     @property
