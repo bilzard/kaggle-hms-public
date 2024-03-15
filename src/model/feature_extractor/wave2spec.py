@@ -126,17 +126,18 @@ class Wave2Spectrogram(nn.Module):
         spec = same_padding_1d(
             eeg, kernel_size=self.n_fft, stride=self.hop_length, mode="reflect"
         )
-        spec = self.wave2spec(spec)
-        spec = (
-            AF.amplitude_to_DB(
-                spec,
-                multiplier=10.0,
-                amin=1e-8,
-                top_db=self.db_cutoff,
-                db_multiplier=0,
+        with torch.autocast(device_type="cuda", enabled=False):
+            spec = self.wave2spec(spec)
+            spec = (
+                AF.amplitude_to_DB(
+                    spec,
+                    multiplier=10.0,
+                    amin=1e-8,
+                    top_db=self.db_cutoff,
+                    db_multiplier=0,
+                )
+                + self.db_offset
             )
-            + self.db_offset
-        )
         B, C, F, T = spec.shape
         spec_mask = spec_mask[..., :T]
         BM, CM, FM, TM = spec_mask.shape
