@@ -56,13 +56,10 @@ class HmsModelMixed(nn.Module):
         self.label_key = label_key
         self.weight_key = weight_key
 
-    @torch.no_grad()
     def generate_spec(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         eeg = batch[self.feature_key]
         eeg_mask = batch[self.mask_key]
-
-        with torch.autocast(device_type="cuda", enabled=False):
-            output = self.feature_extractor(eeg, eeg_mask)
+        output = self.feature_extractor(eeg, eeg_mask)
 
         return output
 
@@ -103,7 +100,6 @@ class HmsModelMixed(nn.Module):
 
         return output
 
-    @torch.no_grad()
     def preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         # Process Spec
         output = self.generate_spec(batch)
@@ -111,9 +107,8 @@ class HmsModelMixed(nn.Module):
         output = self.compose_spec(batch, output)
 
         # Process EEG
-        with torch.autocast(device_type="cuda", enabled=False):
-            eeg, eeg_mask = self.eeg_adapter(eeg, eeg_mask)
-            output["eeg"] = torch.cat([eeg, eeg_mask], dim=1)
+        eeg, eeg_mask = self.eeg_adapter(eeg, eeg_mask)
+        output["eeg"] = torch.cat([eeg, eeg_mask], dim=1)
 
         return output
 

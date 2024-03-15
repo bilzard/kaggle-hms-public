@@ -49,10 +49,13 @@ class ChannelCollator(nn.Module):
         eegs = torch.stack(eegs, dim=1)
         eeg_masks = torch.stack(eeg_masks, dim=1)
 
-        if self.cutoff_freqs[0] is not None:
-            eegs = AF.highpass_biquad(eegs, self.sampling_rate, self.cutoff_freqs[0])
-        if self.cutoff_freqs[1] is not None:
-            eegs = AF.lowpass_biquad(eegs, self.sampling_rate, self.cutoff_freqs[1])
+        with torch.autocast(device_type="cuda", enabled=False):
+            if self.cutoff_freqs[0] is not None:
+                eegs = AF.highpass_biquad(
+                    eegs, self.sampling_rate, self.cutoff_freqs[0]
+                )
+            if self.cutoff_freqs[1] is not None:
+                eegs = AF.lowpass_biquad(eegs, self.sampling_rate, self.cutoff_freqs[1])
 
         output = dict(eeg=eegs, eeg_mask=eeg_masks)
         return output

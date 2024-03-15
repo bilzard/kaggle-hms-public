@@ -78,6 +78,7 @@ class Wave2Spectrogram(nn.Module):
             expand_mask={self.expand_mask},
         )"""
 
+    @torch.no_grad()
     def downsample_mask(self, x: torch.Tensor, mode="nearest") -> torch.Tensor:
         """
         1次元信号をダウンサンプリングする
