@@ -484,7 +484,9 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             "eeg_id",
             "spectrogram_id",
             *[f"{label}_prob" for label in LABELS],
-            weight_key,
+            *[f"{label}_prob_per_eeg" for label in LABELS],
+            "weight",
+            "weight_per_eeg",
             "eeg_label_offset_seconds",
             "spectrogram_label_offset_seconds",
         )
@@ -525,6 +527,10 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         return len(self.eeg_ids) * self.num_samples_per_eeg
 
     def __getitem__(self, idx):
+        """
+        label: k c
+        weight: k
+        """
         #
         # sample label
         #
@@ -589,10 +595,16 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         #
         if self.with_label:
             label = np.array(
-                [row[self.key2idx[f"{label}_prob"]] for label in LABELS],
+                [
+                    [row[self.key2idx[f"{label}_prob"]] for label in LABELS],
+                    [row[self.key2idx[f"{label}_prob_per_eeg"]] for label in LABELS],
+                ],
                 dtype=np.float32,
             )
-            weight = np.array([row[self.key2idx[self.weight_key]]], dtype=np.float32)
+            weight = np.array(
+                [row[self.key2idx["weight"]], row[self.key2idx["weight_per_eeg"]]],
+                dtype=np.float32,
+            )
             data |= dict(label=label, weight=weight)
 
         return data
