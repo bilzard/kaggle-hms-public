@@ -1,5 +1,10 @@
 # 参考文献リスト
 
+## 1D signalの特徴抽出手法
+
+- **SincNet**[14]: band-pass filterのパラメータを学習することでconv filterを学習するよりも少ないパラメータでモデル化しようとする手法。話者識別のタスクにおいてフーリエ変換系のfilter bankであるMFCC特徴やpure-CNNのfilter bankと比較して優れた性能を報告している。
+- **Wavegram(PANNs)**[15]: 1D-CNNで32kHzの音声信号を`1/(5*4*4*4)=1/320`にdown sampleし、できた100Hzのfeature mapを`B (C // F) F T`の形状にreshapeすることで学習可能なfilter bankを得る手法。
+
 ## NLL(Noisy Label Learning)
 
 - **Co-Teaching**[1]: 2つのネットワークにより相互にnoisy sampleの情報を教え合う。バッチサンプルのうち、相手のネットワークにおけるラベルとのlossが大きいもの上位1-Rをnoisy labelとして学習サンプルから除外する。
@@ -45,3 +50,5 @@ Student-Teacherによる対照学習では多くの場合teacherとしてstudent
 - [11] [Bootstrap your own latent: A new approach to self-supervised Learning](https://arxiv.org/abs/2006.07733)
 - [12] [A Simple Framework for Contrastive Learning of Visual Representations](https://arxiv.org/abs/2002.05709)
 - [13] [FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence](https://arxiv.org/abs/2001.07685)
+- [14] [Speaker Recognition from Raw Waveform with SincNet](https://arxiv.org/abs/1808.00158)
+- [15] [PANNs: Large-Scale Pretrained Audio Neural Networks for Audio Pattern Recognition](https://arxiv.org/abs/1912.10211)
