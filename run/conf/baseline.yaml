@@ -87,6 +87,9 @@ trainer:
     use_loss_weights: false
   contrastive:
     lambd: 0.0
+  loss_weight:
+    norm_policy: relative
+    mean: 0.227
 
 architecture:
   model:
