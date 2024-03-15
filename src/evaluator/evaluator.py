@@ -94,50 +94,38 @@ class Evaluator:
         eeg_ids = []
 
         for eeg_id, logits in tqdm(self._valid_logits.items()):
-            logits = torch.stack(logits, dim=0)  # (B, C)
-            labels = torch.stack(self._valid_label[eeg_id], dim=0)  # (B, C)
-            weights = torch.stack(self._valid_weight[eeg_id], dim=0)  # (B, 1)
+            logits = torch.stack(logits, dim=0)  # b k c
+            labels = torch.stack(self._valid_label[eeg_id], dim=0)  # b k c
+            weights = torch.stack(self._valid_weight[eeg_id], dim=0).unsqueeze(
+                -1
+            )  # b k 1
+            assert (
+                logits.ndim == 3 and labels.ndim == 3 and weights.ndim == 3
+            ), f"Invalid shape: {logits.shape}, {labels.shape}, {weights.shape}"
 
             if self.aggregation_fn == "max":
-                logit = torch.max(logits, dim=0)[0]
+                logit = torch.max(logits, dim=0)[0]  # k c
             elif self.aggregation_fn == "mean":
-                logit = logits.mean(dim=0)
+                logit = logits.mean(dim=0)  # k c
             else:
                 raise ValueError(f"Invalid aggregation_fn: {self.aggregation_fn}")
 
-            match self.agg_policy:
-                case "per_eeg_weighted":
-                    label = (labels * weights).sum(dim=0)  # (C)
-                    label = label / label.sum()
-                    pred = torch.log_softmax(logit, dim=0)  # (C)
-                    loss = self.criterion(pred, label) * weights.sum()
-                    val_loss_per_label += loss.detach().cpu().numpy()
-                    val_count += weights.sum().item()
-                case "per_eeg_mean":
-                    label = labels.mean(dim=0)  # (C)
-                    label = label / label.sum()
-                    pred = torch.log_softmax(logit, dim=0)  # (C)
-                    loss = self.criterion(pred, label)
-                    val_loss_per_label += loss.detach().cpu().numpy()
-                    val_count += 1
-                case "per_label_weighted":
-                    preds = torch.log_softmax(logits, dim=1)
-                    loss = self.criterion(preds, labels)
-                    loss = (loss * weights).sum(dim=0)
-                    val_loss_per_label += loss.detach().cpu().numpy()
-                    val_count += weights.sum().item()
-                case "per_label_mean":
-                    preds = torch.log_softmax(logits, dim=1)
-                    loss = self.criterion(preds, labels)
-                    loss = loss.mean(dim=0)
-                    val_loss_per_label += loss.detach().cpu().numpy()
-                    val_count += 1
-                case _:
-                    raise ValueError(f"Invalid agg_policy: {self.agg_policy}")
+            label = (labels * weights).sum(dim=0)  # k c
+            label = label / label.sum(dim=1, keepdim=True)
+            weight = weights.sum(dim=0)
+            pred = torch.log_softmax(logit, dim=1)  # k c
+            loss = self.criterion(pred, label) * weight  # k c
+
+            loss = loss.mean(dim=0)  # c
+            weight = weight.mean(dim=0)  # c
+            logit = logit.mean(dim=0)  # c
+
+            val_loss_per_label += loss.detach().cpu().numpy()
+            val_count += weight.sum().item()
 
             # eegごとの予測値
             eeg_ids.append(eeg_id)
-            logits_per_eeg.append(logit.detach().cpu().numpy())  # (C)
+            logits_per_eeg.append(logit.detach().cpu().numpy())  # c
 
         # lossの正規化
         val_loss_per_label /= val_count

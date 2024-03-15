@@ -151,29 +151,31 @@ class ContrastiveTrainer(BaseTrainer):
         softmax_target: bool = False,
     ) -> tuple[torch.Tensor, float]:
         """
-        pred: (B, C)
-        target: (B, C)
-        weight: (B, 1)
+        pred: b k c
+        target: b k c
+        weight: b k
         """
-        pred = torch.log_softmax(pred, dim=1)
+        pred = torch.log_softmax(pred, dim=2)
         if softmax_target:
-            target = torch.softmax(target, dim=1)
+            target = torch.softmax(target, dim=2)
 
         weight_sum = (
             calc_weight_sum(weight, self.cfg.loss_weight)
             if weight is not None
             else pred.shape[0]
         )
-        loss = self.criterion(pred, target)
+        loss = self.criterion(pred, target)  # b k c
 
         if self.model.training:
             for c in range(6):
-                loss[:, c] *= self.class_weights[c]
+                loss[..., c] *= self.class_weights[c]
 
-        loss = loss.sum(dim=1)  # point-wise KL divergence
+        loss = loss.sum(dim=2)  # b k
 
         if weight is not None:
-            loss *= weight.squeeze(1)
+            loss *= weight
+
+        loss = loss.mean(dim=1)  # b
 
         if aggregate:
             loss = loss.sum() / weight_sum

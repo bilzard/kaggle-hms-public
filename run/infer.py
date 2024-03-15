@@ -114,8 +114,11 @@ def predict(
 
     # aggregate per EEG ID
     for eeg_id, logits in tqdm(eeg_id2logits.items()):
+        # logits: b k c
         logits = np.stack(logits, axis=0)
-        logit = logits.mean(axis=0)
+        assert len(logits.shape) == 3, f"Invalid shape: {logits.shape}"
+
+        logit = logits.mean(axis=(0, 1))
         eeg_id2logits[eeg_id] = logit
 
     eeg_ids = np.array(list(eeg_id2logits.keys()))
