@@ -20,6 +20,7 @@ class MelSpec(nn.Module):
         db_offset: int = 0,
         n_mels: int = 128,
         window_fn: str = "hann_window",
+        norm: tuple[float, float] = (-37.52, 16.10),
     ):
         super().__init__()
         torch_module = import_module("torch")
@@ -32,6 +33,7 @@ class MelSpec(nn.Module):
         self.frequency_lim = frequency_lim
         self.n_mels = n_mels
         self.window_fn = window_fn
+        self.norm = norm
 
         self.wave2spec = MelSpectrogram(
             sample_rate=sampling_rate,
@@ -78,6 +80,7 @@ class MelSpec(nn.Module):
                 )
                 + self.db_offset
             )
+            x = (x - self.norm[0]) / self.norm[1]
         return x
 
 

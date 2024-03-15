@@ -10,6 +10,7 @@ wave2spec:
   db_offset: 0
   n_mels: 128
   window_fn: hann_window
+  norm: [0, 1]
 cutoff_freqs: [0.5, 50]
 apply_mask: True
 downsample_mode: linear
