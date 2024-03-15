@@ -6,8 +6,8 @@ wavegram:
   stem_kernel_size: 3
   stem_stride: 1
   num_filter_banks: 64
-  layers: [1, 2, 2, 3]
-  kernel_sizes: [3, 3, 3, 5]
+  layers: [2, 2, 2, 2]
+  kernel_sizes: [3, 3, 3, 3]
   hidden_dims: [32, 16, 24, 40, 64]
   strides: [2, 2, 2, 2]
   depth_multiplier: 4
