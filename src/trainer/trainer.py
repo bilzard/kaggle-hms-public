@@ -241,17 +241,16 @@ class Trainer(BaseTrainer):
             with tqdm(self.valid_loader, unit="step") as pbar:
                 for batch in pbar:
                     self._move_device(batch)
-                    with torch.autocast(device_type="cuda", enabled=True):
-                        output = self.model(batch)
-                        loss, weight_sum = self._calc_loss(
-                            output[self.pred_key],
-                            batch[self.target_key],
-                            batch[self.weight_key],
-                        )
-                        self._valid_loss_meter.update(loss.item(), weight_sum)
+                    output = self.model(batch)
+                    loss, weight_sum = self._calc_loss(
+                        output[self.pred_key],
+                        batch[self.target_key],
+                        batch[self.weight_key],
+                    )
+                    self._valid_loss_meter.update(loss.item(), weight_sum)
 
-                        for callback in self.callbacks:
-                            callback.on_valid_step_end(
-                                self, batch, output, self._valid_loss_meter.mean
-                            )
-                        pbar.set_postfix({"loss": self._valid_loss_meter.mean})
+                    for callback in self.callbacks:
+                        callback.on_valid_step_end(
+                            self, batch, output, self._valid_loss_meter.mean
+                        )
+                    pbar.set_postfix({"loss": self._valid_loss_meter.mean})
