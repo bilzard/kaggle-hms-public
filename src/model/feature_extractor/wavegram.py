@@ -116,6 +116,8 @@ class Wavegram(nn.Module):
             hidden_dims[-1] % num_filter_banks == 0
         ), f"hidden_dims[-1] must be divisible by num_filter_banks, but got {hidden_dims[-1]} and {num_filter_banks} respectively."
         self.num_filter_banks = num_filter_banks
+        self.stem_stride = stem_stride
+        self.hidden_dims = hidden_dims
 
         self.stem_conv = nn.Sequential(
             nn.Conv1d(
@@ -146,6 +148,10 @@ class Wavegram(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
         )
+
+    @property
+    def hop_length(self):
+        return self.stem_stride * 2 ** (len(self.hidden_dims) - 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
