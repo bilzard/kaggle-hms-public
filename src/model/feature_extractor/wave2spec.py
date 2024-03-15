@@ -5,27 +5,26 @@ import torch.nn as nn
 import torchaudio.functional as AF
 from torchaudio.transforms import MelSpectrogram
 
+from src.model.feature_extractor.eeg import ChannelCollator
 from src.model.tensor_util import rolling_mean, same_padding_1d
-
-from .eeg import ChannelCollator
 
 
 class Wave2Spectrogram(nn.Module):
     def __init__(
         self,
-        sampling_rate=40,
-        n_fft=256,
-        win_length=256,
-        hop_length=64,
-        cutoff_freqs=(0.5, 50),
-        frequency_lim=(0, 20),
-        db_cutoff=60,
-        db_offset=0,
-        n_mels=128,
-        window_fn="hann_window",
-        apply_mask=True,
-        downsample_mode="linear",
-        expand_mask=True,
+        sampling_rate: int = 40,
+        n_fft: int = 128,
+        win_length: int = 64,
+        hop_length: int = 16,
+        cutoff_freqs: tuple[float, float] = (0.5, 50),
+        frequency_lim: tuple[int, int] = (0, 20),
+        db_cutoff: int = 60,
+        db_offset: int = 0,
+        n_mels: int = 128,
+        window_fn: str = "hann_window",
+        apply_mask: bool = True,
+        downsample_mode: str = "linear",
+        expand_mask: bool = True,
     ):
         super().__init__()
         torch_module = import_module("torch")
@@ -85,16 +84,16 @@ class Wave2Spectrogram(nn.Module):
         """
         x = same_padding_1d(
             x,
-            kernel_size=self.n_fft,
+            kernel_size=self.win_length,
             stride=self.hop_length,
             mode="replicate",
         )
         if mode == "nearest":
-            x = x[..., self.n_fft // 2 :: self.hop_length]
+            x = x[..., self.win_length // 2 :: self.hop_length]
         elif mode == "linear":
             x = rolling_mean(
                 x,
-                kernel_size=self.n_fft,
+                kernel_size=self.win_length,
                 stride=self.hop_length,
                 apply_padding=False,
             )
@@ -147,6 +146,36 @@ class Wave2Spectrogram(nn.Module):
             F = spec.shape[2]
             spec_mask = spec_mask.expand(-1, -1, F, -1)
 
-        assert spec.shape[-1] == num_frames // self.hop_length, spec.shape
+        assert (
+            spec.shape[-1] == num_frames // self.hop_length
+        ), f"{spec.shape=}, {num_frames=}, {self.hop_length=}"
         output = dict(spec=spec, eeg=eeg, eeg_mask=eeg_mask, spec_mask=spec_mask)
         return output
+
+
+if __name__ == "__main__":
+    from torchinfo import summary
+
+    batch_size = 2
+    num_probes = 19
+    num_channels = num_probes - 1
+    num_frames = 2048
+    n_fft = 128
+    hop_length = 16
+    eeg = torch.randn(batch_size, num_frames, num_probes)
+    mask = torch.randn(batch_size, num_frames, num_probes)
+    model = Wave2Spectrogram(n_fft=n_fft, hop_length=hop_length)
+    output = model(eeg, mask)
+    assert output["spec"].shape == (
+        batch_size,
+        num_channels,
+        n_fft // 2,
+        num_frames // hop_length,
+    )
+    assert output["spec_mask"].shape == (
+        batch_size,
+        num_channels,
+        n_fft // 2,
+        num_frames // hop_length,
+    ), f"{output['spec_mask'].shape=}"
+    summary(model, input_size=(batch_size, num_frames, num_probes))
