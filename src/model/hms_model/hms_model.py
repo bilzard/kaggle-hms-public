@@ -60,7 +60,6 @@ class HmsModel(nn.Module):
         output = self.feature_extractor(eeg, eeg_mask)
         return output
 
-    @torch.no_grad()
     def compose_spec(
         self, batch: dict[str, Tensor], output: dict[str, Tensor]
     ) -> dict[str, Tensor]:

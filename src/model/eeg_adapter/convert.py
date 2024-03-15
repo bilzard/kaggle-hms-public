@@ -14,7 +14,6 @@ class MuLawEncoding(nn.Module):
         self.T = T
         self.mu = mu
 
-    @torch.no_grad()
     def forward(self, eeg: Tensor, eeg_mask: Tensor) -> tuple[Tensor, Tensor]:
         eeg = mu_law_encoding(eeg / self.T, self.mu)
         return eeg, eeg_mask

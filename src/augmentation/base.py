@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 from torch import Tensor
 
@@ -8,7 +7,6 @@ class Compose(nn.Module):
         super().__init__()
         self.transforms = nn.ModuleList(transforms)
 
-    @torch.no_grad()
     def forward(self, spec: Tensor) -> Tensor:
         for transform in self.transforms:
             spec = transform(spec)

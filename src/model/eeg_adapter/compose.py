@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 from torch import Tensor
 
@@ -13,7 +12,6 @@ class Compose(nn.Module):
         adapter_classes = ", ".join(adapter_classes)
         return f"{self.__class__.__name__}(adapters={adapter_classes})"
 
-    @torch.no_grad()
     def forward(self, eeg: Tensor, eeg_mask: Tensor) -> tuple[Tensor, Tensor]:
         for adapter in self.targets:
             eeg, eeg_mask = adapter(eeg, eeg_mask)
