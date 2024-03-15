@@ -1,0 +1,9 @@
+defaults:
+  - ewg001
+  - _self_
+
+exp_name: ewg001_16ep
+description: wavegram baseline
+
+trainer:
+  epochs: 16
