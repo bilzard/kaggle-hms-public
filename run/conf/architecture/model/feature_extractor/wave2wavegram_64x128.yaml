@@ -1,6 +1,6 @@
 _target_: src.model.feature_extractor.Wave2Wavegram
 wavegram:
-  _target_: src.model.feature_extractor.Wavegram
+  _target_: src.model.feature_extractor.module.Wavegram
   in_channels: 1
   out_channels: 1
   stem_kernel_size: 3
