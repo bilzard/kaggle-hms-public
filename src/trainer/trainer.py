@@ -105,6 +105,13 @@ class Trainer(BaseTrainer):
             target_value=cfg.label.schedule.target_weight_exponent,
             target_step=len(self.train_loader) * cfg.label.schedule.target_epoch,
         )
+        self.min_weight_scheduler = LinearScheduler(
+            schedule_start_step=len(self.train_loader)
+            * cfg.label.schedule.schedule_start_epoch,
+            initial_value=cfg.label.schedule.initial_min_weight,
+            target_value=cfg.label.schedule.target_min_weight,
+            target_step=len(self.train_loader) * cfg.label.schedule.target_epoch,
+        )
         print(f"* teacher_model: {self.teacher_model is not None}")
         print(
             "* forget_rate: {} -> {} (step: {} -> {})".format(
@@ -120,6 +127,14 @@ class Trainer(BaseTrainer):
                 self.weight_exponent_scheduler.target_value,
                 self.weight_exponent_scheduler.schedule_start_step,
                 self.weight_exponent_scheduler.target_step,
+            )
+        )
+        print(
+            "* min_weight: {} -> {} (step: {} -> {})".format(
+                self.min_weight_scheduler.initial_value,
+                self.min_weight_scheduler.target_value,
+                self.min_weight_scheduler.schedule_start_step,
+                self.min_weight_scheduler.target_step,
             )
         )
 
@@ -234,17 +249,34 @@ class Trainer(BaseTrainer):
                         self.forget_rate_scheduler.step()
 
                     output = self.model(batch)
+
+                    target = batch[self.target_key]  # b k c
+                    pred = output[self.pred_key]  # b k c
+                    weight = batch[self.weight_key]  # b k
+
+                    # min_weight でフィルタリング
+                    valid_indices = torch.where(
+                        (weight.mean(dim=1) > self.min_weight_scheduler.value)
+                    )[0]
+                    if len(valid_indices) == 0:
+                        continue
+                    self.min_weight_scheduler.step()
+
+                    target = target[valid_indices]
+                    pred = pred[valid_indices]
+                    weight = weight[valid_indices]
+
                     loss, weight_sum = self._calc_loss(
-                        output[self.pred_key],
-                        batch[self.target_key],
-                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
+                        pred,
+                        target,
+                        weight if self.cfg.use_loss_weights else None,
                         aggregate=False,
                     )
                     self.weight_exponent_scheduler.step()
                     if self.teacher_model is not None:
                         loss = loss[indices_to_update]
                         weight_sum = (
-                            (batch[self.weight_key][indices_to_update].sum().item())
+                            (weight[indices_to_update].sum().item())
                             if self.cfg.use_loss_weights
                             else len(indices_to_update)
                         )
@@ -269,6 +301,7 @@ class Trainer(BaseTrainer):
                         "loss": self._train_loss_meter.mean,
                         "forget_rate": self.forget_rate_scheduler.value,
                         "weight_exponent": self.weight_exponent_scheduler.value,
+                        "min_weight": self.min_weight_scheduler.value,
                     }
                 )
 
