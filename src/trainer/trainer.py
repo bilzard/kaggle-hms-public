@@ -105,11 +105,22 @@ class Trainer(BaseTrainer):
             target_value=cfg.label.schedule.target_weight_exponent,
             target_step=len(self.train_loader) * cfg.label.schedule.target_epoch,
         )
-        print(f"* target_step: {self.forget_rate_scheduler.target_step}")
-        print(f"* target_forget_rate: {self.forget_rate_scheduler.target_value}")
         print(f"* teacher_model: {self.teacher_model is not None}")
         print(
-            f"* target_weight_exponent: {self.weight_exponent_scheduler.target_value}"
+            "* forget_rate: {} -> {} (step: {} -> {})".format(
+                self.forget_rate_scheduler.initial_value,
+                self.forget_rate_scheduler.target_value,
+                self.forget_rate_scheduler.schedule_start_step,
+                self.forget_rate_scheduler.target_step,
+            )
+        )
+        print(
+            "* weight_exponent: {} -> {} (step: {} -> {})".format(
+                self.weight_exponent_scheduler.initial_value,
+                self.weight_exponent_scheduler.target_value,
+                self.weight_exponent_scheduler.schedule_start_step,
+                self.weight_exponent_scheduler.target_step,
+            )
         )
 
     def fit(self):
