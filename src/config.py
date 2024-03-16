@@ -90,7 +90,8 @@ class PseudoLabelConfig:
 class WeightScheduleConfig:
     initial_weight_exponent: float
     target_weight_exponent: float
-    target_epochs: int
+    schedule_start_epoch: int
+    target_epoch: int
 
 
 @dataclass
