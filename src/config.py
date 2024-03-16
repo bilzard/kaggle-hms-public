@@ -92,6 +92,8 @@ class PseudoLabelConfig:
 class WeightScheduleConfig:
     initial_weight_exponent: float
     target_weight_exponent: float
+    initial_min_weight: float
+    target_min_weight: float
     schedule_start_epoch: int
     target_epoch: int
 
