@@ -70,6 +70,7 @@ class EvalConfig:
     stride: int
     seed: int
     population_threshold: float
+    weight_exponent: float
 
 
 @dataclass

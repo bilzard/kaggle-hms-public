@@ -311,7 +311,10 @@ def main(cfg: MainConfig):
                 valid_loader=valid_loader,
                 mixed_precision=True,
                 callbacks=[
-                    MetricsLogger(aggregation_fn=cfg.trainer.val.aggregation_fn),
+                    MetricsLogger(
+                        aggregation_fn=cfg.trainer.val.aggregation_fn,
+                        weight_exponent=cfg.trainer.val.weight_exponent,
+                    ),
                     SaveModelCheckpoint(
                         save_last=cfg.trainer.save_last and not cfg.dry_run,
                         save_best=cfg.trainer.save_best and not cfg.dry_run,
