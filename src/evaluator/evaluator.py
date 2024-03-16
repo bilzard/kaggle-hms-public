@@ -18,6 +18,7 @@ class Evaluator:
         aggregation_fn: str = "max",
         agg_policy: str = "per_eeg_weighted",
         iterations: int = 1,
+        weight_exponent: float = 1.0,
     ):
         assert agg_policy in [
             "per_eeg_weighted",
@@ -38,6 +39,7 @@ class Evaluator:
         self.device = device
         self.agg_policy = agg_policy
         self.iterations = iterations
+        self.weight_exponent = weight_exponent
 
     def __repr__(self):
         return f"{self.__class__.__name__}(device={self.device}, agg_policy={self.agg_policy}, aggregation_fn={self.aggregation_fn}, input_keys={self.input_keys}, pred_key={self.pred_key}, target_key={self.target_key}, weight_key={self.weight_key})"
@@ -113,7 +115,7 @@ class Evaluator:
 
             label = (labels * weights).sum(dim=0)  # k c
             label = label / label.sum(dim=1, keepdim=True)
-            weight = weights.sum(dim=0)
+            weight = weights.sum(dim=0) ** self.weight_exponent
             pred = torch.log_softmax(logit, dim=1)  # k c
             loss = self.criterion(pred, label) * weight  # k c
 
