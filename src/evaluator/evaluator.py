@@ -19,6 +19,7 @@ class Evaluator:
         agg_policy: str = "per_eeg_weighted",
         iterations: int = 1,
         weight_exponent: float = 1.0,
+        min_weight: float = 1e-3,
     ):
         assert agg_policy in [
             "per_eeg_weighted",
@@ -40,6 +41,7 @@ class Evaluator:
         self.agg_policy = agg_policy
         self.iterations = iterations
         self.weight_exponent = weight_exponent
+        self.min_weight = min_weight
 
     def __repr__(self):
         return f"{self.__class__.__name__}(device={self.device}, agg_policy={self.agg_policy}, aggregation_fn={self.aggregation_fn}, input_keys={self.input_keys}, pred_key={self.pred_key}, target_key={self.target_key}, weight_key={self.weight_key})"
@@ -106,6 +108,14 @@ class Evaluator:
                 logits.ndim == 3 and labels.ndim == 3 and weights.ndim == 3
             ), f"Invalid shape: {logits.shape}, {labels.shape}, {weights.shape}"
 
+            valid_indices = torch.where(weights.mean(dim=(1, 2)) >= self.min_weight)[0]
+            if len(valid_indices) == 0:
+                continue
+
+            logits = logits[valid_indices]
+            labels = labels[valid_indices]
+            weights = weights[valid_indices]
+
             if self.aggregation_fn == "max":
                 logit = torch.max(logits, dim=0)[0]  # k c
             elif self.aggregation_fn == "mean":
@@ -135,6 +145,8 @@ class Evaluator:
         val_loss = val_loss_per_label.sum()
 
         self._valid_logits.clear()
+        self._valid_label.clear()
+        self._valid_weight.clear()
 
         # eegごとの予測値をDataFrameに変換
         logits_per_eeg = np.stack(logits_per_eeg, axis=0)

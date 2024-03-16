@@ -61,6 +61,7 @@ def infer_per_seed(
                 agg_policy=cfg.trainer.val.agg_policy,
                 iterations=cfg.infer.tta_iterations,
                 weight_exponent=cfg.trainer.val.weight_exponent,
+                min_weight=cfg.trainer.val.min_weight,
             )
             val_loss, val_loss_per_label, eeg_ids, logits = evaluator.evaluate(
                 model, data_loader
