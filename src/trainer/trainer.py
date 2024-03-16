@@ -98,9 +98,17 @@ class Trainer(BaseTrainer):
             target_value=cfg.distillation.target_forget_rate,
             target_step=len(self.train_loader) * cfg.distillation.target_epochs,
         )
+        self.weight_exponent_scheduler = LinearScheduler(
+            initial_value=1.0,
+            target_value=cfg.label.schedule.target_weight_exponent,
+            target_step=len(self.train_loader) * cfg.label.schedule.target_epochs,
+        )
         print(f"* target_step: {self.forget_rate_scheduler.target_step}")
         print(f"* target_forget_rate: {self.forget_rate_scheduler.target_value}")
         print(f"* teacher_model: {self.teacher_model is not None}")
+        print(
+            f"* target_weight_exponent: {self.weight_exponent_scheduler.target_value}"
+        )
 
     def fit(self):
         for epoch in range(self.epochs):
@@ -204,6 +212,8 @@ class Trainer(BaseTrainer):
                 self.optimizer.zero_grad()
                 self._move_device(batch)
                 with torch.autocast(device_type="cuda", enabled=self.mixed_precision):
+                    batch[self.weight_key] **= self.weight_exponent_scheduler.value
+
                     if self.teacher_model is not None:
                         indices_to_update = self.pruning_samples(
                             batch, self.forget_rate_scheduler.value
@@ -217,6 +227,7 @@ class Trainer(BaseTrainer):
                         batch[self.weight_key] if self.cfg.use_loss_weights else None,
                         aggregate=False,
                     )
+                    self.weight_exponent_scheduler.step()
                     if self.teacher_model is not None:
                         loss = loss[indices_to_update]
                         weight_sum = (
@@ -244,6 +255,7 @@ class Trainer(BaseTrainer):
                     {
                         "loss": self._train_loss_meter.mean,
                         "forget_rate": self.forget_rate_scheduler.value,
+                        "weight_exponent": self.weight_exponent_scheduler.value,
                     }
                 )
 
