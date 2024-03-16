@@ -39,6 +39,7 @@ class MetricsLogger(Callback):
                 }
                 | {
                     "step/forget_rate": trainer.forget_rate_scheduler.value,
+                    "step/weight_exponent": trainer.weight_exponent_scheduler.value,
                 }
             )
 
@@ -68,7 +69,12 @@ class MetricsLogger(Callback):
                     f"epoch/val_loss_{label}": loss
                     for label, loss in val_loss_per_label.items()
                 },
+                **{
+                    f"epoch/lr{i}": lr
+                    for i, lr in enumerate(trainer.scheduler.get_last_lr())
+                },
                 "epoch/forget_rate": trainer.forget_rate_scheduler.value,
+                "epoch/weight_exponent": trainer.weight_exponent_scheduler.value,
                 "epoch": epoch,
             }
 
