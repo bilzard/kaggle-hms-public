@@ -99,7 +99,7 @@ class Trainer(BaseTrainer):
             target_step=len(self.train_loader) * cfg.distillation.target_epochs,
         )
         self.weight_exponent_scheduler = LinearScheduler(
-            initial_value=1.0,
+            initial_value=cfg.label.schedule.initial_weight_exponent,
             target_value=cfg.label.schedule.target_weight_exponent,
             target_step=len(self.train_loader) * cfg.label.schedule.target_epochs,
         )
