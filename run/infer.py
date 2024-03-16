@@ -191,6 +191,7 @@ def main(cfg: MainConfig):
                     agg_policy=cfg.trainer.val.agg_policy,
                     iterations=cfg.infer.tta_iterations,
                     weight_exponent=cfg.trainer.val.weight_exponent,
+                    min_weight=cfg.trainer.val.min_weight,
                 )
                 logger.write_log("Evaluator:", evaluator)
                 val_loss, val_loss_per_label, eeg_ids, logits = evaluator.evaluate(

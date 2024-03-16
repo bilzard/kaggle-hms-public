@@ -6,7 +6,12 @@ from src.evaluator import Evaluator
 
 
 class MetricsLogger(Callback):
-    def __init__(self, aggregation_fn: str = "max", weight_exponent: float = 1.0):
+    def __init__(
+        self,
+        aggregation_fn: str = "max",
+        weight_exponent: float = 1.0,
+        min_weight: float = 1e-3,
+    ):
         assert aggregation_fn in [
             "max",
             "mean",
@@ -14,7 +19,9 @@ class MetricsLogger(Callback):
 
         self.aggregation_fn = aggregation_fn
         self.evaluator = Evaluator(
-            aggregation_fn=aggregation_fn, weight_exponent=weight_exponent
+            aggregation_fn=aggregation_fn,
+            weight_exponent=weight_exponent,
+            min_weight=min_weight,
         )
 
         self.wandb_enabled = wandb.run is not None

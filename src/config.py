@@ -71,6 +71,7 @@ class EvalConfig:
     seed: int
     population_threshold: float
     weight_exponent: float
+    min_weight: float
 
 
 @dataclass
