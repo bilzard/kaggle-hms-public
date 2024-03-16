@@ -239,6 +239,8 @@ def main(cfg: MainConfig):
                 transform=instantiate(cfg.trainer.transform)
                 if cfg.trainer.transform
                 else None,
+                label_postfix=cfg.trainer.label.label_postfix,
+                weight_key=cfg.trainer.label.weight_key,
             )
             train_sampler = (
                 LossBasedSampler(
@@ -270,6 +272,8 @@ def main(cfg: MainConfig):
                 stride=cfg.trainer.val.stride,
                 seed=cfg.trainer.val.seed,
                 spec_cropped_duration=cfg.architecture.spec_cropped_duration,
+                label_postfix=cfg.trainer.label.label_postfix,
+                weight_key=cfg.trainer.label.weight_key,
             )
             valid_loader = get_valid_loader(
                 valid_dataset,

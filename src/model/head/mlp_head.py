@@ -8,7 +8,7 @@ class Head(nn.Module):
         self,
         in_channels: int,
         bottleneck_ratio: int = 4,
-        num_heads: int = 2,
+        num_heads: int = 1,
         num_classes: int = 6,
     ):
         super().__init__()

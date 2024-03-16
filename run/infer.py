@@ -52,6 +52,8 @@ def get_loader(
                 transform=instantiate(cfg.infer.tta)
                 if cfg.infer.tta is not None
                 else None,
+                label_postfix=cfg.trainer.label.label_postfix,
+                weight_key=cfg.trainer.label.weight_key,
             )
             valid_loader = get_valid_loader(
                 valid_dataset,
