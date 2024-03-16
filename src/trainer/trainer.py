@@ -99,9 +99,11 @@ class Trainer(BaseTrainer):
             target_step=len(self.train_loader) * cfg.distillation.target_epochs,
         )
         self.weight_exponent_scheduler = LinearScheduler(
+            schedule_start_step=len(self.train_loader)
+            * cfg.label.schedule.schedule_start_epoch,
             initial_value=cfg.label.schedule.initial_weight_exponent,
             target_value=cfg.label.schedule.target_weight_exponent,
-            target_step=len(self.train_loader) * cfg.label.schedule.target_epochs,
+            target_step=len(self.train_loader) * cfg.label.schedule.target_epoch,
         )
         print(f"* target_step: {self.forget_rate_scheduler.target_step}")
         print(f"* target_forget_rate: {self.forget_rate_scheduler.target_value}")

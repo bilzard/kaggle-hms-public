@@ -80,7 +80,8 @@ trainer:
     weight_key: [weight]
     label_postfix: [_prob]
     schedule:
-      target_epochs: 0
+      schedule_start_epoch: 0
+      target_epoch: 0
       initial_weight_exponent: 1.0
       target_weight_exponent: 1.0
   class_weights: [1.151, 0.706, 1.039, 1.681, 1.17, 0.253]
