@@ -89,13 +89,17 @@ class PseudoLabelConfig:
 
 
 @dataclass
-class WeightScheduleConfig:
-    initial_weight_exponent: float
-    target_weight_exponent: float
-    initial_min_weight: float
-    target_min_weight: float
+class ParamScheduleConfig:
     schedule_start_epoch: int
     target_epoch: int
+    initial_value: float
+    target_value: float
+
+
+@dataclass
+class WeightScheduleConfig:
+    weight_exponent: ParamScheduleConfig
+    min_weight: ParamScheduleConfig
 
 
 @dataclass
