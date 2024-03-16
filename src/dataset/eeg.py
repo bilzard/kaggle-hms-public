@@ -82,7 +82,8 @@ class HmsBaseDataset(Dataset):
         id2cqf: dict[int, np.ndarray],
         padding_type: str = "right",
         duration: int = 2048,
-        weight_key: str = "weight_per_eeg",
+        weight_key: str | list[str] = "weight_per_eeg",
+        label_postfix: str | list[str] = "_prob",
         transform: BaseTransform | None = None,
         transform_enabled: bool = False,
         seed: int = 42,
@@ -97,12 +98,14 @@ class HmsBaseDataset(Dataset):
         self.weight_key = weight_key
         self.seed = seed
         self.with_label = with_label
+        self.label_postfix = label_postfix
 
         self._transform_enabled = transform_enabled
         self._args = dict(
             padding_type=padding_type,
             duration=duration,
             weight_key=weight_key,
+            label_postfix=label_postfix,
             transform_enabled=transform_enabled,
             seed=seed,
             transform=transform,
@@ -472,7 +475,8 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         transform: BaseTransform | None = None,
         with_label: bool = True,
         padding_type: str = "right",
-        weight_key: str = "weight",
+        weight_key: list[str] = ["weight"],
+        label_postfix: list[str] = ["_prob"],
         seed: int = 42,
         transform_enabled: bool = False,
         **kwdargs,
@@ -483,10 +487,8 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         metadata = metadata.select(
             "eeg_id",
             "spectrogram_id",
-            *[f"{label}_prob" for label in LABELS],
-            *[f"{label}_prob_per_eeg" for label in LABELS],
-            "weight",
-            "weight_per_eeg",
+            *[f"{label}{postfix}" for postfix in label_postfix for label in LABELS],
+            *[key for key in weight_key],
             "eeg_label_offset_seconds",
             "spectrogram_label_offset_seconds",
         )
@@ -494,9 +496,10 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             metadata,
             id2eeg,
             id2cqf,
-            padding_type,
-            duration,
-            weight_key,
+            padding_type=padding_type,
+            duration=duration,
+            weight_key=weight_key,
+            label_postfix=label_postfix,
             sampling_rate=sampling_rate,
             duration_sec=duration_sec,
             num_samples_per_eeg=num_samples_per_eeg,
@@ -508,6 +511,7 @@ class PerEegSubsampleDataset(HmsBaseDataset):
             transform=transform,
             with_label=with_label,
         )
+
         self.duration_sec = duration_sec
         self.sampling_rate = sampling_rate
         self.num_samples_per_eeg = num_samples_per_eeg
@@ -596,13 +600,13 @@ class PerEegSubsampleDataset(HmsBaseDataset):
         if self.with_label:
             label = np.array(
                 [
-                    [row[self.key2idx[f"{label}_prob"]] for label in LABELS],
-                    [row[self.key2idx[f"{label}_prob_per_eeg"]] for label in LABELS],
+                    [row[self.key2idx[f"{label}{postfix}"]] for label in LABELS]
+                    for postfix in self.label_postfix
                 ],
                 dtype=np.float32,
             )
             weight = np.array(
-                [row[self.key2idx["weight"]], row[self.key2idx["weight_per_eeg"]]],
+                [row[self.key2idx[key]] for key in self.weight_key],
                 dtype=np.float32,
             )
             data |= dict(label=label, weight=weight)

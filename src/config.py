@@ -91,6 +91,8 @@ class LabelConfig:
     diversity_power: float
     population_power: float
     max_votes: int
+    label_postfix: list[str]
+    weight_key: list[str]
 
 
 @dataclass
