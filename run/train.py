@@ -173,12 +173,7 @@ def main(cfg: MainConfig):
     fold_dir = Path(working_dir / "fold_split" / cfg.phase)
     fold_split_df = pl.read_parquet(fold_dir / "fold_split.pqt")
     train_df, valid_df = train_valid_split(metadata, fold_split_df, fold=cfg.fold)
-    train_df = train_df.filter(
-        pl.col("population").gt(cfg.trainer.population_threshold)
-    )
-    valid_df = valid_df.filter(
-        pl.col("population").gt(cfg.trainer.val.population_threshold)
-    )
+    valid_df = valid_df.filter(pl.col("weight").ge(cfg.trainer.val.min_weight))
 
     with trace("load eeg"):
         eeg_ids = metadata["eeg_id"].unique().to_list()
@@ -314,6 +309,7 @@ def main(cfg: MainConfig):
                     MetricsLogger(
                         aggregation_fn=cfg.trainer.val.aggregation_fn,
                         weight_exponent=cfg.trainer.val.weight_exponent,
+                        min_weight=cfg.trainer.val.min_weight,
                     ),
                     SaveModelCheckpoint(
                         save_last=cfg.trainer.save_last and not cfg.dry_run,
