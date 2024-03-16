@@ -84,6 +84,7 @@ class MetricsLogger(Callback):
                 },
                 "epoch/forget_rate": trainer.forget_rate_scheduler.value,
                 "epoch/weight_exponent": trainer.weight_exponent_scheduler.value,
+                "epoch/min_weight": trainer.min_weight_scheduler.value,
                 "epoch": epoch,
             }
 
