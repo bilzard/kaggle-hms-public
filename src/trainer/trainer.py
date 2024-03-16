@@ -99,18 +99,20 @@ class Trainer(BaseTrainer):
             target_step=len(self.train_loader) * cfg.distillation.target_epochs,
         )
         self.weight_exponent_scheduler = LinearScheduler(
+            initial_value=cfg.label.schedule.weight_exponent.initial_value,
+            target_value=cfg.label.schedule.weight_exponent.target_value,
             schedule_start_step=len(self.train_loader)
-            * cfg.label.schedule.schedule_start_epoch,
-            initial_value=cfg.label.schedule.initial_weight_exponent,
-            target_value=cfg.label.schedule.target_weight_exponent,
-            target_step=len(self.train_loader) * cfg.label.schedule.target_epoch,
+            * cfg.label.schedule.weight_exponent.schedule_start_epoch,
+            target_step=len(self.train_loader)
+            * cfg.label.schedule.weight_exponent.target_epoch,
         )
         self.min_weight_scheduler = LinearScheduler(
+            initial_value=cfg.label.schedule.min_weight.initial_value,
+            target_step=len(self.train_loader)
+            * cfg.label.schedule.min_weight.target_epoch,
             schedule_start_step=len(self.train_loader)
-            * cfg.label.schedule.schedule_start_epoch,
-            initial_value=cfg.label.schedule.initial_min_weight,
-            target_value=cfg.label.schedule.target_min_weight,
-            target_step=len(self.train_loader) * cfg.label.schedule.target_epoch,
+            * cfg.label.schedule.min_weight.schedule_start_epoch,
+            target_value=cfg.label.schedule.min_weight.target_value,
         )
         print(f"* teacher_model: {self.teacher_model is not None}")
         print(
