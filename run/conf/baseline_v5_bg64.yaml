@@ -1,0 +1,30 @@
+defaults:
+  - baseline_v5
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [0.5, 1.0]
+      - _target_: src.model.adapter.DualCanvasAggregator
+        drop_z: true
+    bg_adapters:
+      - _target_: src.model.bg_adapter.BgConstantNormalizer
+      - _target_: src.model.bg_adapter.BgTimeCroppingTransform
+        start: 96
+        size: 64
+      - _target_: src.model.bg_adapter.BgResizeTransform
+        size: [64, 128]
+      - _target_: src.model.bg_adapter.BgDualCanvasAggregator
+    merger:
+      _target_: src.model.merger.MergeFreq
+  use_bg_spec: true
+
+trainer:
+  data:
+    input_keys: [eeg, cqf, bg_spec]
