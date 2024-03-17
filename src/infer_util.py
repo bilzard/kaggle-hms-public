@@ -16,6 +16,7 @@ def load_metadata(
     group_by_eeg: bool = False,
     weight_key: str = "weight_per_eeg",
     num_samples: int = 128,
+    min_weight: float = 0.0,
 ) -> pl.DataFrame:
     """
     phaseに応じてmetadataをロードする
@@ -34,7 +35,12 @@ def load_metadata(
             target_fold = fold_split_df.select("eeg_id", "fold").unique()
             metadata = pl.read_csv(data_dir / "train.csv")
             metadata = metadata.join(target_fold, on="eeg_id")
+
             metadata = process_label(metadata)
+
+            # min_weightより大きいweightのみを使用
+            metadata = metadata.filter(pl.col("weight").ge(min_weight))
+
             if group_by_eeg:
                 metadata = metadata.group_by("eeg_id", maintain_order=True).agg(
                     pl.col("spectrogram_id").first(),
