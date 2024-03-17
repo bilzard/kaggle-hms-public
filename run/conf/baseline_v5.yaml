@@ -1,0 +1,33 @@
+defaults:
+  - baseline_v4
+  - _self_
+
+exp_name: ???
+description: ???
+
+trainer:
+  epochs: 8
+  loss_weight:
+    norm_policy: relative
+  label:
+    weight_key: [weight, weight_per_eeg]
+    label_postfix: [_prob, _prob_per_eeg]
+    schedule:
+      weight_exponent:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 1.0
+        target_value: 1.0
+      min_weight:
+        schedule_start_epoch: 4
+        target_epoch: 4
+        initial_value: 0.0
+        target_value: 0.3
+  val:
+    weight_exponent: 0.0
+    min_weight: 0.3 # ~8.4 votes
+
+architecture:
+  model:
+    head:
+      num_heads: 2
