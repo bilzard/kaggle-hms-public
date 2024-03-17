@@ -173,7 +173,7 @@ def check_model(
 
     for i, bg_adapter in enumerate(model.bg_adapters):
         bg_spec = bg_adapter(bg_spec)
-        print_shapes(f"BgAdapter[{i}]", adapter, dict(bg_spec=bg_spec))
+        print_shapes(f"BgAdapter[{i}]", bg_adapter, dict(bg_spec=bg_spec))
 
     if model.cfg.use_bg_spec:
         assert model.merger is not None
