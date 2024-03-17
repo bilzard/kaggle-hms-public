@@ -144,6 +144,7 @@ def main(cfg: MainConfig):
         fold_split_dir=fold_split_dir,
         fold=cfg.fold,
         num_samples=cfg.dev.num_samples,
+        min_weight=cfg.trainer.val.min_weight,
     )
 
     logger = BaseLogger(log_file_name=cfg.infer.log_name, clear=True)
