@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v5_bg64
+  - _self_
+
+exp_name: exp107_8ep
+description: baseline v5 with bg
