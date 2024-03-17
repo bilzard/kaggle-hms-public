@@ -49,6 +49,7 @@ class MetricsLogger(Callback):
                 | {
                     "step/forget_rate": trainer.forget_rate_scheduler.value,
                     "step/weight_exponent": trainer.weight_exponent_scheduler.value,
+                    "step/min_weight": trainer.min_weight_scheduler.value,
                 }
             )
 
