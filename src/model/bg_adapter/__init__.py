@@ -9,7 +9,7 @@ from .normalize import (
     BgInstanceNormalizer,
     BgLayerNormalizer,
 )
-from .transform import BgPaddingTransform, BgResizeTransform
+from .transform import BgPaddingTransform, BgResizeTransform, BgTimeCroppingTransform
 
 __all__ = [
     "BgDualStackAggregator",
@@ -21,4 +21,5 @@ __all__ = [
     "BgInstanceNormalizer",
     "BgLayerNormalizer",
     "BgBatchNormalizer",
+    "BgTimeCroppingTransform",
 ]
