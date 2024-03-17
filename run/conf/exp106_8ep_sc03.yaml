@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v5_bg
+  - _self_
+
+exp_name: exp106_8ep_sc03
+description: baseline v5 with bg
