@@ -47,3 +47,21 @@ class BgPaddingTransform(nn.Module):
         spec = F.pad(spec, pad_size, value=0)
 
         return spec
+
+
+class BgTimeCroppingTransform(nn.Module):
+    def __init__(
+        self,
+        start: int,
+        size: int,
+    ):
+        super().__init__()
+        self.start = start
+        self.size = size
+
+    def forward(self, spec: Tensor) -> Tensor:
+        """
+        spec: b c f t
+        """
+        spec = spec[..., self.start : self.start + self.size]
+        return spec
