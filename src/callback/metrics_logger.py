@@ -1,8 +1,27 @@
+from typing import Any
+
 import torch
+import torch.nn as nn
 import wandb
 
 from src.callback.base import Callback
 from src.evaluator import Evaluator
+
+
+def _add_scheduler_value_to_wandb(
+    data: dict[str, Any], trainer: nn.Module, name: str, group: str = "step"
+):
+    if hasattr(trainer, f"{name}_scheduler"):
+        data[f"{group}/{name}"] = getattr(trainer, f"{name}_scheduler").value
+
+
+def _add_loss_meter_value_to_wandb(
+    data: dict[str, Any], trainer: nn.Module, name: str, group: str = "epoch"
+):
+    if hasattr(trainer, f"_train_loss_meter_{name}"):
+        data[f"{group}/train_loss_{name}"] = getattr(
+            trainer, f"_train_loss_meter_{name}"
+        ).mean
 
 
 class MetricsLogger(Callback):
@@ -35,23 +54,23 @@ class MetricsLogger(Callback):
     @torch.no_grad()
     def on_train_step_end(
         self,
-        trainer,
+        trainer: nn.Module,
         batch: dict[str, torch.Tensor],
         output: dict[str, torch.Tensor],
         loss: float,
     ):
         if self.wandb_enabled:
-            wandb.log(
-                {
-                    f"step/lr{i}": lr
-                    for i, lr in enumerate(trainer.scheduler.get_last_lr())
-                }
-                | {
-                    "step/forget_rate": trainer.forget_rate_scheduler.value,
-                    "step/weight_exponent": trainer.weight_exponent_scheduler.value,
-                    "step/min_weight": trainer.min_weight_scheduler.value,
-                }
+            data = {
+                f"step/lr{i}": lr
+                for i, lr in enumerate(trainer.scheduler.get_last_lr())
+            }
+            _add_scheduler_value_to_wandb(data, trainer, "forget_rate", group="step")
+            _add_scheduler_value_to_wandb(
+                data, trainer, "weight_exponent", group="step"
             )
+            _add_scheduler_value_to_wandb(data, trainer, "min_weight", group="step")
+
+            wandb.log(data)
 
     @torch.no_grad()
     def on_valid_epoch_end(self, trainer, epoch: int, loss: float):
@@ -83,28 +102,17 @@ class MetricsLogger(Callback):
                     f"epoch/lr{i}": lr
                     for i, lr in enumerate(trainer.scheduler.get_last_lr())
                 },
-                "epoch/forget_rate": trainer.forget_rate_scheduler.value,
-                "epoch/weight_exponent": trainer.weight_exponent_scheduler.value,
-                "epoch/min_weight": trainer.min_weight_scheduler.value,
                 "epoch": epoch,
             }
+            _add_scheduler_value_to_wandb(data, trainer, "forget_rate", group="epoch")
+            _add_scheduler_value_to_wandb(
+                data, trainer, "weight_exponent", group="epoch"
+            )
+            _add_scheduler_value_to_wandb(data, trainer, "min_weight", group="epoch")
 
-            if (
-                hasattr(trainer, "_train_loss_meter_eeg")
-                and hasattr(trainer, "_train_loss_meter_spec")
-                and hasattr(trainer, "_train_loss_meter_contrastive")
-            ):
-                data |= {
-                    "epoch/train_loss_eeg": getattr(
-                        trainer, "_train_loss_meter_eeg"
-                    ).mean,
-                    "epoch/train_loss_spec": getattr(
-                        trainer, "_train_loss_meter_spec"
-                    ).mean,
-                    "epoch/train_loss_contrastive": getattr(
-                        trainer, "_train_loss_meter_contrastive"
-                    ).mean,
-                }
+            _add_loss_meter_value_to_wandb(data, trainer, "eeg", group="epoch")
+            _add_loss_meter_value_to_wandb(data, trainer, "spec", group="epoch")
+            _add_loss_meter_value_to_wandb(data, trainer, "contrastive", group="epoch")
 
             wandb.log(data)
 
