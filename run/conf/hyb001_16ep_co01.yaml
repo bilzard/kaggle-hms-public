@@ -1,0 +1,25 @@
+defaults:
+  - baseline_v5_hybrid
+  - _self_
+
+exp_name: hyb001_16ep_co01
+description: Hybrid (1d + 2d) model + w/o contrastive loss
+
+trainer:
+  epochs: 16
+  trainer_class:
+    _target_: src.trainer.ContrastiveTrainer
+  use_loss_weights: true
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 12
+        target_epoch: 12
+        initial_value: 0.0
+        target_value: 0.3
+  ssl:
+    weight_schedule:
+      schedule_start_epoch: 0
+      target_epoch: 16
+      initial_value: 1.0
+      target_value: 1.0
