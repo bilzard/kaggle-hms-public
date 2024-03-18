@@ -1,0 +1,16 @@
+defaults:
+  - baseline_v5
+  - override architecture/model/feature_extractor: wave2wavegram_64x128
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+        drop_z: true
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 1.0]
