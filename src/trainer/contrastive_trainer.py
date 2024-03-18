@@ -232,10 +232,10 @@ class ContrastiveTrainer(BaseTrainer):
 
                     weight = batch[self.weight_key]
                     target = batch[self.target_key]
-                    logit_eeg_0 = output["logit_eeg"]
-                    logit_spec_0 = output["logit_spec"]
-                    logit_eeg_contrastive = output["logit_eeg_contrastive"]
-                    logit_spec_contrastive = output["logit_spec_contrastive"]
+                    logit_eeg = output["logit_eeg"]
+                    logit_spec = output["logit_spec"]
+                    emb_eeg = output["emb_eeg"]
+                    emb_spec = output["emb_spec"]
 
                     # min_weight でフィルタリング
                     valid_indices = torch.where(
@@ -245,8 +245,8 @@ class ContrastiveTrainer(BaseTrainer):
                         continue
 
                     target = target[valid_indices]
-                    logit_eeg = logit_eeg_0[valid_indices]
-                    logit_spec = logit_spec_0[valid_indices]
+                    logit_eeg = logit_eeg[valid_indices]
+                    logit_spec = logit_spec[valid_indices]
                     weight = weight[valid_indices]
 
                     loss_eeg, _ = self._calc_loss(
@@ -267,43 +267,10 @@ class ContrastiveTrainer(BaseTrainer):
                     loss = loss_supervised
 
                     if self.contrastive_weight_scheduler.value > 0:
-                        loss_contrastive_1, _ = self._calc_loss(
-                            logit_eeg_contrastive,
-                            logit_spec_0,
-                            weight=None,
-                            aggregate=True,
-                            softmax_target=True,
-                        )
-                        loss_contrastive_2, _ = self._calc_loss(
-                            logit_spec_0,
-                            logit_eeg_contrastive,
-                            weight=None,
-                            aggregate=True,
-                            softmax_target=True,
-                        )
-                        loss_contrastive_3, _ = self._calc_loss(
-                            logit_eeg_0,
-                            logit_spec_contrastive,
-                            weight=None,
-                            aggregate=True,
-                            softmax_target=True,
-                        )
-                        loss_contrastive_4, _ = self._calc_loss(
-                            logit_spec_contrastive,
-                            logit_eeg_0,
-                            weight=None,
-                            aggregate=True,
-                            softmax_target=True,
-                        )
-
-                        loss_contrastive = (
-                            loss_contrastive_1
-                            + loss_contrastive_2
-                            + loss_contrastive_3
-                            + loss_contrastive_4
-                        ) / 4.0
+                        loss_contrastive = self.criterion_contrastive(
+                            emb_eeg, emb_spec
+                        ).mean()
                         weight_sum_contrastive = weight.shape[0]
-
                         loss += (
                             self.contrastive_weight_scheduler.value * loss_contrastive
                         )
