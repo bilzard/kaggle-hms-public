@@ -122,6 +122,7 @@ class ContrastiveTrainer(BaseTrainer):
             target_value=ssl_config.weight_schedule.target_value,
             schedule_start_step=len(self.train_loader)
             * ssl_config.weight_schedule.schedule_start_epoch,
+            initial_value=ssl_config.weight_schedule.initial_value,
         )
         print(
             "* min_weight: {} -> {} (step: {} -> {})".format(
