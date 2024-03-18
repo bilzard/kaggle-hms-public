@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
-from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import get_cosine_schedule_with_warmup
@@ -17,8 +16,7 @@ from src.trainer.util import calc_weight_sum
 
 class Trainer(BaseTrainer):
     """
-    teacherモデルの予測値から算出されるlossを使ってbatch内のサンプルを間引きするtrainer。
-    間引き率は学習step/epochごとにスケジュールされる。
+    General-purpose Trainer
     """
 
     def __init__(
@@ -31,11 +29,10 @@ class Trainer(BaseTrainer):
         epochs: int,
         callbacks: list[Callback] = [],
         mixed_precision=True,
-        teacher_model: nn.Module | None = None,
+        **kwargs,
     ):
         super().__init__(cfg)
         self.model = model
-        self.teacher_model = teacher_model
         self.criterion = nn.KLDivLoss(reduction="none")
         self.device = device
         self.epochs = epochs
@@ -61,6 +58,7 @@ class Trainer(BaseTrainer):
         print(f"** class_weights: {self.class_weights}")
 
         self.configure_optimizers()
+        self.configure_schedulers()
         self.clear_log()
         self.log_architecture()
 
@@ -72,7 +70,6 @@ class Trainer(BaseTrainer):
 
     def configure_optimizers(self):
         cfg = self.cfg
-        max_steps = len(self.train_loader) * self.epochs
         base_lr = cfg.lr * (cfg.batch_size * cfg.num_samples_per_eeg) / 32.0
         params = get_lr_params(
             self.model,
@@ -87,16 +84,15 @@ class Trainer(BaseTrainer):
             weight_decay=cfg.weight_decay,
             _convert_="object",
         )
+
+    def configure_schedulers(self):
+        cfg = self.cfg
+        max_steps = len(self.train_loader) * self.epochs
         self.scheduler = get_cosine_schedule_with_warmup(
             self.optimizer,
             num_training_steps=max_steps,
             num_warmup_steps=int(max_steps * cfg.scheduler.warmup_ratio),
             num_cycles=0.5,
-        )
-        self.forget_rate_scheduler = LinearScheduler(
-            initial_value=0.0,
-            target_value=cfg.distillation.target_forget_rate,
-            target_step=len(self.train_loader) * cfg.distillation.target_epochs,
         )
         self.weight_exponent_scheduler = LinearScheduler(
             initial_value=cfg.label.schedule.weight_exponent.initial_value,
@@ -114,15 +110,6 @@ class Trainer(BaseTrainer):
             * cfg.label.schedule.min_weight.schedule_start_epoch,
             target_value=cfg.label.schedule.min_weight.target_value,
         )
-        print(f"* teacher_model: {self.teacher_model is not None}")
-        print(
-            "* forget_rate: {} -> {} (step: {} -> {})".format(
-                self.forget_rate_scheduler.initial_value,
-                self.forget_rate_scheduler.target_value,
-                self.forget_rate_scheduler.schedule_start_step,
-                self.forget_rate_scheduler.target_step,
-            )
-        )
         print(
             "* weight_exponent: {} -> {} (step: {} -> {})".format(
                 self.weight_exponent_scheduler.initial_value,
@@ -139,6 +126,11 @@ class Trainer(BaseTrainer):
                 self.min_weight_scheduler.target_step,
             )
         )
+
+    def update_scheduler(self):
+        self.scheduler.step()
+        self.weight_exponent_scheduler.step()
+        self.min_weight_scheduler.step()
 
     def fit(self):
         for epoch in range(self.epochs):
@@ -210,32 +202,8 @@ class Trainer(BaseTrainer):
 
         return loss, weight_sum
 
-    @torch.no_grad()
-    def pruning_samples(self, batch: dict[str, Tensor], forget_rate: float) -> Tensor:
-        if self.teacher_model is None:
-            raise ValueError("teacher_model is not set.")
-
-        output = self.teacher_model(batch)
-        loss, _ = self._calc_loss(
-            output[self.pred_key],
-            batch[self.target_key],
-            batch[self.weight_key] if self.cfg.distillation.use_loss_weights else None,
-            aggregate=False,
-        )
-        sorted_indices = torch.argsort(loss.data)
-        loss_sorted = loss[sorted_indices]
-
-        remain_rate = 1.0 - forget_rate
-        num_remain = int(remain_rate * len(loss_sorted))
-        indices_to_update = sorted_indices[:num_remain]
-
-        return indices_to_update
-
     def train_epoch(self, epoch: int):
         self.model.train()
-
-        if self.teacher_model is not None:
-            self.teacher_model.eval()
 
         with tqdm(self.train_loader, unit="step") as pbar:
             for batch in pbar:
@@ -243,12 +211,6 @@ class Trainer(BaseTrainer):
                 self._move_device(batch)
                 with torch.autocast(device_type="cuda", enabled=self.mixed_precision):
                     batch[self.weight_key] **= self.weight_exponent_scheduler.value
-
-                    if self.teacher_model is not None:
-                        indices_to_update = self.pruning_samples(
-                            batch, self.forget_rate_scheduler.value
-                        )
-                        self.forget_rate_scheduler.step()
 
                     output = self.model(batch)
 
@@ -262,7 +224,6 @@ class Trainer(BaseTrainer):
                     )[0]
                     if len(valid_indices) == 0:
                         continue
-                    self.min_weight_scheduler.step()
 
                     target = target[valid_indices]
                     pred = pred[valid_indices]
@@ -274,14 +235,6 @@ class Trainer(BaseTrainer):
                         weight if self.cfg.use_loss_weights else None,
                         aggregate=False,
                     )
-                    self.weight_exponent_scheduler.step()
-                    if self.teacher_model is not None:
-                        loss = loss[indices_to_update]
-                        weight_sum = (
-                            (weight[indices_to_update].sum().item())
-                            if self.cfg.use_loss_weights
-                            else len(indices_to_update)
-                        )
                     loss = loss.sum() / weight_sum
                     self._train_loss_meter.update(loss.item(), weight_sum)
 
@@ -292,7 +245,8 @@ class Trainer(BaseTrainer):
                 else:
                     loss.backward()
                     self.optimizer.step()
-                self.scheduler.step()
+
+                self.update_scheduler()
 
                 for callback in self.callbacks:
                     callback.on_train_step_end(
@@ -301,7 +255,6 @@ class Trainer(BaseTrainer):
                 pbar.set_postfix(
                     {
                         "loss": self._train_loss_meter.mean,
-                        "forget_rate": self.forget_rate_scheduler.value,
                         "weight_exponent": self.weight_exponent_scheduler.value,
                         "min_weight": self.min_weight_scheduler.value,
                     }
