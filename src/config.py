@@ -69,7 +69,6 @@ class EvalConfig:
     duration: int
     stride: int
     seed: int
-    population_threshold: float
     weight_exponent: float
     min_weight: float
 
@@ -152,7 +151,6 @@ class TrainerConfig:
     num_samples_per_eeg: int
     log_file_name: str
     random_seed_offset: int
-    population_threshold: float
     no_decay_bias_params: bool
     class_weights: list[float]
     class_weight_exponent: float

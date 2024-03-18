@@ -48,7 +48,6 @@ trainer:
   save_last: true
   save_best: false
   duration: 2048
-  population_threshold: 0
   no_decay_bias_params: false
   val:
     batch_size: 32
@@ -57,7 +56,6 @@ trainer:
     aggregation_fn: max
     agg_policy: per_eeg_weighted
     seed: 123
-    population_threshold: 0
     weight_exponent: 0.0
     min_weight: 0.0
   scheduler:
