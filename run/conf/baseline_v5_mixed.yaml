@@ -1,0 +1,36 @@
+defaults:
+  - baseline_v5
+  - architecture/model/eeg_adapter: eeg_dual_stacking_collator
+  - architecture/model/eeg_encoder: efficientnet1d
+  - override architecture/model/feature_processor: mixed_dual_feature_processor
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    eeg_encoder:
+      se_after_dw_conv: true
+    feature_processor:
+      num_eeg_channels: 10
+      bottleneck_ratio: 10
+      num_heads: 2
+  in_channels: null
+  in_channels_eeg: 20
+  in_channels_spec: 2
+  model_class:
+    _target_: src.model.hms_model.hms_model_mixed.HmsModelMixed
+  model_checker:
+    _target_: src.model.hms_model.hms_model_mixed.check_model
+
+trainer:
+  epochs: 8
+  use_loss_weights: true
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 4
+        target_epoch: 4
+        initial_value: 0.0
+        target_value: 0.3
