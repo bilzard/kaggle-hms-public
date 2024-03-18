@@ -1,0 +1,25 @@
+defaults:
+  - baseline_v5
+  - _self_
+
+exp_name: ???
+description: ???
+
+trainer:
+  epochs: 8
+  trainer_class:
+    _target_: src.trainer.MeanTeacherTrainer
+  ssl:
+    average_type: ema
+    teacher_decay: 0.99
+    use_buffers: true
+    use_loss_weights: false
+    weight_schedule:
+      schedule_start_epoch: 4
+      target_epoch: 8
+      target_value: 0.1
+    decay_schedule:
+      schedule_start_epoch: 0
+      target_epoch: 0
+      initial_value: 0.0
+      target_value: 0.0
