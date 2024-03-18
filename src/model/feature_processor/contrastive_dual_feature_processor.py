@@ -28,6 +28,7 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         lr_mapping_type: str = "identity",
         bottleneck_ratio: int = 4,
         num_heads: int = 1,
+        eps=1e-4,
     ):
         super().__init__()
         self.in_channels_spec = in_channels_spec
@@ -35,6 +36,8 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         self.hidden_dim = hidden_dim
         self.num_eeg_channels = num_eeg_channels
         self.lr_mapping_type = lr_mapping_type
+        self.eps = eps
+
         self.spec_similarity_encoder = CosineSimilarityEncoder2d(
             hidden_dim=hidden_dim, activation=activation_spec
         )
@@ -47,13 +50,6 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         in_channels_eeg = 2 * in_channels_eeg + hidden_dim
         in_channels_spec = 2 * in_channels_spec + hidden_dim
 
-        self.eeg_head = Head(
-            in_channels_eeg, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
-        )
-        self.spec_head = Head(
-            in_channels_spec, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
-        )
-
         # pred for contrastive loss
         self.proj_eeg = Mlp(
             in_channels_eeg, hidden_dim, bottleneck_ratio=bottleneck_ratio
@@ -61,10 +57,10 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         self.proj_spec = Mlp(
             in_channels_spec, hidden_dim, bottleneck_ratio=bottleneck_ratio
         )
-        self.head_eeg_contrastive = Head(
+        self.eeg_head = Head(
             hidden_dim, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
         )
-        self.head_spec_contrastive = Head(
+        self.spec_head = Head(
             hidden_dim, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
         )
 
@@ -86,10 +82,11 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         spec = torch.cat(spec_feats, dim=1)
         spec = self.spec_pool(spec)  # b c 1 1
         spec = rearrange(spec, "b c 1 1 -> b c")
+        spec = self.proj_spec(spec)  # b c
+        spec = spec / torch.clamp(
+            torch.linalg.vector_norm(spec, dim=1, keepdim=True), min=self.eps
+        )
         spec_pred = self.spec_head(spec)  # b k c
-        logit_spec_contrastive = self.head_spec_contrastive(
-            self.proj_spec(spec)
-        )  # b k c
 
         eeg = inputs["eeg"]
         eeg = rearrange(
@@ -105,15 +102,18 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         eeg = torch.cat(eeg_feats, dim=1)
         eeg = self.sim_pool(eeg)  # b c 1 1
         eeg = rearrange(eeg, "b c 1 1 -> b c")
+        eeg = self.proj_eeg(eeg)  # b c
+        eeg = eeg / torch.clamp(
+            torch.linalg.vector_norm(eeg, dim=1, keepdim=True), min=self.eps
+        )
         eeg_pred = self.eeg_head(eeg)  # b k c
-        logit_eeg_contrastive = self.head_eeg_contrastive(self.proj_eeg(eeg))  # b k c
 
         return dict(
             pred=((eeg_pred + spec_pred) / 2.0).detach(),
             logit_eeg=eeg_pred,
             logit_spec=spec_pred,
-            logit_eeg_contrastive=logit_eeg_contrastive,
-            logit_spec_contrastive=logit_spec_contrastive,
+            emb_eeg=eeg,  # b hidden_dim
+            emb_spec=spec,  # b hidden_dim
         )
 
 
