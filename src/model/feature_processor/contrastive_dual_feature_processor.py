@@ -28,7 +28,6 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         lr_mapping_type: str = "identity",
         bottleneck_ratio: int = 4,
         num_heads: int = 1,
-        eps=1e-4,
     ):
         super().__init__()
         self.in_channels_spec = in_channels_spec
@@ -36,7 +35,6 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         self.hidden_dim = hidden_dim
         self.num_eeg_channels = num_eeg_channels
         self.lr_mapping_type = lr_mapping_type
-        self.eps = eps
 
         self.spec_similarity_encoder = CosineSimilarityEncoder2d(
             hidden_dim=hidden_dim, activation=activation_spec
@@ -83,9 +81,6 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         spec = self.spec_pool(spec)  # b c 1 1
         spec = rearrange(spec, "b c 1 1 -> b c")
         spec = self.proj_spec(spec)  # b c
-        spec = spec / torch.clamp(
-            torch.linalg.vector_norm(spec, dim=1, keepdim=True), min=self.eps
-        )
         spec_pred = self.spec_head(spec)  # b k c
 
         eeg = inputs["eeg"]
@@ -103,9 +98,6 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         eeg = self.sim_pool(eeg)  # b c 1 1
         eeg = rearrange(eeg, "b c 1 1 -> b c")
         eeg = self.proj_eeg(eeg)  # b c
-        eeg = eeg / torch.clamp(
-            torch.linalg.vector_norm(eeg, dim=1, keepdim=True), min=self.eps
-        )
         eeg_pred = self.eeg_head(eeg)  # b k c
 
         return dict(
