@@ -256,8 +256,8 @@ class ContrastiveTrainer(BaseTrainer):
                     target = batch[self.target_key]
                     logit_eeg = output["logit_eeg"]
                     logit_spec = output["logit_spec"]
-                    emb_eeg = output["emb_eeg"]
-                    emb_spec = output["emb_spec"]
+                    eeg_con = output["eeg_con"]
+                    spec_con = output["spec_con"]
 
                     # min_weight でフィルタリング
                     valid_indices = torch.where(
@@ -289,11 +289,11 @@ class ContrastiveTrainer(BaseTrainer):
                     loss = loss_supervised
 
                     if self.contrastive_weight_scheduler.value > 0:
-                        loss_contrastive_1 = self._calc_contrastive_loss(
-                            emb_eeg, emb_spec
+                        loss_contrastive_1, _ = self._calc_loss(
+                            eeg_con, spec_con, softmax_target=True, aggregate=True
                         )
-                        loss_contrastive_2 = self._calc_contrastive_loss(
-                            emb_spec, emb_eeg
+                        loss_contrastive_2, _ = self._calc_loss(
+                            spec_con, eeg_con, softmax_target=True, aggregate=True
                         )
                         loss_contrastive = (
                             loss_contrastive_1 + loss_contrastive_2

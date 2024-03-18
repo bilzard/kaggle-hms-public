@@ -6,7 +6,6 @@ from torch import Tensor
 from src.model.basic_block import (
     CosineSimilarityEncoder2d,
     GeMPool2d,
-    Mlp,
     vector_pair_mapping,
 )
 from src.model.head import Head
@@ -49,17 +48,17 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         in_channels_spec = 2 * in_channels_spec + hidden_dim
 
         # pred for contrastive loss
-        self.proj_eeg = Mlp(
-            in_channels_eeg, hidden_dim, bottleneck_ratio=bottleneck_ratio
-        )
-        self.proj_spec = Mlp(
-            in_channels_spec, hidden_dim, bottleneck_ratio=bottleneck_ratio
-        )
         self.eeg_head = Head(
-            hidden_dim, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
+            in_channels_eeg, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
         )
         self.spec_head = Head(
-            hidden_dim, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
+            in_channels_spec, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
+        )
+        self.eeg_con = Head(
+            in_channels_eeg, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
+        )
+        self.spec_con = Head(
+            in_channels_spec, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
         )
 
     def forward(self, inputs: dict[str, Tensor]) -> dict[str, Tensor]:
@@ -80,8 +79,8 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         spec = torch.cat(spec_feats, dim=1)
         spec = self.spec_pool(spec)  # b c 1 1
         spec = rearrange(spec, "b c 1 1 -> b c")
-        spec = self.proj_spec(spec)  # b c
         spec_pred = self.spec_head(spec)  # b k c
+        spec_con = self.spec_con(spec)  # b k c
 
         eeg = inputs["eeg"]
         eeg = rearrange(
@@ -97,15 +96,15 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         eeg = torch.cat(eeg_feats, dim=1)
         eeg = self.sim_pool(eeg)  # b c 1 1
         eeg = rearrange(eeg, "b c 1 1 -> b c")
-        eeg = self.proj_eeg(eeg)  # b c
         eeg_pred = self.eeg_head(eeg)  # b k c
+        eeg_con = self.eeg_con(eeg)  # b k c
 
         return dict(
             pred=((eeg_pred + spec_pred) / 2.0).detach(),
             logit_eeg=eeg_pred,
             logit_spec=spec_pred,
-            emb_eeg=eeg,  # b hidden_dim
-            emb_spec=spec,  # b hidden_dim
+            eeg_con=eeg_con,
+            spec_con=spec_con,
         )
 
 
