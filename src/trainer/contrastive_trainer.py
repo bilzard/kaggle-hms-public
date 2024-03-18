@@ -4,7 +4,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
-from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import get_cosine_schedule_with_warmup
@@ -217,28 +216,6 @@ class ContrastiveTrainer(BaseTrainer):
 
         return loss, weight_sum
 
-    def _calc_contrastive_loss(
-        self,
-        pred: torch.Tensor,
-        target: torch.Tensor,
-    ) -> Tensor:
-        """
-        pred: b c
-        target: b c
-        """
-        pred = torch.log_softmax(pred, dim=1)
-        target = torch.softmax(target, dim=1)
-
-        loss = self.criterion(pred, target)  # b c
-
-        if self.model.training:
-            for c in range(6):
-                loss[..., c] *= self.class_weights[c]
-
-        loss = loss.sum(dim=1).mean()
-
-        return loss
-
     def train_epoch(self, epoch: int):
         self.model.train()
 
@@ -256,8 +233,6 @@ class ContrastiveTrainer(BaseTrainer):
                     target = batch[self.target_key]
                     logit_eeg = output["logit_eeg"]
                     logit_spec = output["logit_spec"]
-                    eeg_con = output["eeg_con"]
-                    spec_con = output["spec_con"]
 
                     # min_weight でフィルタリング
                     valid_indices = torch.where(
@@ -290,10 +265,10 @@ class ContrastiveTrainer(BaseTrainer):
 
                     if self.contrastive_weight_scheduler.value > 0:
                         loss_contrastive_1, _ = self._calc_loss(
-                            eeg_con, spec_con, softmax_target=True, aggregate=True
+                            logit_eeg, logit_spec, softmax_target=True, aggregate=True
                         )
                         loss_contrastive_2, _ = self._calc_loss(
-                            spec_con, eeg_con, softmax_target=True, aggregate=True
+                            logit_spec, logit_eeg, softmax_target=True, aggregate=True
                         )
                         loss_contrastive = (
                             loss_contrastive_1 + loss_contrastive_2

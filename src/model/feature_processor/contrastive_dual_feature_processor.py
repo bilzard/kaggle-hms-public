@@ -54,12 +54,6 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         self.spec_head = Head(
             in_channels_spec, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
         )
-        self.eeg_con = Head(
-            in_channels_eeg, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
-        )
-        self.spec_con = Head(
-            in_channels_spec, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
-        )
 
     def forward(self, inputs: dict[str, Tensor]) -> dict[str, Tensor]:
         """
@@ -80,7 +74,6 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         spec = self.spec_pool(spec)  # b c 1 1
         spec = rearrange(spec, "b c 1 1 -> b c")
         spec_pred = self.spec_head(spec)  # b k c
-        spec_con = self.spec_con(spec)  # b k c
 
         eeg = inputs["eeg"]
         eeg = rearrange(
@@ -97,14 +90,11 @@ class ContrastiveDualFeatureProcessor(nn.Module):
         eeg = self.sim_pool(eeg)  # b c 1 1
         eeg = rearrange(eeg, "b c 1 1 -> b c")
         eeg_pred = self.eeg_head(eeg)  # b k c
-        eeg_con = self.eeg_con(eeg)  # b k c
 
         return dict(
             pred=((eeg_pred + spec_pred) / 2.0).detach(),
             logit_eeg=eeg_pred,
             logit_spec=spec_pred,
-            eeg_con=eeg_con,
-            spec_con=spec_con,
         )
 
 
