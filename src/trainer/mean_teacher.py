@@ -182,6 +182,13 @@ class MeanTeacherTrainer(BaseTrainer):
             )
         )
 
+    def update_scheduler(self):
+        self.scheduler.step()
+        self.weight_exponent_scheduler.step()
+        self.min_weight_scheduler.step()
+        self.contrastive_weight_scheduler.step()
+        self.decay_scheduler.step()
+
     def log_architecture(self):
         self.write_log("Optimizer", str(self.optimizer))
         self.write_log("Train dataset", str(self.train_loader.dataset))
@@ -281,11 +288,9 @@ class MeanTeacherTrainer(BaseTrainer):
                     weight = batch[self.weight_key]  # b k
 
                     if self.teacher_model is not None:
-                        loss_contrastive = (
-                            self.criterion_contrastive(pred, teacher_pred)
-                            .mean(dim=(1, 2))
-                            .sum()
-                        )
+                        loss_contrastive = self.criterion_contrastive(
+                            pred, teacher_pred
+                        ).mean()
                         weight_sum_contrastive = weight.shape[0]
 
                     # min_weight でフィルタリング
@@ -294,33 +299,30 @@ class MeanTeacherTrainer(BaseTrainer):
                     )[0]
                     if len(valid_indices) == 0:
                         continue
-                    self.min_weight_scheduler.step()
 
                     target = target[valid_indices]
                     pred = pred[valid_indices]
                     weight = weight[valid_indices]
 
-                    loss, weight_sum = self._calc_loss(
+                    loss_supervised, weight_sum = self._calc_loss(
                         pred,
                         target,
                         weight if self.cfg.use_loss_weights else None,
                         aggregate=False,
                     )
-                    self.weight_exponent_scheduler.step()
-                    loss = loss.sum() / weight_sum
-                    if self.teacher_model is not None:
-                        loss_contrastive = (
-                            loss_contrastive.sum() / weight_sum_contrastive
-                        )
-                        loss += (
-                            self.contrastive_weight_scheduler.value * loss_contrastive
-                        )
-                        self.contrastive_weight_scheduler.step()
+                    loss_supervised = loss_supervised.sum() / weight_sum
+                    self._train_loss_meter.update(loss_supervised.item(), weight_sum)
 
-                    self._train_loss_meter.update(loss.item(), weight_sum)
-                    self._train_contrastive_loss_meter.update(
-                        loss_contrastive.item(), weight_sum_contrastive
-                    )
+                    loss = loss_supervised
+                    if self.teacher_model is not None:
+                        loss = (
+                            loss
+                            + self.contrastive_weight_scheduler.value * loss_contrastive
+                        )
+                        self._train_contrastive_loss_meter.update(
+                            loss_contrastive.item(),
+                            weight_sum_contrastive,
+                        )
 
                 if self.scaler is not None:
                     self.scaler.scale(loss).backward()
@@ -329,7 +331,8 @@ class MeanTeacherTrainer(BaseTrainer):
                 else:
                     loss.backward()
                     self.optimizer.step()
-                self.scheduler.step()
+
+                self.update_scheduler()
 
                 if self.teacher_model is not None:
                     self.teacher_model.update_parameters(self.model)
