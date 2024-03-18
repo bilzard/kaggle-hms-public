@@ -59,21 +59,7 @@ class MetricsLogger(Callback):
         output: dict[str, torch.Tensor],
         loss: float,
     ):
-        if self.wandb_enabled:
-            data = {
-                f"step/lr{i}": lr
-                for i, lr in enumerate(trainer.scheduler.get_last_lr())
-            }
-            _add_scheduler_value_to_wandb(data, trainer, "forget_rate", group="step")
-            _add_scheduler_value_to_wandb(
-                data, trainer, "weight_exponent", group="step"
-            )
-            _add_scheduler_value_to_wandb(data, trainer, "min_weight", group="step")
-            _add_scheduler_value_to_wandb(
-                data, trainer, "contrastive_weight", group="step"
-            )
-
-            wandb.log(data)
+        pass
 
     @torch.no_grad()
     def on_valid_epoch_end(self, trainer, epoch: int, loss: float):
