@@ -260,51 +260,52 @@ class ContrastiveTrainer(BaseTrainer):
                         weight if self.cfg.use_loss_weights else None,
                         aggregate=False,
                     )
-                    loss = (loss_eeg + loss_spec) / 2.0
+                    loss_supervised = (loss_eeg + loss_spec) / 2.0
                     weight_sum = calc_weight_sum(weight, self.cfg.loss_weight)
-                    loss_supervised = loss.sum() / weight_sum
+                    loss_supervised = loss_supervised.sum() / weight_sum
+                    loss = loss_supervised
 
-                    loss_contrastive_1, _ = self._calc_loss(
-                        logit_eeg_contrastive,
-                        logit_spec_0,
-                        weight=None,
-                        aggregate=True,
-                        softmax_target=True,
-                    )
-                    loss_contrastive_2, _ = self._calc_loss(
-                        logit_spec_0,
-                        logit_eeg_contrastive,
-                        weight=None,
-                        aggregate=True,
-                        softmax_target=True,
-                    )
-                    loss_contrastive_3, _ = self._calc_loss(
-                        logit_eeg_0,
-                        logit_spec_contrastive,
-                        weight=None,
-                        aggregate=True,
-                        softmax_target=True,
-                    )
-                    loss_contrastive_4, _ = self._calc_loss(
-                        logit_spec_contrastive,
-                        logit_eeg_0,
-                        weight=None,
-                        aggregate=True,
-                        softmax_target=True,
-                    )
+                    if self.contrastive_weight_scheduler.value > 0:
+                        loss_contrastive_1, _ = self._calc_loss(
+                            logit_eeg_contrastive,
+                            logit_spec_0,
+                            weight=None,
+                            aggregate=True,
+                            softmax_target=True,
+                        )
+                        loss_contrastive_2, _ = self._calc_loss(
+                            logit_spec_0,
+                            logit_eeg_contrastive,
+                            weight=None,
+                            aggregate=True,
+                            softmax_target=True,
+                        )
+                        loss_contrastive_3, _ = self._calc_loss(
+                            logit_eeg_0,
+                            logit_spec_contrastive,
+                            weight=None,
+                            aggregate=True,
+                            softmax_target=True,
+                        )
+                        loss_contrastive_4, _ = self._calc_loss(
+                            logit_spec_contrastive,
+                            logit_eeg_0,
+                            weight=None,
+                            aggregate=True,
+                            softmax_target=True,
+                        )
 
-                    loss_contrastive = (
-                        loss_contrastive_1
-                        + loss_contrastive_2
-                        + loss_contrastive_3
-                        + loss_contrastive_4
-                    ) / 4.0
-                    weight_sum_contrastive = weight.shape[0]
+                        loss_contrastive = (
+                            loss_contrastive_1
+                            + loss_contrastive_2
+                            + loss_contrastive_3
+                            + loss_contrastive_4
+                        ) / 4.0
+                        weight_sum_contrastive = weight.shape[0]
 
-                    loss = (
-                        loss_supervised
-                        + self.contrastive_weight_scheduler.value * loss_contrastive
-                    )
+                        loss += (
+                            self.contrastive_weight_scheduler.value * loss_contrastive
+                        )
 
                     with torch.no_grad():
                         self._train_loss_meter.update(
@@ -318,10 +319,10 @@ class ContrastiveTrainer(BaseTrainer):
                             loss_spec.sum().item() / weight_sum,
                             weight_sum,
                         )
-                        self._train_loss_meter_contrastive.update(
-                            loss_contrastive.item(),
-                            weight_sum_contrastive,
-                        )
+                        if self.contrastive_weight_scheduler.value > 0:
+                            self._train_loss_meter_contrastive.update(
+                                loss_contrastive.item(), weight_sum_contrastive
+                            )
 
                 if self.scaler is not None:
                     self.scaler.scale(loss).backward()
