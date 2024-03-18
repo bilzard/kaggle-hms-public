@@ -13,7 +13,7 @@ from src.model.head import Head
 
 class MixedDualFeatureProcessor(nn.Module):
     """
-    L/R-invalid mapping + Similarity +  w GeMPool
+    1d modelと2d modelの予測値を返す
     """
 
     def __init__(
@@ -25,8 +25,8 @@ class MixedDualFeatureProcessor(nn.Module):
         activation_spec: nn.Module,
         activation_eeg: nn.Module,
         lr_mapping_type: str = "identity",
-        bottleneck_ratio_eeg: int = 4,
-        bottleneck_ratio_spec: int = 4,
+        bottleneck_ratio: int = 4,
+        num_heads: int = 1,
     ):
         super().__init__()
         self.in_channels_spec = in_channels_spec
@@ -34,6 +34,7 @@ class MixedDualFeatureProcessor(nn.Module):
         self.hidden_dim = hidden_dim
         self.num_eeg_channels = num_eeg_channels
         self.lr_mapping_type = lr_mapping_type
+
         self.spec_similarity_encoder = CosineSimilarityEncoder2d(
             hidden_dim=hidden_dim, activation=activation_spec
         )
@@ -42,18 +43,11 @@ class MixedDualFeatureProcessor(nn.Module):
         )
         self.spec_pool = GeMPool2d()
         self.sim_pool = GeMPool2d()
-        self.eeg_head = Head(
-            in_channels=2 * in_channels_eeg + hidden_dim,
-            bottleneck_ratio=bottleneck_ratio_eeg,
-        )
-        self.spec_head = Head(
-            in_channels=2 * in_channels_spec + hidden_dim,
-            bottleneck_ratio=bottleneck_ratio_spec,
-        )
 
-    @property
-    def out_channels(self) -> int:
-        return 2 * (self.in_channels_spec + self.in_channels_eeg + self.hidden_dim)
+        in_channels_head = 2 * (in_channels_eeg + in_channels_spec + hidden_dim)
+        self.head = Head(
+            in_channels_head, bottleneck_ratio=bottleneck_ratio, num_heads=num_heads
+        )
 
     def forward(self, inputs: dict[str, Tensor]) -> Tensor:
         """
@@ -73,7 +67,6 @@ class MixedDualFeatureProcessor(nn.Module):
         spec = torch.cat(spec_feats, dim=1)
         spec = self.spec_pool(spec)  # b c 1 1
         spec = rearrange(spec, "b c 1 1 -> b c")
-        spec_pred = self.spec_head(spec)
 
         eeg = inputs["eeg"]
         eeg = rearrange(
@@ -89,9 +82,10 @@ class MixedDualFeatureProcessor(nn.Module):
         eeg = torch.cat(eeg_feats, dim=1)
         eeg = self.sim_pool(eeg)  # b c 1 1
         eeg = rearrange(eeg, "b c 1 1 -> b c")
-        eeg_pred = self.eeg_head(eeg)
 
-        return (spec_pred + eeg_pred) / 2
+        pred = self.head(torch.cat([spec, eeg], dim=1))  # b k c
+
+        return pred
 
 
 if __name__ == "__main__":
