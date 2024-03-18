@@ -69,6 +69,9 @@ class MetricsLogger(Callback):
                 data, trainer, "weight_exponent", group="step"
             )
             _add_scheduler_value_to_wandb(data, trainer, "min_weight", group="step")
+            _add_scheduler_value_to_wandb(
+                data, trainer, "contrastive_weight", group="step"
+            )
 
             wandb.log(data)
 
@@ -109,6 +112,9 @@ class MetricsLogger(Callback):
                 data, trainer, "weight_exponent", group="epoch"
             )
             _add_scheduler_value_to_wandb(data, trainer, "min_weight", group="epoch")
+            _add_scheduler_value_to_wandb(
+                data, trainer, "contrastive_weight", group="epoch"
+            )
 
             _add_loss_meter_value_to_wandb(data, trainer, "eeg", group="epoch")
             _add_loss_meter_value_to_wandb(data, trainer, "spec", group="epoch")
