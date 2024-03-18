@@ -1,15 +1,16 @@
+from typing import cast
+
 import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
-from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import get_cosine_schedule_with_warmup
 
 from src.callback.base import Callback
-from src.config import TrainerConfig
-from src.scheduler import LinearScheduler
+from src.config import ContrastiveConfig, TrainerConfig
+from src.scheduler import GaussianRampUpScheduler, LinearScheduler
 from src.train_util import AverageMeter, get_lr_params
 from src.trainer.base import BaseTrainer
 from src.trainer.util import calc_weight_sum
@@ -41,6 +42,7 @@ class ContrastiveTrainer(BaseTrainer):
         self.model = model
         self.teacher_model = teacher_model
         self.criterion = nn.KLDivLoss(reduction="none")
+        self.criterion_contrastive = nn.MSELoss(reduction="none")
         self.device = device
         self.epochs = epochs
         self.mixed_precision = mixed_precision
@@ -69,6 +71,7 @@ class ContrastiveTrainer(BaseTrainer):
         print(f"** class_weights: {self.class_weights}")
 
         self.configure_optimizers()
+        self.configure_schedulers()
         self.clear_log()
         self.log_architecture()
 
@@ -80,7 +83,6 @@ class ContrastiveTrainer(BaseTrainer):
 
     def configure_optimizers(self):
         cfg = self.cfg
-        max_steps = len(self.train_loader) * self.epochs
         base_lr = cfg.lr * (cfg.batch_size * cfg.num_samples_per_eeg) / 32.0
         params = get_lr_params(
             self.model,
@@ -95,20 +97,52 @@ class ContrastiveTrainer(BaseTrainer):
             weight_decay=cfg.weight_decay,
             _convert_="object",
         )
+
+    def configure_schedulers(self):
+        cfg = self.cfg
+        max_steps = len(self.train_loader) * self.epochs
         self.scheduler = get_cosine_schedule_with_warmup(
             self.optimizer,
             num_training_steps=max_steps,
             num_warmup_steps=int(max_steps * cfg.scheduler.warmup_ratio),
             num_cycles=0.5,
         )
-        self.forget_rate_scheduler = LinearScheduler(
-            initial_value=0.0,
-            target_value=cfg.distillation.target_forget_rate,
-            target_step=len(self.train_loader) * cfg.distillation.target_epochs,
+        self.min_weight_scheduler = LinearScheduler(
+            initial_value=cfg.label.schedule.min_weight.initial_value,
+            target_step=len(self.train_loader)
+            * cfg.label.schedule.min_weight.target_epoch,
+            schedule_start_step=len(self.train_loader)
+            * cfg.label.schedule.min_weight.schedule_start_epoch,
+            target_value=cfg.label.schedule.min_weight.target_value,
         )
-        print(f"* target_step: {self.forget_rate_scheduler.target_step}")
-        print(f"* target_forget_rate: {self.forget_rate_scheduler.target_value}")
-        print(f"* teacher_model: {self.teacher_model is not None}")
+        ssl_config = cast(ContrastiveConfig, cfg.ssl)
+        self.contrastive_weight_scheduler = GaussianRampUpScheduler(
+            target_step=len(self.train_loader)
+            * ssl_config.weight_schedule.target_epoch,
+            target_value=ssl_config.weight_schedule.target_value,
+            schedule_start_step=len(self.train_loader)
+            * ssl_config.weight_schedule.schedule_start_epoch,
+        )
+        print(
+            "* min_weight: {} -> {} (step: {} -> {})".format(
+                self.min_weight_scheduler.initial_value,
+                self.min_weight_scheduler.target_value,
+                self.min_weight_scheduler.schedule_start_step,
+                self.min_weight_scheduler.target_step,
+            )
+        )
+        print(
+            "* contrastive_weight: 0 -> {} (step: {} -> {})".format(
+                self.contrastive_weight_scheduler.target_value,
+                self.contrastive_weight_scheduler.schedule_start_step,
+                self.contrastive_weight_scheduler.target_step,
+            )
+        )
+
+    def update_scheduler(self):
+        self.scheduler.step()
+        self.min_weight_scheduler.step()
+        self.contrastive_weight_scheduler.step()
 
     def fit(self):
         for epoch in range(self.epochs):
@@ -182,17 +216,6 @@ class ContrastiveTrainer(BaseTrainer):
 
         return loss, weight_sum
 
-    @torch.no_grad()
-    def pruning_samples(self, loss: Tensor, forget_rate: float) -> Tensor:
-        sorted_indices = torch.argsort(loss.data)
-        loss_sorted = loss[sorted_indices]
-
-        remain_rate = 1.0 - forget_rate
-        num_remain = int(remain_rate * len(loss_sorted))
-        indices_to_update = sorted_indices[:num_remain]
-
-        return indices_to_update
-
     def train_epoch(self, epoch: int):
         self.model.train()
 
@@ -205,63 +228,100 @@ class ContrastiveTrainer(BaseTrainer):
                 self._move_device(batch)
                 with torch.autocast(device_type="cuda", enabled=self.mixed_precision):
                     output = self.model(batch)
+
+                    weight = batch[self.weight_key]
+                    target = batch[self.target_key]
+                    logit_eeg_0 = output["logit_eeg"]
+                    logit_spec_0 = output["logit_spec"]
+                    logit_eeg_contrastive = output["logit_eeg_contrastive"]
+                    logit_spec_contrastive = output["logit_spec_contrastive"]
+
+                    # min_weight でフィルタリング
+                    valid_indices = torch.where(
+                        (weight.mean(dim=1) > self.min_weight_scheduler.value)
+                    )[0]
+                    if len(valid_indices) == 0:
+                        continue
+
+                    target = target[valid_indices]
+                    logit_eeg = logit_eeg_0[valid_indices]
+                    logit_spec = logit_spec_0[valid_indices]
+                    weight = weight[valid_indices]
+
                     loss_eeg, _ = self._calc_loss(
-                        output["logit_eeg"],
-                        batch[self.target_key],
-                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
+                        logit_eeg,
+                        target,
+                        weight if self.cfg.use_loss_weights else None,
                         aggregate=False,
                     )
                     loss_spec, _ = self._calc_loss(
-                        output["logit_spec"],
-                        batch[self.target_key],
-                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
+                        logit_spec,
+                        target,
+                        weight if self.cfg.use_loss_weights else None,
                         aggregate=False,
                     )
-                    loss_eeg_spec, _ = self._calc_loss(
-                        output["logit_eeg"],
-                        output["logit_spec"],
-                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
-                        aggregate=False,
+                    loss = (loss_eeg + loss_spec) / 2.0
+                    weight_sum = calc_weight_sum(weight, self.cfg.loss_weight)
+                    loss_supervised = loss.sum() / weight_sum
+
+                    loss_contrastive_1, _ = self._calc_loss(
+                        logit_eeg_contrastive,
+                        logit_spec_0,
+                        weight=None,
+                        aggregate=True,
                         softmax_target=True,
                     )
-                    loss_spec_eeg, _ = self._calc_loss(
-                        output["logit_spec"],
-                        output["logit_eeg"],
-                        batch[self.weight_key] if self.cfg.use_loss_weights else None,
-                        aggregate=False,
+                    loss_contrastive_2, _ = self._calc_loss(
+                        logit_spec_0,
+                        logit_eeg_contrastive,
+                        weight=None,
+                        aggregate=True,
                         softmax_target=True,
                     )
-                    loss = (loss_eeg + loss_spec) / 2.0 + self.cfg.contrastive.lambd * (
-                        (loss_eeg_spec + loss_spec_eeg) / 2.0
+                    loss_contrastive_3, _ = self._calc_loss(
+                        logit_eeg_0,
+                        logit_spec_contrastive,
+                        weight=None,
+                        aggregate=True,
+                        softmax_target=True,
                     )
-                    indices_to_update = self.pruning_samples(
-                        loss, self.forget_rate_scheduler.value
+                    loss_contrastive_4, _ = self._calc_loss(
+                        logit_spec_contrastive,
+                        logit_eeg_0,
+                        weight=None,
+                        aggregate=True,
+                        softmax_target=True,
                     )
-                    loss = loss[indices_to_update]
-                    weight_sum = calc_weight_sum(
-                        batch[self.weight_key][indices_to_update], self.cfg.loss_weight
+
+                    loss_contrastive = (
+                        loss_contrastive_1
+                        + loss_contrastive_2
+                        + loss_contrastive_3
+                        + loss_contrastive_4
+                    ) / 4.0
+                    weight_sum_contrastive = weight.shape[0]
+
+                    loss = (
+                        loss_supervised
+                        + self.contrastive_weight_scheduler.value * loss_contrastive
                     )
-                    loss = loss.sum() / weight_sum
 
                     with torch.no_grad():
-                        self._train_loss_meter.update(loss.item(), weight_sum)
+                        self._train_loss_meter.update(
+                            loss_supervised.item(), weight_sum
+                        )
                         self._train_loss_meter_eeg.update(
-                            loss_eeg[indices_to_update].sum().item() / weight_sum,
+                            loss_eeg.sum().item() / weight_sum,
                             weight_sum,
                         )
                         self._train_loss_meter_spec.update(
-                            loss_spec[indices_to_update].sum().item() / weight_sum,
+                            loss_spec.sum().item() / weight_sum,
                             weight_sum,
                         )
                         self._train_loss_meter_contrastive.update(
-                            ((loss_eeg_spec + loss_eeg_spec)[indices_to_update] / 2.0)
-                            .sum()
-                            .item()
-                            / weight_sum,
-                            weight_sum,
+                            loss_contrastive.item(),
+                            weight_sum_contrastive,
                         )
-
-                self.forget_rate_scheduler.step()
 
                 if self.scaler is not None:
                     self.scaler.scale(loss).backward()
@@ -270,7 +330,7 @@ class ContrastiveTrainer(BaseTrainer):
                 else:
                     loss.backward()
                     self.optimizer.step()
-                self.scheduler.step()
+                self.update_scheduler()
 
                 for callback in self.callbacks:
                     callback.on_train_step_end(
@@ -282,7 +342,8 @@ class ContrastiveTrainer(BaseTrainer):
                         "loss_eeg": self._train_loss_meter_eeg.mean,
                         "loss_spec": self._train_loss_meter_spec.mean,
                         "loss_contrastive": self._train_loss_meter_contrastive.mean,
-                        "forget_rate": self.forget_rate_scheduler.value,
+                        "min_weight": self.min_weight_scheduler.value,
+                        "contrastive_weight": self.contrastive_weight_scheduler.value,
                     }
                 )
 

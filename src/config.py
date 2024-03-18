@@ -127,11 +127,6 @@ class DistillationConfig:
 
 
 @dataclass
-class ContrastiveConfig:
-    lambd: float
-
-
-@dataclass
 class LossWeightConfig:
     norm_policy: str
     global_mean: float
@@ -150,6 +145,11 @@ class MeanTeacherConfig(SslConfig):
     use_loss_weights: bool
     weight_schedule: ParamScheduleConfig
     decay_schedule: ParamScheduleConfig
+
+
+@dataclass
+class ContrastiveConfig(SslConfig):
+    weight_schedule: ParamScheduleConfig
 
 
 @dataclass
@@ -180,7 +180,6 @@ class TrainerConfig:
     pseudo_label: PseudoLabelConfig
     label: LabelConfig
     distillation: DistillationConfig
-    contrastive: ContrastiveConfig
     loss_weight: LossWeightConfig
     ssl: type[SslConfig]
 
