@@ -11,19 +11,21 @@ class GaussianRampUpScheduler:
         target_step: int,
         target_value: float,
         schedule_start_step: int = 0,
-        **kwargs,
+        initial_value: float = 0.0,
     ):
         self.current_step = 0
         self.target_value = target_value
         self.target_step = target_step
-        self.current_value = self.initial_value = self.target_value * math.exp(-5)
+        self.current_value = self.initial_value = initial_value
         self.schedule_start_step = schedule_start_step
 
     def step(self):
         if self.current_step < self.schedule_start_step:
             self.current_value = self.initial_value
         elif self.current_step < self.target_step:
-            self.current_value = self.target_value * (
+            self.current_value = self.initial_value + (
+                self.target_value - self.initial_value
+            ) * (
                 math.exp(
                     -5
                     * (
