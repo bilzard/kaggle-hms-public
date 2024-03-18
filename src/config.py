@@ -138,6 +138,21 @@ class LossWeightConfig:
 
 
 @dataclass
+class SslConfig:
+    enabled: bool
+
+
+@dataclass
+class MeanTeacherConfig(SslConfig):
+    average_type: str
+    teacher_decay: float
+    use_buffers: bool
+    use_loss_weights: bool
+    weight_schedule: ParamScheduleConfig
+    decay_schedule: ParamScheduleConfig
+
+
+@dataclass
 class TrainerConfig:
     trainer_class: DictConfig
     epochs: int
@@ -167,6 +182,7 @@ class TrainerConfig:
     distillation: DistillationConfig
     contrastive: ContrastiveConfig
     loss_weight: LossWeightConfig
+    ssl: type[SslConfig]
 
 
 @dataclass
