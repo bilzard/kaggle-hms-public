@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
+from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import get_cosine_schedule_with_warmup
@@ -42,7 +43,6 @@ class ContrastiveTrainer(BaseTrainer):
         self.model = model
         self.teacher_model = teacher_model
         self.criterion = nn.KLDivLoss(reduction="none")
-        self.criterion_contrastive = nn.MSELoss(reduction="none")
         self.device = device
         self.epochs = epochs
         self.mixed_precision = mixed_precision
@@ -217,6 +217,28 @@ class ContrastiveTrainer(BaseTrainer):
 
         return loss, weight_sum
 
+    def _calc_contrastive_loss(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor,
+    ) -> Tensor:
+        """
+        pred: b c
+        target: b c
+        """
+        pred = torch.log_softmax(pred, dim=1)
+        target = torch.softmax(target, dim=1)
+
+        loss = self.criterion(pred, target)  # b c
+
+        if self.model.training:
+            for c in range(6):
+                loss[..., c] *= self.class_weights[c]
+
+        loss = loss.sum(dim=1).mean()
+
+        return loss
+
     def train_epoch(self, epoch: int):
         self.model.train()
 
@@ -267,9 +289,15 @@ class ContrastiveTrainer(BaseTrainer):
                     loss = loss_supervised
 
                     if self.contrastive_weight_scheduler.value > 0:
-                        loss_contrastive = self.criterion_contrastive(
+                        loss_contrastive_1 = self._calc_contrastive_loss(
                             emb_eeg, emb_spec
-                        ).mean()
+                        )
+                        loss_contrastive_2 = self._calc_contrastive_loss(
+                            emb_spec, emb_eeg
+                        )
+                        loss_contrastive = (
+                            loss_contrastive_1 + loss_contrastive_2
+                        ) / 2.0
                         weight_sum_contrastive = weight.shape[0]
                         loss += (
                             self.contrastive_weight_scheduler.value * loss_contrastive
