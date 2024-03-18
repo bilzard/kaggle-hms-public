@@ -14,7 +14,7 @@ architecture:
       se_after_dw_conv: true
     feature_processor:
       num_eeg_channels: 10
-      bottleneck_ratio: 2
+      bottleneck_ratio: 4
       num_heads: 2
   in_channels: null
   in_channels_eeg: 20
