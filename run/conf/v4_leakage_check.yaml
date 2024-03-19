@@ -1,0 +1,13 @@
+defaults:
+  - baseline_v4
+  - override architecture/model/feature_processor: dual_v2_leakage_check
+  - _self_
+
+exp_name: v4_leakage_check
+description: v4 with leakage check
+
+architecture:
+  model_class:
+    _target_: src.model.hms_model.hms_model_leakage_check.HmsModelLeakageCheck
+  model_checker:
+    _target_: src.model.hms_model.hms_model_leakage_check.check_model
