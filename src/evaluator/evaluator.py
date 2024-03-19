@@ -98,6 +98,7 @@ class Evaluator:
 
         logits_per_eeg = []
         eeg_ids = []
+        weights_per_eeg = []
 
         for eeg_id, logits in tqdm(self._valid_logits.items()):
             logits = torch.stack(logits, dim=0)  # b k c
@@ -140,6 +141,7 @@ class Evaluator:
             # eegごとの予測値
             eeg_ids.append(eeg_id)
             logits_per_eeg.append(logit.detach().cpu().numpy())  # c
+            weights_per_eeg.append(weight.detach().cpu().numpy() / len(valid_indices))
 
         # lossの正規化
         val_loss_per_label /= val_count
@@ -151,6 +153,7 @@ class Evaluator:
 
         # eegごとの予測値をDataFrameに変換
         logits_per_eeg = np.stack(logits_per_eeg, axis=0)
+        weights_per_eeg = np.concatenate(weights_per_eeg, axis=0)
         eeg_ids = np.array(eeg_ids)
         val_loss_per_label = dict(zip(LABELS, val_loss_per_label.tolist()))
 
@@ -159,4 +162,5 @@ class Evaluator:
             val_loss_per_label=val_loss_per_label,
             eeg_ids=eeg_ids,
             logits_per_eeg=logits_per_eeg,
+            weights_per_eeg=weights_per_eeg,
         )
