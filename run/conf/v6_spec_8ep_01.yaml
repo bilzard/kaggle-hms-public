@@ -1,0 +1,11 @@
+defaults:
+  - baseline_v6
+  - _self_
+
+exp_name: v6_spec_8ep_01
+description: v6 self injection
+
+trainer:
+  epochs: 8
+  pseudo_label:
+    ensemble_entity_name: exp081_8ep_sc03
