@@ -56,7 +56,7 @@ trainer:
     aggregation_fn: max
     agg_policy: per_eeg_weighted
     seed: 123
-    weight_exponent: 0.0
+    weight_exponent: 1.0
     min_weight: 0.0
   scheduler:
     warmup_ratio: 0.0
