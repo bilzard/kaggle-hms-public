@@ -63,7 +63,8 @@ class MetricsLogger(Callback):
 
     @torch.no_grad()
     def on_valid_epoch_end(self, trainer, epoch: int, loss: float):
-        val_loss, val_loss_per_label, _, _ = self.evaluator.aggregate()
+        output = self.evaluator.aggregate()
+        val_loss, val_loss_per_label = output["val_loss"], output["val_loss_per_label"]
 
         print(
             f"[epoch {epoch}] val_loss: {val_loss:.4f}, val_loss_per_chunk: {loss:.4f}, val_loss_per_label: ("
