@@ -1,4 +1,0 @@
-enabled: false
-max_drop_ratio: 0.0
-teacher_ensemble_name: null
-saturated_epochs: 0

@@ -151,12 +151,6 @@ class ContrastiveTrainer(BaseTrainer):
             self._train_loss_meter_spec.reset()
             self._train_loss_meter_contrastive.reset()
 
-            if self.cfg.pseudo_label.enabled:
-                self.train_loader.sampler.set_epoch(epoch)  # type: ignore
-                print(
-                    f"epoch: {epoch}, num_samples: {self.train_loader.sampler.num_samples}"  # type: ignore
-                )
-
             self.train_epoch(epoch)
             for callback in self.callbacks:
                 callback.on_train_epoch_end(self, epoch, self._train_loss_meter.mean)

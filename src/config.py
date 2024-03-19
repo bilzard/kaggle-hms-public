@@ -80,14 +80,6 @@ class WandbConfig:
 
 
 @dataclass
-class PseudoLabelConfig:
-    enabled: bool
-    teacher_ensemble_name: str
-    max_drop_ratio: float
-    saturated_epochs: int
-
-
-@dataclass
 class ParamScheduleConfig:
     schedule_start_epoch: int
     target_epoch: int
@@ -177,7 +169,6 @@ class TrainerConfig:
     optimizer: DictConfig
     scheduler: SchedulerConfig
     val: EvalConfig
-    pseudo_label: PseudoLabelConfig
     label: LabelConfig
     distillation: DistillationConfig
     loss_weight: LossWeightConfig
