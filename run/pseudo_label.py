@@ -57,15 +57,14 @@ def infer_per_seed(
                 input_keys=cfg.trainer.data.input_keys,
                 agg_policy=cfg.trainer.val.agg_policy,
                 iterations=cfg.infer.tta_iterations,
-                weight_exponent=1.0,
+                weight_exponent=0.0,
                 min_weight=0.0,
             )
             print("Evaluator:", evaluator)
             output = evaluator.evaluate(model, data_loader)
-            eeg_ids, logits, weights = (
+            eeg_ids, logits = (
                 output["eeg_ids"],
                 output["logits_per_eeg"],
-                output["weights_per_eeg"],
             )
         case _:
             raise ValueError(
@@ -73,7 +72,6 @@ def infer_per_seed(
             )
 
     prediction_df = make_submission(eeg_ids, logits, apply_softmax=False)
-    prediction_df = prediction_df.with_columns(pl.Series(weights).alias("weight"))
     return prediction_df
 
 
@@ -181,12 +179,10 @@ def main(cfg: EnsembleMainConfig):
             .group_by("eeg_id", maintain_order=True)
             .agg(
                 *[pl.col(f"{label}_vote").mean() for label in LABELS],
-                pl.col("weight").mean(),
             )
         )
         pred_df = pred_df.rename(
             {f"{label}_vote": f"pl_{label}_vote" for label in LABELS}
-            | dict(weight="pl_weight_org")
         )
 
     with trace("** generate pseudo label"):
