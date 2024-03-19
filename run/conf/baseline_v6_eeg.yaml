@@ -1,0 +1,37 @@
+defaults:
+  - baseline_v6
+  - architecture/model/eeg_adapter: eeg_dual_stacking_collator
+  - architecture/model/eeg_encoder: efficientnet1d
+  - architecture/model/eeg_feature_processor: eeg_dual_per_channel_v2
+  - override architecture/model/feature_extractor: channel_collator
+  - override architecture/model/head: mlp_head
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    eeg_encoder:
+      se_after_dw_conv: true
+      use_channel_mixer: true
+      mixer_type: sc
+    eeg_feature_processor:
+      num_eeg_channels: 10
+  model_class:
+    _target_: src.model.hms_model.hms_model_1d.HmsModel1d
+  model_checker:
+    _target_: src.model.hms_model.hms_model_1d.check_model
+  in_channels: 20
+
+trainer:
+  epochs: 16
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 12
+        target_epoch: 12
+        initial_value: 0.0
+        target_value: 0.3
+  pseudo_label:
+    ensemble_entity_name: ???
