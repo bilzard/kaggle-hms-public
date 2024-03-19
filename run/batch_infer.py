@@ -63,8 +63,12 @@ def infer_per_seed(
                 weight_exponent=cfg.trainer.val.weight_exponent,
                 min_weight=cfg.trainer.val.min_weight,
             )
-            val_loss, val_loss_per_label, eeg_ids, logits = evaluator.evaluate(
-                model, data_loader
+            output = evaluator.evaluate(model, data_loader)
+            val_loss, val_loss_per_label, eeg_ids, logits = (
+                output["val_loss"],
+                output["val_loss_per_label"],
+                output["eeg_ids"],
+                output["logits_per_eeg"],
             )
             print(f"val_loss: {val_loss:.4f}")
             print(", ".join([f"{k}={v:.4f}" for k, v in val_loss_per_label.items()]))

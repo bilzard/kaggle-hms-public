@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Any
 
 import numpy as np
 import torch
@@ -54,7 +55,7 @@ class Evaluator:
     @torch.no_grad()
     def evaluate(
         self, model: nn.Module, valid_loader: DataLoader, device: str = "cuda"
-    ) -> tuple[float, dict[str, float], np.ndarray, np.ndarray]:
+    ) -> dict[str, Any]:
         model.eval()
         model.to(device=device)
         valid_loader.dataset.reset()  # type: ignore
@@ -91,7 +92,7 @@ class Evaluator:
             self._valid_weight[eeg_id].append(weight[i].detach().cpu())
 
     @torch.no_grad()
-    def aggregate(self) -> tuple[float, dict[str, float], np.ndarray, np.ndarray]:
+    def aggregate(self) -> dict[str, Any]:
         val_loss_per_label = np.zeros(len(LABELS), dtype=np.float32)
         val_count = 0.0
 
@@ -125,12 +126,12 @@ class Evaluator:
 
             label = (labels * weights).sum(dim=0)  # k c
             label = label / label.sum(dim=1, keepdim=True)
-            weight = weights.sum(dim=0) ** self.weight_exponent
+            weight = weights.sum(dim=0) ** self.weight_exponent  # k 1
             pred = torch.log_softmax(logit, dim=1)  # k c
             loss = self.criterion(pred, label) * weight  # k c
 
             loss = loss.mean(dim=0)  # c
-            weight = weight.mean(dim=0)  # c
+            weight = weight.mean(dim=0)  # 1
             logit = logit.mean(dim=0)  # c
 
             val_loss_per_label += loss.detach().cpu().numpy()
@@ -153,4 +154,9 @@ class Evaluator:
         eeg_ids = np.array(eeg_ids)
         val_loss_per_label = dict(zip(LABELS, val_loss_per_label.tolist()))
 
-        return val_loss, val_loss_per_label, eeg_ids, logits_per_eeg
+        return dict(
+            val_loss=val_loss,
+            val_loss_per_label=val_loss_per_label,
+            eeg_ids=eeg_ids,
+            logits_per_eeg=logits_per_eeg,
+        )
