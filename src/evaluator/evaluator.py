@@ -45,7 +45,7 @@ class Evaluator:
         self.min_weight = min_weight
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(device={self.device}, agg_policy={self.agg_policy}, aggregation_fn={self.aggregation_fn}, input_keys={self.input_keys}, pred_key={self.pred_key}, target_key={self.target_key}, weight_key={self.weight_key})"
+        return f"{self.__class__.__name__}(device={self.device}, agg_policy={self.agg_policy}, aggregation_fn={self.aggregation_fn}, input_keys={self.input_keys}, pred_key={self.pred_key}, target_key={self.target_key}, weight_key={self.weight_key}, weight_exponent={self.weight_exponent}, min_weight={self.min_weight})"
 
     def _move_device(self, x: dict[str, torch.Tensor]):
         for k, v in x.items():
