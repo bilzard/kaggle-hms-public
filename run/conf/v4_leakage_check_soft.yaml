@@ -1,0 +1,11 @@
+defaults:
+  - v4_leakage_check
+  - _self_
+
+exp_name: v4_leakage_check_soft
+description: v4 with leakage check soft weight
+
+architecture:
+  model:
+    feature_processor:
+      binary_weight: false
