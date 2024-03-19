@@ -24,15 +24,17 @@ class DualFeatureProcessorV2LeakageCheck(BaseFeatureProcessor):
         hidden_dim: int,
         activation: nn.Module,
         lr_mapping_type: str = "identity",
+        binary_weight: bool = True,
     ):
         super().__init__(in_channels=in_channels)
         self.hidden_dim = hidden_dim
         self.lr_mapping_type = lr_mapping_type
+        self.binary_weight = binary_weight
+
         self.similarity_encoder = CosineSimilarityEncoder2d(
             hidden_dim=hidden_dim, activation=activation
         )
         self.weight_embedding = nn.Linear(1, hidden_dim)
-
         self.pool = GeMPool2d()
 
     @property
@@ -61,7 +63,10 @@ class DualFeatureProcessorV2LeakageCheck(BaseFeatureProcessor):
         x = rearrange(x, "b c 1 1 -> b c")
 
         weight = inputs["weight"]  # b 1
-        weight = (weight < 0.3).float().to(weight.device)
+
+        if self.binary_weight:
+            weight = (weight < 0.3).float().to(weight.device)
+
         weight_embed = self.weight_embedding(weight)  # b h
         x = torch.cat([x, weight_embed], dim=1)
 
