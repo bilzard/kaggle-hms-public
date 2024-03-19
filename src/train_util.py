@@ -1,12 +1,16 @@
 import re
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
+import polars as pl
 import torch
 import torch.nn as nn
 from hydra.utils import call, instantiate
+from scipy.special import softmax
 
-from src.config import ArchitectureConfig, LrAdjustmentConfig
+from src.config import ArchitectureConfig, LrAdjustmentConfig, PseudoLabelConfig
+from src.constant import LABELS
 
 
 class AverageMeter(object):
@@ -109,3 +113,50 @@ def get_lr_params(
             print("-" * 40)
 
     return final_param_groups
+
+
+def inject_pseudo_labels(
+    metadata: pl.DataFrame,
+    cfg: PseudoLabelConfig,
+    pseudo_label_path: Path,
+    phase: str = "train",
+) -> pl.DataFrame:
+    pseudo_label = pl.read_parquet(pseudo_label_path / f"{phase}_pseudo_label.pqt")
+    x = pseudo_label.select([pl.col(f"pl_{label}_vote") for label in LABELS]).to_numpy()
+    x = softmax(x, axis=1)
+    pseudo_label = pl.DataFrame(
+        [
+            *[
+                pl.Series(x[:, c]).alias(f"pl_{label}_prob")
+                for c, label in enumerate(LABELS)
+            ],
+            pl.Series(pseudo_label["eeg_id"]).alias("eeg_id"),
+        ]
+    )
+    metadata = metadata.join(pseudo_label, on="eeg_id")
+    if cfg.injection_mode == "replace":
+        metadata = metadata.with_columns(
+            *[
+                pl.when(pl.col("weight").lt(cfg.min_weight))
+                .then(pl.col(f"pl_{label}_prob"))
+                .otherwise(pl.col(f"{label}_prob"))
+                .alias(f"{label}_prob")
+                for label in LABELS
+            ],
+            *[
+                pl.when(pl.col("weight_per_eeg").lt(cfg.min_weight))
+                .then(pl.col(f"pl_{label}_prob"))
+                .otherwise(pl.col(f"{label}_prob_per_eeg"))
+                .alias(f"{label}_prob_per_eeg")
+                for label in LABELS
+            ],
+            *[
+                pl.when(pl.col(weight_col_name).lt(cfg.min_weight))
+                .then(pl.lit(cfg.weight))
+                .otherwise(pl.col(weight_col_name))
+                .alias(weight_col_name)
+                for weight_col_name in ["weight", "weight_per_eeg"]
+            ],
+        )
+
+    return metadata

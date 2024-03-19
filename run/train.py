@@ -27,7 +27,7 @@ from src.preprocess import (
 )
 from src.proc_util import trace
 from src.random_util import seed_everything, seed_worker
-from src.train_util import check_model, get_model, move_device
+from src.train_util import check_model, get_model, inject_pseudo_labels, move_device
 
 
 def load_checkpoint(
@@ -163,6 +163,16 @@ def main(cfg: MainConfig):
     fold_split_df = pl.read_parquet(fold_dir / "fold_split.pqt")
     train_df, valid_df = train_valid_split(metadata, fold_split_df, fold=cfg.fold)
     valid_df = valid_df.filter(pl.col("weight").ge(cfg.trainer.val.min_weight))
+    if cfg.trainer.pseudo_label.ensemble_entity_name is not None:
+        print(
+            f"* injecting pseudo label from `{cfg.trainer.pseudo_label.ensemble_entity_name}`"
+        )
+        pseudo_label_path = Path(
+            working_dir / "pseudo_label" / cfg.trainer.pseudo_label.ensemble_entity_name
+        )
+        train_df = inject_pseudo_labels(
+            train_df, cfg.trainer.pseudo_label, pseudo_label_path
+        )
 
     with trace("load eeg"):
         eeg_ids = metadata["eeg_id"].unique().to_list()

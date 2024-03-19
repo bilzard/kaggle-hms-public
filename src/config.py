@@ -145,6 +145,14 @@ class ContrastiveConfig(SslConfig):
 
 
 @dataclass
+class PseudoLabelConfig:
+    ensemble_entity_name: str
+    weight: float
+    injection_mode: str
+    min_weight: float
+
+
+@dataclass
 class TrainerConfig:
     trainer_class: DictConfig
     epochs: int
@@ -173,6 +181,7 @@ class TrainerConfig:
     distillation: DistillationConfig
     loss_weight: LossWeightConfig
     ssl: type[SslConfig]
+    pseudo_label: PseudoLabelConfig
 
 
 @dataclass

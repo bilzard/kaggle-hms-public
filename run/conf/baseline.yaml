@@ -102,6 +102,11 @@ trainer:
   loss_weight:
     norm_policy: relative
     global_mean: 0.227
+  pseudo_label:
+    ensemble_entity_name: null
+    weight: 0.5
+    injection_mode: replace
+    min_weight: 0.3
 
 architecture:
   model:
