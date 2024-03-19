@@ -1,0 +1,5 @@
+_target_: src.model.feature_processor.dual_feature_processor_v2_leakage_check.DualFeatureProcessorV2LeakageCheck
+hidden_dim: ${architecture.hidden_dim}
+activation:
+  _target_: torch.nn.PReLU
+lr_mapping_type: ${architecture.lr_mapping_type}
