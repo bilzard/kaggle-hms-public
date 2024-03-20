@@ -1,0 +1,23 @@
+defaults:
+  - v5_aux_head_8ep
+  - _self_
+
+exp_name: v5_aux_head_decoupled_sc00_8ep
+description: v5 with aux head (decoupled, w/o weight pruning)
+
+architecture:
+  model:
+    feature_processor:
+      decouple_two_branches: true
+
+trainer:
+  epochs: 8
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 0.0
+        target_value: 0.0
+  aux_loss:
+    freeze_epoch: .inf
