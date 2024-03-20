@@ -1,0 +1,9 @@
+defaults:
+  - v5_aux_head_decoupled_sc00_8ep
+  - _self_
+
+exp_name: v5_aux_head_decoupled_sc00_12ep
+description: v5 with aux head (decoupled, w/o weight pruning)
+
+trainer:
+  epochs: 12
