@@ -51,7 +51,7 @@ class Trainer(BaseTrainer):
         self.valid_loader = valid_loader
 
         self._train_loss_meter = AverageMeter()
-        self._train_aux_loss_meter = AverageMeter()
+        self._train_loss_meter_aux = AverageMeter()
         self._valid_loss_meter = AverageMeter()
         assert len(cfg.class_weights) == 6
         self.class_weights = np.array(cfg.class_weights) ** cfg.class_weight_exponent
@@ -138,7 +138,7 @@ class Trainer(BaseTrainer):
     def fit(self):
         for epoch in range(self.epochs):
             self._train_loss_meter.reset()
-            self._train_aux_loss_meter.reset()
+            self._train_loss_meter_aux.reset()
 
             self.train_epoch(epoch)
             for callback in self.callbacks:
@@ -261,7 +261,7 @@ class Trainer(BaseTrainer):
                             weight_pred, weight_0, self.cfg.aux_loss
                         )
                         loss += self.cfg.aux_loss.lambd * aux_loss
-                        self._train_aux_loss_meter.update(aux_loss.item(), 1)
+                        self._train_loss_meter_aux.update(aux_loss.item(), 1)
 
                 if self.scaler is not None:
                     self.scaler.scale(loss).backward()
@@ -280,7 +280,7 @@ class Trainer(BaseTrainer):
                 pbar.set_postfix(
                     {
                         "loss": self._train_loss_meter.mean,
-                        "aux_loss": self._train_aux_loss_meter.mean,
+                        "aux_loss": self._train_loss_meter_aux.mean,
                         "weight_exponent": self.weight_exponent_scheduler.value,
                         "min_weight": self.min_weight_scheduler.value,
                     }
