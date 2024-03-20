@@ -211,6 +211,10 @@ class Trainer(BaseTrainer):
     def train_epoch(self, epoch: int):
         self.model.train()
 
+        if epoch == self.cfg.aux_loss.freeze_epoch:
+            if hasattr(self.model.feature_processor, "freeze_aux_branch"):
+                self.model.feature_processor.freeze_aux_branch()
+
         with tqdm(self.train_loader, unit="step") as pbar:
             for batch in pbar:
                 self.optimizer.zero_grad()
@@ -248,7 +252,11 @@ class Trainer(BaseTrainer):
                     loss = supervised_loss
                     aux_loss = 0.0
 
-                    if (weight_pred is not None) and (self.cfg.aux_loss.lambd > 0.0):
+                    if (
+                        (weight_pred is not None)
+                        and (self.cfg.aux_loss.lambd > 0.0)
+                        and (epoch < self.cfg.aux_loss.freeze_epoch)
+                    ):
                         aux_loss = self._calc_aux_loss(
                             weight_pred, weight_0, self.cfg.aux_loss
                         )
