@@ -157,6 +157,7 @@ class AuxLossConfig:
     lambd: float
     is_binary: str
     binary_threshold: float
+    freeze_epoch: int
 
 
 @dataclass

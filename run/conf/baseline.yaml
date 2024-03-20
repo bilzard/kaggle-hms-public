@@ -111,6 +111,7 @@ trainer:
     lambd: 0.0
     is_binary: true
     binary_threshold: 0.3
+    freeze_epoch: .inf
 
 architecture:
   model:

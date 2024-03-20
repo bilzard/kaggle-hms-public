@@ -169,6 +169,7 @@ class DualFeatureProcessorWithAuxHead(BaseFeatureProcessor):
         self.lr_mapping_type = lr_mapping_type
         self.num_heads = num_heads
         self.use_weight_embedding = use_weight_embedding
+        self._frozen_aux_branch = False
 
         self.similarity_encoder = CosineSimilarityEncoder2d(
             hidden_dim=hidden_dim, activation=activation
@@ -223,6 +224,17 @@ class DualFeatureProcessorWithAuxHead(BaseFeatureProcessor):
     @property
     def out_channels(self) -> int:
         return 2 * self.in_channels + self.hidden_dim
+
+    def freeze_aux_branch(self):
+        """
+        w>=0.3に絞ったあとはweightの分布が正例のみになる。
+        偏った分布で学習すると性能が劣化するのでw>=0に絞り始めたepochでaux_branchをfreezeできるようにする。
+        """
+        if not self._frozen_aux_branch:
+            print(f"* {self.__class__.__name__}: freeze aux branch")
+            self.aux_conv.requires_grad_(False)
+            self.aux_head.requires_grad_(False)
+            self._frozen_aux_branch = True
 
     def forward(self, inputs: dict[str, Tensor]) -> dict[str, Tensor]:
         """
