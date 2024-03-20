@@ -1,0 +1,36 @@
+defaults:
+  - baseline_v5
+  - override architecture/model/feature_processor: dual_with_aux_head
+  - _self_
+
+exp_name: v5_aux_head_8ep
+description: v5 with aux head
+
+trainer:
+  epochs: 8
+  label:
+    schedule:
+      weight_exponent:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 1.0
+        target_value: 1.0
+      min_weight:
+        schedule_start_epoch: 4
+        target_epoch: 4
+        initial_value: 0.0
+        target_value: 0.3
+  aux_loss:
+    lambd: 1.0
+    is_binary: false
+    binary_threshold: 0.3
+    freeze_epoch: 4
+
+architecture:
+  model_class:
+    _target_: src.model.hms_model.hms_model_v2.HmsModelV2
+  model_checker:
+    _target_: src.model.hms_model.hms_model_v2.check_model
+  model:
+    feature_processor:
+      num_heads: 2
