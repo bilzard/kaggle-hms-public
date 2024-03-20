@@ -20,10 +20,8 @@ class Mlp(nn.Sequential):
             nn.Linear(
                 in_channels // bottleneck_ratio,
                 out_channels,
-                bias=False,
+                bias=True,
             ),
-            nn.BatchNorm1d(out_channels),
-            activation(),
         )
 
 
