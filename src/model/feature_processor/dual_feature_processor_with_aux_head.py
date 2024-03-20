@@ -163,6 +163,7 @@ class DualFeatureProcessorWithAuxHead(BaseFeatureProcessor):
         se_ratio: int = 4,
         use_ir_conv: bool = True,
         use_se: bool = True,
+        decouple_two_branches: bool = False,
     ):
         super().__init__(in_channels=in_channels)
         self.hidden_dim = hidden_dim
@@ -170,6 +171,7 @@ class DualFeatureProcessorWithAuxHead(BaseFeatureProcessor):
         self.num_heads = num_heads
         self.use_weight_embedding = use_weight_embedding
         self._frozen_aux_branch = False
+        self.decouple_two_branches = decouple_two_branches
 
         self.similarity_encoder = CosineSimilarityEncoder2d(
             hidden_dim=hidden_dim, activation=activation
@@ -263,6 +265,8 @@ class DualFeatureProcessorWithAuxHead(BaseFeatureProcessor):
 
         if self.use_weight_embedding:
             weight_emb = weight[:, 0]  # b
+            if self.decouple_two_branches:
+                weight_emb = weight_emb.detach()
             weight_emb = rearrange(weight_emb, "b -> b 1")  # b 1
             weight_emb = weight_emb.sigmoid()
             weight_emb = self.weight_embedding(weight_emb)  # b c
