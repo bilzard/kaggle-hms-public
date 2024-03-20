@@ -2,12 +2,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 from hydra.utils import instantiate
+from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import get_cosine_schedule_with_warmup
 
 from src.callback.base import Callback
-from src.config import TrainerConfig
+from src.config import AuxLossConfig, TrainerConfig
 from src.scheduler import LinearScheduler
 from src.train_util import AverageMeter, get_lr_params
 from src.trainer.base import BaseTrainer
@@ -34,6 +35,7 @@ class Trainer(BaseTrainer):
         super().__init__(cfg)
         self.model = model
         self.criterion = nn.KLDivLoss(reduction="none")
+        self.aux_loss_criterion = nn.BCEWithLogitsLoss(reduction="none")
         self.device = device
         self.epochs = epochs
         self.mixed_precision = mixed_precision
@@ -49,6 +51,7 @@ class Trainer(BaseTrainer):
         self.valid_loader = valid_loader
 
         self._train_loss_meter = AverageMeter()
+        self._train_aux_loss_meter = AverageMeter()
         self._valid_loss_meter = AverageMeter()
         assert len(cfg.class_weights) == 6
         self.class_weights = np.array(cfg.class_weights) ** cfg.class_weight_exponent
@@ -135,6 +138,7 @@ class Trainer(BaseTrainer):
     def fit(self):
         for epoch in range(self.epochs):
             self._train_loss_meter.reset()
+            self._train_aux_loss_meter.reset()
 
             self.train_epoch(epoch)
             for callback in self.callbacks:
@@ -157,11 +161,11 @@ class Trainer(BaseTrainer):
 
     def _calc_loss(
         self,
-        pred: torch.Tensor,
-        target: torch.Tensor,
-        weight: torch.Tensor | None = None,
+        pred: Tensor,
+        target: Tensor,
+        weight: Tensor | None = None,
         aggregate: bool = True,
-    ) -> tuple[torch.Tensor, float]:
+    ) -> tuple[Tensor, float]:
         """
         pred: b k c
         target: b k c
@@ -196,6 +200,14 @@ class Trainer(BaseTrainer):
 
         return loss, weight_sum
 
+    def _calc_aux_loss(
+        self, pred: Tensor, target: Tensor, cfg: AuxLossConfig
+    ) -> Tensor:
+        if cfg.is_binary:
+            target = (target > cfg.binary_threshold).float().to(target.device)
+
+        return self.aux_loss_criterion(pred, target).mean()
+
     def train_epoch(self, epoch: int):
         self.model.train()
 
@@ -210,27 +222,38 @@ class Trainer(BaseTrainer):
 
                     target = batch[self.target_key]  # b k c
                     pred = output[self.pred_key]  # b k c
-                    weight = batch[self.weight_key]  # b k
+                    weight_0 = batch[self.weight_key]  # b k
+                    weight_pred = output.get(self.weight_key, None)  # b k
 
                     # min_weight でフィルタリング
                     valid_indices = torch.where(
-                        (weight.mean(dim=1) > self.min_weight_scheduler.value)
+                        (weight_0[:, 0] > self.min_weight_scheduler.value)
                     )[0]
                     if len(valid_indices) == 0:
                         continue
 
                     target = target[valid_indices]
                     pred = pred[valid_indices]
-                    weight = weight[valid_indices]
+                    weight = weight_0[valid_indices]
 
-                    loss, weight_sum = self._calc_loss(
+                    supervised_loss, weight_sum = self._calc_loss(
                         pred,
                         target,
                         weight if self.cfg.use_loss_weights else None,
                         aggregate=False,
                     )
-                    loss = loss.sum() / weight_sum
-                    self._train_loss_meter.update(loss.item(), weight_sum)
+                    supervised_loss = supervised_loss.sum() / weight_sum
+                    loss = supervised_loss
+                    aux_loss = 0.0
+
+                    if (weight_pred is not None) and (self.cfg.aux_loss.lambd > 0.0):
+                        aux_loss = self._calc_aux_loss(
+                            weight_pred, weight_0, self.cfg.aux_loss
+                        )
+                        loss += self.cfg.aux_loss.lambd * aux_loss
+                        self._train_aux_loss_meter.update(aux_loss.item(), 1)
+
+                    self._train_loss_meter.update(supervised_loss.item(), weight_sum)
 
                 if self.scaler is not None:
                     self.scaler.scale(loss).backward()
@@ -249,6 +272,7 @@ class Trainer(BaseTrainer):
                 pbar.set_postfix(
                     {
                         "loss": self._train_loss_meter.mean,
+                        "aux_loss": self._train_aux_loss_meter.mean,
                         "weight_exponent": self.weight_exponent_scheduler.value,
                         "min_weight": self.min_weight_scheduler.value,
                     }

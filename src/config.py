@@ -153,6 +153,13 @@ class PseudoLabelConfig:
 
 
 @dataclass
+class AuxLossConfig:
+    lambd: float
+    is_binary: str
+    binary_threshold: float
+
+
+@dataclass
 class TrainerConfig:
     trainer_class: DictConfig
     epochs: int
@@ -182,6 +189,7 @@ class TrainerConfig:
     loss_weight: LossWeightConfig
     ssl: type[SslConfig]
     pseudo_label: PseudoLabelConfig
+    aux_loss: AuxLossConfig
 
 
 @dataclass
