@@ -106,6 +106,7 @@ class MetricsLogger(Callback):
             _add_loss_meter_value_to_wandb(data, trainer, "eeg", group="epoch")
             _add_loss_meter_value_to_wandb(data, trainer, "spec", group="epoch")
             _add_loss_meter_value_to_wandb(data, trainer, "contrastive", group="epoch")
+            _add_loss_meter_value_to_wandb(data, trainer, "aux", group="epoch")
 
             wandb.log(data)
 
