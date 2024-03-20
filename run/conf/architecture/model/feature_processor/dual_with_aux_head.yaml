@@ -1,0 +1,15 @@
+_target_: src.model.feature_processor.DualFeatureProcessorWithAuxHead
+hidden_dim: ${architecture.hidden_dim}
+activation:
+  _target_: torch.nn.PReLU
+lr_mapping_type: ${architecture.lr_mapping_type}
+num_heads: ???
+bottleneck_ratio: 4
+depth_multiplier: 4
+se_ratio: 16
+n_layers: 1
+kernel_size: 3
+only_pool: false
+use_weight_embedding: true
+use_ir_conv: false
+use_se: false
