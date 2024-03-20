@@ -243,6 +243,8 @@ class Trainer(BaseTrainer):
                         aggregate=False,
                     )
                     supervised_loss = supervised_loss.sum() / weight_sum
+                    self._train_loss_meter.update(supervised_loss.item(), weight_sum)
+
                     loss = supervised_loss
                     aux_loss = 0.0
 
@@ -252,8 +254,6 @@ class Trainer(BaseTrainer):
                         )
                         loss += self.cfg.aux_loss.lambd * aux_loss
                         self._train_aux_loss_meter.update(aux_loss.item(), 1)
-
-                    self._train_loss_meter.update(supervised_loss.item(), weight_sum)
 
                 if self.scaler is not None:
                     self.scaler.scale(loss).backward()
