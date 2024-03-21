@@ -52,7 +52,7 @@ trainer:
     batch_size: 32
     duration: ${trainer.duration}
     stride: 1024
-    aggregation_fn: max
+    aggregation_fn: mean
     agg_policy: per_eeg_weighted
     seed: 123
     weight_exponent: 0.0
