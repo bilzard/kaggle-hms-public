@@ -93,24 +93,26 @@ def main(cfg: EnsembleMainConfig):
 
     with trace("load predictions"):
         print(f"ensemble_name: {ensemble_entity.name}")
-        prediction_paths: list[Path] = []
+        predictions = []
         for experiment in ensemble_entity.experiments:
+            local_preds = []
             for ensemble_fold in experiment.folds:
                 fold = ensemble_fold.split
                 for seed in ensemble_fold.seeds:
-                    prediction_paths.append(
-                        infer_dir
-                        / experiment.exp_name
-                        / f"fold_{fold}"
-                        / f"seed_{seed:d}"
-                        / f"pred_{cfg.phase}.pqt"
+                    local_preds.append(
+                        pl.read_parquet(
+                            infer_dir
+                            / experiment.exp_name
+                            / f"fold_{fold}"
+                            / f"seed_{seed:d}"
+                            / f"pred_{cfg.phase}.pqt"
+                        )
                     )
-
-        predictions = []
-        for path in prediction_paths:
-            assert path.exists(), f"file not found: {path}"
-            print(path)
-            predictions.append(pl.read_parquet(path))
+            local_preds = pl.concat(local_preds)
+            local_preds = local_preds.group_by("eeg_id", maintain_order=True).agg(
+                pl.col(f"{label}_vote").mean() for label in LABELS
+            )
+            predictions.append(local_preds)
 
         predictions = pl.concat(predictions)
         predictions = predictions.group_by("eeg_id", maintain_order=True).agg(
