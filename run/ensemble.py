@@ -1,8 +1,10 @@
+from functools import partial
 from pathlib import Path
 
 import hydra
 import numpy as np
 import polars as pl
+from scipy.optimize import minimize
 from scipy.special import kl_div, softmax
 
 from src.config import EnsembleMainConfig
@@ -11,7 +13,7 @@ from src.infer_util import load_metadata, make_submission
 from src.proc_util import trace
 
 
-def calc_metric(gts, preds):
+def calc_metric(gts: np.ndarray, preds: np.ndarray) -> float:
     losses = kl_div(gts, softmax(preds, axis=1))
     loss_per_label = losses.sum(axis=1)
     loss = loss_per_label.mean()
@@ -68,6 +70,37 @@ def do_evaluate(
         print(f"* loss: {loss:.4f}")
 
 
+def loss_fn(weights: list[float], gts: np.ndarray, preds: list[np.ndarray]):
+    final_preds = np.zeros_like(preds[0])
+    weights = np.array(weights) / np.sum(weights)
+    for weight, pred in zip(weights, preds):
+        final_preds += weight * pred
+    score = calc_metric(gts, final_preds)
+    return score
+
+
+def eval_with_optimized_weight(metadata: pl.DataFrame, predictions: list[pl.DataFrame]):
+    eeg_ids = predictions[0]["eeg_id"].to_list()
+    gts = (
+        metadata.filter(pl.col("eeg_id").is_in(eeg_ids))
+        .sort("eeg_id")
+        .select(f"{label}_prob_per_eeg" for label in LABELS)
+        .to_numpy()
+    )
+    preds = [
+        pred.sort("eeg_id").select(f"{label}_vote" for label in LABELS).to_numpy()
+        for pred in predictions
+    ]
+    starting_weights = [1 / len(preds)] * len(preds)
+    bounds = [(0, 1)] * len(preds)
+    return minimize(
+        partial(loss_fn, gts=gts, preds=preds),
+        starting_weights,
+        method="Nelder-Mead",
+        bounds=bounds,
+    )
+
+
 @hydra.main(config_path="conf", config_name="ensemble", version_base="1.2")
 def main(cfg: EnsembleMainConfig):
     working_dir = Path(cfg.env.working_dir)
@@ -105,13 +138,12 @@ def main(cfg: EnsembleMainConfig):
             f"* ensemble of {len(ensemble_entity.experiments)} models (total seeds={num_seeds})"
         )
 
-        predictions = pl.concat(predictions)
-        predictions = predictions.group_by("eeg_id", maintain_order=True).agg(
-            pl.col(f"{label}_vote").mean() for label in LABELS
-        )
-
-        match cfg.phase:
-            case "train":
+        match cfg.phase, cfg.optimize_weight:
+            case "train", False:
+                predictions = pl.concat(predictions)
+                predictions = predictions.group_by("eeg_id", maintain_order=True).agg(
+                    pl.col(f"{label}_vote").mean() for label in LABELS
+                )
                 metadata = load_metadata(
                     data_dir=Path(cfg.env.data_dir),
                     phase=cfg.phase,
@@ -123,8 +155,26 @@ def main(cfg: EnsembleMainConfig):
                 do_evaluate(
                     metadata, predictions, apply_label_weight=cfg.apply_label_weight
                 )
-
-            case "test":
+            case "train", True:
+                metadata = load_metadata(
+                    data_dir=Path(cfg.env.data_dir),
+                    phase=cfg.phase,
+                    fold_split_dir=fold_split_dir,
+                    group_by_eeg=True,
+                    weight_key="weight_per_eeg",
+                    num_samples=cfg.dev.num_samples,
+                )
+                res = eval_with_optimized_weight(metadata, predictions)
+                weights = res.x / res.x.sum()
+                print("weights:")
+                for w, exp in zip(weights, ensemble_entity.experiments):
+                    print(f"  {exp.exp_name}: {w:.4f}")
+                print("best score:", round(res["fun"], 4))
+            case "test", _:
+                predictions = pl.concat(predictions)
+                predictions = predictions.group_by("eeg_id", maintain_order=True).agg(
+                    pl.col(f"{label}_vote").mean() for label in LABELS
+                )
                 submission_df = make_submission(
                     eeg_ids=predictions["eeg_id"].to_list(),
                     predictions=predictions.drop("eeg_id").to_numpy(),
