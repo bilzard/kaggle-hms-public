@@ -1,0 +1,29 @@
+defaults:
+  - baseline_v5
+  - override architecture/model/feature_extractor: wave2wavegram_64x128_p16
+  - _self_
+
+exp_name: v5_wg_p16_16ep_sc03c
+description: Wavegram 16 planes
+
+architecture:
+  model:
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+        drop_z: true
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor: [1.0, 1.0]
+      - _target_: src.model.adapter.WavegramCollator
+        num_planes: 16
+  in_channels: 32
+
+trainer:
+  epochs: 16
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 12
+        target_epoch: 12
+        initial_value: 0.0
+        target_value: 0.3
