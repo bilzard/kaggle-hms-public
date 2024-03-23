@@ -202,7 +202,9 @@ def main(cfg: EnsembleMainConfig):
                     weight_key="weight_per_eeg",
                     num_samples=cfg.dev.num_samples,
                 )
-                do_evaluate(metadata, pred_df)
+                do_evaluate(
+                    metadata, pred_df, apply_label_weight=cfg.apply_label_weight
+                )
 
             case "test":
                 submission_df = make_submission(
