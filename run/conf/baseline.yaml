@@ -112,6 +112,7 @@ trainer:
     is_binary: true
     binary_threshold: 0.3
     freeze_epoch: .inf
+  feature_extractor_freeze_epoch: .inf
 
 architecture:
   model:

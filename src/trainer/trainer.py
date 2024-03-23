@@ -214,6 +214,9 @@ class Trainer(BaseTrainer):
         if epoch == self.cfg.aux_loss.freeze_epoch:
             if hasattr(self.model.feature_processor, "freeze_aux_branch"):
                 self.model.feature_processor.freeze_aux_branch()
+        if epoch == self.cfg.feature_extractor_freeze_epoch:
+            if hasattr(self.model.feature_extractor, "freeze"):
+                self.model.feature_extractor.freeze()
 
         with tqdm(self.train_loader, unit="step") as pbar:
             for batch in pbar:
