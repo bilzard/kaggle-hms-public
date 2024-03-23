@@ -80,7 +80,11 @@ def loss_fn(weights: list[float], gts: np.ndarray, preds: list[np.ndarray]):
 
 
 def eval_with_optimized_weight(metadata: pl.DataFrame, predictions: list[pl.DataFrame]):
-    eeg_ids = predictions[0]["eeg_id"].to_list()
+    eeg_ids = set(metadata["eeg_id"].to_list())
+    for pred in predictions:
+        eeg_ids &= set(pred["eeg_id"].to_list())
+    predictions = [pred.filter(pl.col("eeg_id").is_in(eeg_ids)) for pred in predictions]
+
     gts = (
         metadata.filter(pl.col("eeg_id").is_in(eeg_ids))
         .sort("eeg_id")
