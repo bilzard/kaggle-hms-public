@@ -41,6 +41,11 @@ class Wave2Wavegram(nn.Module):
         )
         self.wavegram = wavegram
 
+        if wavegram.out_channels > 1:
+            self.mask_encoder = nn.Conv2d(
+                in_channels=1, out_channels=wavegram.out_channels, kernel_size=1
+            )
+
     def downsample_mask(self, x: torch.Tensor, mode="nearest") -> torch.Tensor:
         """
         1次元信号をダウンサンプリングする
@@ -68,10 +73,10 @@ class Wave2Wavegram(nn.Module):
     def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None):
         """
         return:
-        - signal: (B, C, T)
-        - spectrogram: (B, C, F, T)
-        - channel_mask: (B, C, T)
-        - spec_mask: (B, C, 1, T)
+        - signal: b ch t
+        - spectrogram: (b c) ch f t
+        - channel_mask: b ch t
+        - spec_mask: (b c) ch f t
         """
         output = self.collate_channels(x, mask)
         eeg = output["eeg"]
@@ -86,11 +91,19 @@ class Wave2Wavegram(nn.Module):
         B, Ch, T = eeg.shape
         eeg = rearrange(eeg, "b ch t -> (b ch) 1 t")
         spec = self.wavegram(eeg)
-        spec = rearrange(spec, "(b ch) 1 f t -> b ch f t", b=B, ch=Ch)
-        B, C, F, T = spec.shape
+        spec = rearrange(spec, "(b ch) c f t -> (b c) ch f t", b=B, ch=Ch)
         spec_mask = spec_mask[..., :T]
-        BM, CM, FM, TM = spec_mask.shape
-        assert B == BM and C == CM and T == TM, (spec.shape, spec_mask.shape)
+        spec_mask = rearrange(spec_mask, "b ch f t -> (b ch) 1 f t")
+
+        if self.wavegram.out_channels > 1:
+            spec_mask = self.mask_encoder(spec_mask)  # (b ch) c f t
+
+        spec_mask = rearrange(spec_mask, "(b ch) c f t -> (b c) ch f t", b=B, ch=Ch)
+
+        assert all([spec.shape[i] == spec_mask.shape[i] for i in [0, 1, 3]]), (
+            spec.shape,
+            spec_mask.shape,
+        )
 
         if self.expand_mask:
             F = spec.shape[2]
@@ -113,25 +126,26 @@ if __name__ == "__main__":
     hidden_dims = [64, 64, 64, 128, 128]
     win_length = 64
 
-    eeg = torch.randn(batch_size, num_frames, num_probes)
-    mask = torch.rand(batch_size, num_frames, num_probes)
-    wavegram = Wavegram(
-        1,
-        1,
-        hidden_dims=hidden_dims,
-        num_filter_banks=num_filter_banks,
-    )
+    for out_channels in [1, 8]:
+        eeg = torch.randn(batch_size, num_frames, num_probes)
+        mask = torch.rand(batch_size, num_frames, num_probes)
+        wavegram = Wavegram(
+            1,
+            out_channels,
+            hidden_dims=hidden_dims,
+            num_filter_banks=num_filter_banks,
+        )
 
-    model = Wave2Wavegram(
-        wavegram,
-        win_length=win_length,
-    )
-    output = model(eeg, mask)
-    assert output["spec"].shape == (
-        batch_size,
-        num_channels,
-        num_filter_banks,
-        num_frames // 2 ** (len(hidden_dims) - 1),
-    ), output["spec"].shape
+        model = Wave2Wavegram(
+            wavegram,
+            win_length=win_length,
+        )
+        output = model(eeg, mask)
+        assert output["spec"].shape == (
+            batch_size * out_channels,
+            num_channels,
+            num_filter_banks,
+            num_frames // 2 ** (len(hidden_dims) - 1),
+        ), output["spec"].shape
 
     summary(model, input_size=(batch_size, num_frames, num_probes))
