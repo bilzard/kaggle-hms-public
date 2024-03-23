@@ -27,6 +27,7 @@ class Wave2Wavegram(nn.Module):
         expand_mask: bool = True,
         freq_mask_param: int = 16,
         time_mask_param: int = 32,
+        freeze_mask_encoder: bool = False,
     ):
         super().__init__()
         self.sampling_rate = sampling_rate
@@ -36,6 +37,9 @@ class Wave2Wavegram(nn.Module):
         self.downsample_mode = downsample_mode
         self.expand_mask = expand_mask
         self.hop_length = wavegram.hop_length
+        self.freeze_mask_encoder = freeze_mask_encoder
+
+        self._frozen = False
 
         self.collate_channels = ChannelCollator(
             sampling_rate=sampling_rate,
@@ -47,11 +51,22 @@ class Wave2Wavegram(nn.Module):
             FrequencyMasking(freq_mask_param),
             TimeMasking(time_mask_param),
         )
-
         if wavegram.out_channels > 1:
             self.mask_encoder = nn.Conv2d(
                 in_channels=1, out_channels=wavegram.out_channels, kernel_size=1
             )
+
+    def freeze(self):
+        """
+        w>=0.3に絞るとサンプル数が少なくなるためか、過学習し始める。
+        サンプル数を絞ったタイミングでfilterの重みを固定できるようにする
+        """
+        if not self._frozen:
+            print(f"* {self.__class__.__name__}: freeze parameters")
+            self.wavegram.requires_grad_(False)
+            if self.wavegram.out_channels > 1 and self.freeze_mask_encoder:
+                self.mask_encoder.requires_grad_(False)
+            self._frozen = True
 
     def downsample_mask(self, x: torch.Tensor, mode="nearest") -> torch.Tensor:
         """
