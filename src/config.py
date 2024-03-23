@@ -278,6 +278,7 @@ class EnsembleMainConfig:
     debug: bool
     cleanup: bool
     final_submission: bool
+    optimize_weight: bool
     apply_label_weight: bool
     env: EnvironmentConfig
     dev: DevelopmentConfig
