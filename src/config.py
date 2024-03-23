@@ -178,6 +178,7 @@ class TrainerConfig:
     class_weights: list[float]
     class_weight_exponent: float
     use_loss_weights: bool
+    feature_extractor_freeze_epoch: int
     transform: DictConfig | None
     train_dataset: DictConfig
     valid_dataset: DictConfig
