@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from einops import rearrange
+from torchaudio.transforms import FrequencyMasking, TimeMasking
 
 from src.model.feature_extractor import ChannelCollator
 from src.model.tensor_util import rolling_mean, same_padding_1d
@@ -23,6 +24,8 @@ class Wave2Panns(nn.Module):
         apply_mask: bool = True,
         downsample_mode: str = "linear",
         expand_mask: bool = True,
+        freq_mask_param: int = 16,
+        time_mask_param: int = 32,
     ):
         super().__init__()
 
@@ -41,6 +44,11 @@ class Wave2Panns(nn.Module):
         )
         self.wavegram = wavegram
         self.wave2spec = wave2spec
+
+        self.spec_aug = torch.nn.Sequential(
+            FrequencyMasking(freq_mask_param),
+            TimeMasking(time_mask_param),
+        )
 
     def downsample_mask(self, x: torch.Tensor, mode="nearest") -> torch.Tensor:
         """
@@ -92,6 +100,11 @@ class Wave2Panns(nn.Module):
         wavegram = rearrange(wavegram, "(b ch) 1 f t -> b ch f t", b=B, ch=Ch)
 
         spec = torch.cat([spec, wavegram], dim=2)
+
+        if self.training:
+            spec = rearrange(spec, "b ch (m f) t -> b (ch m) f t", m=2)
+            spec = self.spec_aug(spec)
+            spec = rearrange(spec, "b (ch m) f t -> b ch (m f) t", m=2)
 
         # expand mask
         B, C, _, T = spec.shape
