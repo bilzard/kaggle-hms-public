@@ -29,3 +29,4 @@ dry_run: false
 debug: false
 cleanup: true
 final_submission: true
+apply_label_weight: false
