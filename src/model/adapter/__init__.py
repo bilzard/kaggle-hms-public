@@ -12,6 +12,7 @@ from .aggregate import (
     WeightedMeanStackingAggregator,
     WeightedMeanTilingAggregator,
 )
+from .collate import WavegramCollator
 from .normalize import (
     BatchNormalizer,
     ConstantNormalizer,
@@ -39,4 +40,5 @@ __all__ = [
     "DualChannelSeparatedAggregator",
     "TimeCroppingTransform",
     "DualCanvasAggregatorWithWeightedMean",
+    "WavegramCollator",
 ]
