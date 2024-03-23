@@ -118,6 +118,7 @@ class Wavegram(nn.Module):
         self.num_filter_banks = num_filter_banks
         self.stem_stride = stem_stride
         self.hidden_dims = hidden_dims
+        self._out_channels = out_channels
 
         self.stem_conv = nn.Sequential(
             nn.Conv1d(
@@ -148,6 +149,10 @@ class Wavegram(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
         )
+
+    @property
+    def out_channels(self):
+        return self._out_channels
 
     @property
     def hop_length(self):
