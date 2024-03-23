@@ -29,3 +29,8 @@ trainer:
         target_epoch: 12
         initial_value: 0.0
         target_value: 0.3
+  transform:
+    _target_: src.transform.Compose
+    transforms:
+      - _target_: src.transform.ChannelPermutation
+        p: 0.8
