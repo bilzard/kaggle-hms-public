@@ -1,0 +1,9 @@
+defaults:
+  - v5_wg_p8_12ep_sc03c
+  - _self_
+
+exp_name: v5_wg_p8_12ep_sc03c_fr
+description: Wavegram 8 planes; freeze feature extractor after 8 epochs
+
+trainer:
+  feature_extractor_freeze_epoch: 8
