@@ -13,3 +13,5 @@ cutoff_freqs: [0.5, 50]
 apply_mask: true
 downsample_mode: linear
 expand_mask: true
+freq_mask_param: 16
+time_mask_param: 32
