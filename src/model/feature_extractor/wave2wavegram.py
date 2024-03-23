@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from einops import rearrange
+from torchaudio.transforms import FrequencyMasking, TimeMasking
 
 from src.model.feature_extractor import ChannelCollator
 from src.model.tensor_util import rolling_mean, same_padding_1d
@@ -24,6 +25,8 @@ class Wave2Wavegram(nn.Module):
         apply_mask: bool = True,
         downsample_mode: str = "linear",
         expand_mask: bool = True,
+        freq_mask_param: int = 16,
+        time_mask_param: int = 32,
     ):
         super().__init__()
         self.sampling_rate = sampling_rate
@@ -40,6 +43,10 @@ class Wave2Wavegram(nn.Module):
             apply_mask=apply_mask,
         )
         self.wavegram = wavegram
+        self.spec_aug = torch.nn.Sequential(
+            FrequencyMasking(freq_mask_param),
+            TimeMasking(time_mask_param),
+        )
 
         if wavegram.out_channels > 1:
             self.mask_encoder = nn.Conv2d(
@@ -90,7 +97,13 @@ class Wave2Wavegram(nn.Module):
 
         B, Ch, T = eeg.shape
         eeg = rearrange(eeg, "b ch t -> (b ch) 1 t")
-        spec = self.wavegram(eeg)
+        spec = self.wavegram(eeg)  # (b ch) c f t
+
+        if self.training:
+            spec = rearrange(spec, "(b ch) c f t -> b (ch c) f t", b=B, ch=Ch)
+            spec = self.spec_aug(spec)
+            spec = rearrange(spec, "b (ch c) f t -> (b ch) c f t", ch=Ch)
+
         spec = rearrange(spec, "(b ch) c f t -> (b c) ch f t", b=B, ch=Ch)
         spec_mask = spec_mask[..., :T]
         spec_mask = rearrange(spec_mask, "b ch f t -> (b ch) 1 f t")
