@@ -18,7 +18,7 @@ from src.proc_util import trace
 from src.random_util import seed_everything
 from src.train_util import check_model, get_model
 
-from .ensemble import do_evaluate
+from .ensemble import do_evaluate, eval_with_optimized_weight
 from .infer import get_loader, load_checkpoint, predict
 
 
@@ -177,23 +177,25 @@ def main(cfg: EnsembleMainConfig):
         spec_id2spec = preload_spectrograms(spec_ids, spec_dir)
 
     with trace("** predict per experiments"):
-        pred_dfs = []
+        predictions = []
         for experiment in cfg.ensemble_entity.experiments:
             print(f"*** exp_name: {experiment.exp_name} ***")
             pred_df = infer_per_experiment(
                 cfg, experiment, metadata, id2eeg, id2cqf, spec_id2spec
             )
-            pred_dfs.append(pred_df)
-
-        pred_df = (
-            pl.concat(pred_dfs)
-            .group_by("eeg_id", maintain_order=True)
-            .agg(pl.col(f"{label}_vote").mean() for label in LABELS)
-        )
+            pred_df = pred_df.group_by("eeg_id", maintain_order=True).agg(
+                pl.col(f"{label}_vote").mean() for label in LABELS
+            )
+            predictions.append(pred_df)
 
     with trace("** evaluate or make submission"):
-        match cfg.phase:
-            case "train":
+        match cfg.phase, cfg.optimize_weight:
+            case "train", False:
+                pred_df = (
+                    pl.concat(predictions)
+                    .group_by("eeg_id", maintain_order=True)
+                    .agg(pl.col(f"{label}_vote").mean() for label in LABELS)
+                )
                 metadata = load_metadata(
                     data_dir=data_dir,
                     phase=cfg.phase,
@@ -205,8 +207,27 @@ def main(cfg: EnsembleMainConfig):
                 do_evaluate(
                     metadata, pred_df, apply_label_weight=cfg.apply_label_weight
                 )
-
-            case "test":
+            case "train", True:
+                metadata = load_metadata(
+                    data_dir=data_dir,
+                    phase=cfg.phase,
+                    fold_split_dir=fold_split_dir,
+                    group_by_eeg=True,
+                    weight_key="weight_per_eeg",
+                    num_samples=cfg.dev.num_samples,
+                )
+                res = eval_with_optimized_weight(metadata, predictions)
+                weights = res.x / res.x.sum()
+                print("weights:")
+                for w, exp in zip(weights, cfg.ensemble_entity.experiments):
+                    print(f"  {exp.exp_name}: {w:.4f}")
+                print("best score:", round(res["fun"], 4))
+            case "test", _:
+                pred_df = (
+                    pl.concat(predictions)
+                    .group_by("eeg_id", maintain_order=True)
+                    .agg(pl.col(f"{label}_vote").mean() for label in LABELS)
+                )
                 submission_df = make_submission(
                     eeg_ids=pred_df["eeg_id"].to_list(),
                     predictions=pred_df.drop("eeg_id").to_numpy(),
