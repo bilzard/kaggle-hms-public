@@ -11,8 +11,8 @@ def mixup_1d(
     """
     signal: b ch t
     mask: b ch t
-    label: b c
-    weight: b 1
+    label: b k c
+    weight: b k
     """
     lambd = np.random.beta(alpha, alpha)
 
@@ -53,7 +53,9 @@ if __name__ == "__main__":
             np.array([[1.0] * frame_length, [0.0] * frame_length])
         )
         mask = torch.from_numpy(np.array([[1.0] * frame_length, [0.0] * frame_length]))
-        label = torch.from_numpy(np.array([[1.0] * num_classes, [0.0] * num_classes]))
+        label = torch.from_numpy(
+            np.array([[[1.0] * num_classes], [[0.0] * num_classes]])
+        )
         weight = torch.from_numpy(np.array([[1.0], [0.0]]))
 
         signal = rearrange(signal, "b t -> b 1 t", b=batch_size, t=frame_length)
