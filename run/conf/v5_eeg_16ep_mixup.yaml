@@ -1,0 +1,15 @@
+defaults:
+  - baseline_v5_eeg
+  - _self_
+
+exp_name: v5_eeg_16ep_mixup
+description: v5 eeg mixup(p=0.5, alpha=0.2)
+
+architecture:
+  model:
+    augmentation:
+      _target_: src.model.augmentation.Mixup1d
+      p: 0.5
+      alpha: 0.2
+    feature_extractor:
+      cutoff_freqs: [0.5, 50]
