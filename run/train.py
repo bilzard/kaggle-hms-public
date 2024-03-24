@@ -75,11 +75,10 @@ def save_sample_spec(
     seed: int = 0,
     device: str = "cuda",
     figure_path: Path = Path("figure"),
-    cleanup: bool = True,
 ):
     seed_everything(seed)
     if not figure_path.exists():
-        if cleanup:
+        if cfg.cleanup:
             shutil.rmtree(figure_path, ignore_errors=True)
         figure_path.mkdir(parents=True)
 
