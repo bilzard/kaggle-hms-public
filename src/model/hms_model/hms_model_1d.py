@@ -21,6 +21,7 @@ class HmsModel1d(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
+        self.augmentation = instantiate(cfg.model.augmentation)
         self.eeg_adapter = instantiate(cfg.model.eeg_adapter)
         self.eeg_encoder = instantiate(
             cfg.model.eeg_encoder, in_channels=cfg.in_channels
@@ -43,6 +44,9 @@ class HmsModel1d(nn.Module):
         eeg_mask = batch[self.mask_key]
 
         output = self.feature_extractor(eeg, eeg_mask)
+        if self.training:
+            self.augmentation(batch, output)
+
         eeg, eeg_mask = output["eeg"], output["eeg_mask"]
         eeg, eeg_mask = self.eeg_adapter(eeg, eeg_mask)
         output["eeg"] = torch.cat([eeg, eeg_mask], dim=1)
@@ -67,7 +71,8 @@ def print_shapes(module_name: str, module: nn.Module | None, data: dict):
         print(f"{module_name}")
     print("-" * 80)
     for key, value in data.items():
-        print(f"{key}: {value.shape}")
+        if isinstance(value, Tensor):
+            print(f"{key}: {value.shape}")
 
 
 @torch.no_grad()
@@ -81,13 +86,19 @@ def check_model(
     model = model.to(device)
     eeg = torch.randn(2, 2048, 19).to(device)
     cqf = torch.randn(2, 2048, 19).to(device)
+    weight = torch.randn(2, 1).to(device)
+    label = torch.randn(2, 6).to(device)
+    batch = dict(eeg=eeg, cqf=cqf, weight=weight, label=label)
 
-    print_shapes("Input", None, {"eeg": eeg, "cqf": cqf})
+    print_shapes("Input", None, batch)
 
-    output = model.feature_extractor(eeg, cqf)
+    output = model.feature_extractor(batch["eeg"], batch["cqf"])
     print_shapes(
         "Feature Extractor", model.feature_extractor, {k: v for k, v in output.items()}
     )
+
+    model.augmentation(batch, output)
+    print_shapes("Augmentation", model.augmentation, output)
 
     eeg = output["eeg"]
     eeg_mask = output["eeg_mask"]
