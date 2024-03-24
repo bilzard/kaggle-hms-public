@@ -11,8 +11,8 @@ def cutmix_1d(
     """
     signal: b ch t
     mask: b ch t
-    label: b c
-    weight: b 1
+    label: b k c
+    weight: b k
     """
     _, _, frame_length = signal.shape
 
@@ -57,7 +57,9 @@ if __name__ == "__main__":
     def generate_samples(batch_size=2, channels=1, frame_length=10, num_classes=6):
         signal = torch.arange(batch_size * frame_length).float()
         mask = torch.arange(batch_size * frame_length).float()
-        label = torch.from_numpy(np.array([[1.0] * num_classes, [0.0] * num_classes]))
+        label = torch.from_numpy(
+            np.array([[[1.0] * num_classes], [[0.0] * num_classes]])
+        )
         weight = torch.from_numpy(np.array([[1.0], [0.0]]))
 
         signal = rearrange(signal, "(b t) -> b 1 t", b=batch_size, t=frame_length)
