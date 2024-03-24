@@ -29,3 +29,41 @@ class Compose(BaseAugmentation):
 class Identity(BaseAugmentation):
     def apply(self, batch: dict[str, Tensor], output: dict[str, Tensor]) -> None:
         pass
+
+
+if __name__ == "__main__":
+    print("*" * 80)
+    print("* Test BaseAugmentation")
+    print("*" * 80)
+
+    class CustomAugmentation(BaseAugmentation):
+        def apply(self, batch: dict[str, Tensor], output: dict[str, Tensor]) -> None:
+            print("CustomAugmentation applied")
+
+    aug = CustomAugmentation(p=0.5)
+
+    for i in range(10):
+        print(f"iter: {i}")
+        batch = dict()
+        output = dict()
+        aug(batch, output)
+
+    print("*" * 80)
+    print("* Test Compose")
+    print("*" * 80)
+
+    class AugmentationA(BaseAugmentation):
+        def apply(self, batch: dict[str, Tensor], output: dict[str, Tensor]) -> None:
+            print("A is applied")
+
+    class AugmentationB(BaseAugmentation):
+        def apply(self, batch: dict[str, Tensor], output: dict[str, Tensor]) -> None:
+            print("B is applied")
+
+    aug = Compose([AugmentationA(p=0.5), AugmentationB(p=0.5)])
+
+    for i in range(10):
+        print(f"iter: {i}")
+        batch = dict()
+        output = dict()
+        aug(batch, output)
