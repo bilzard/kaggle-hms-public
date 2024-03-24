@@ -1,0 +1,16 @@
+defaults:
+  - v5_eeg_16ep_mixup
+  - _self_
+
+exp_name: v5_eeg_24ep_mixup
+description: v5 eeg mixup (16ep + ft 8ep)
+
+trainer:
+  epochs: 24
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 16
+        target_epoch: 16
+        initial_value: 0.0
+        target_value: 0.3

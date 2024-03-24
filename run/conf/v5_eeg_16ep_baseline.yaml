@@ -1,0 +1,11 @@
+defaults:
+  - baseline_v5_eeg
+  - _self_
+
+exp_name: v5_eeg_16ep_baseline
+description: v5 eeg baseline
+
+architecture:
+  model:
+    feature_extractor:
+      cutoff_freqs: [0.5, 50]
