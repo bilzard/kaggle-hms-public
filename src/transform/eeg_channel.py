@@ -191,13 +191,16 @@ if __name__ == "__main__":
         transform = transform_cls(p=1.0)
         feat = np.array(list(PROBE2IDX.keys()))[np.newaxis, np.newaxis, :]
         mask = np.array(list(PROBE2IDX.keys()))[np.newaxis, np.newaxis, :]
-        mask = np.array(list(PROBE2IDX.keys()))[np.newaxis, np.newaxis, :]
 
         feat_aug, mask_aug = transform(feat, mask)
         print(feat.shape)
         print("* feature *")
         for ch in range(feat.shape[-1]):
             print(f"{feat[..., ch].item()} -> {feat_aug[..., ch].item()}")
+
+        print("* mask *")
+        for ch in range(mask.shape[-1]):
+            print(f"{mask[..., ch].item()} -> {mask_aug[..., ch].item()}")
 
         assert (mask_aug == feat_aug).all()
 
@@ -206,7 +209,9 @@ if __name__ == "__main__":
     mask = np.ones((4, 20))
     feat_aug, mask_aug = transform(feat, mask)
 
+    print("*" * 40)
     print(f"** {transform.__class__.__name__} **")
+    print("*" * 40)
     print("* feature *")
     print(feat_aug.T)
     print("* mask *")
