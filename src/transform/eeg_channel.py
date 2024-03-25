@@ -38,8 +38,8 @@ def _swap_channels(
     feature, mask = feature.copy(), mask.copy()
     for src, dst in correspondences:
         src_idx, dst_idx = PROBE2IDX[src], PROBE2IDX[dst]
-        feature[..., [src_idx, dst_idx]] = feature[..., [dst_idx, src_idx]]
-        mask[..., [src_idx, dst_idx]] = mask[..., [dst_idx, src_idx]]
+        feature[..., [src_idx, dst_idx]] = feature[..., [dst_idx, src_idx]].copy()
+        mask[..., [src_idx, dst_idx]] = mask[..., [dst_idx, src_idx]].copy()
 
     return feature, mask
 
@@ -86,15 +86,15 @@ def channel_permutation(
 
     perm = torch.randperm(len(left_idxs)).numpy()
 
-    feature[..., left_idxs] = feature[..., left_idxs[perm]]
-    feature[..., right_idxs] = feature[..., right_idxs[perm]]
-    mask[..., left_idxs] = mask[..., left_idxs[perm]]
-    mask[..., right_idxs] = mask[..., right_idxs[perm]]
+    feature[..., left_idxs] = feature[..., left_idxs[perm]].copy()
+    feature[..., right_idxs] = feature[..., right_idxs[perm]].copy()
+    mask[..., left_idxs] = mask[..., left_idxs[perm]].copy()
+    mask[..., right_idxs] = mask[..., right_idxs[perm]].copy()
 
     central_idxs = np.array([PROBE2IDX[ch] for ch in CENTRAL_CHANNELS])
     perm = torch.randperm(len(central_idxs)).numpy()
-    feature[..., central_idxs] = feature[..., central_idxs[perm]]
-    mask[..., central_idxs] = mask[..., central_idxs[perm]]
+    feature[..., central_idxs] = feature[..., central_idxs[perm]].copy()
+    mask[..., central_idxs] = mask[..., central_idxs[perm]].copy()
 
     return feature, mask
 
