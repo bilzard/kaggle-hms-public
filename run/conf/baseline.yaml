@@ -121,6 +121,8 @@ trainer:
 
 architecture:
   model:
+    eeg_pre_adapter:
+      _target_: src.model.eeg_adapter.Identity
     augmentation:
       _target_: src.model.augmentation.Identity
     spec_transform: null
