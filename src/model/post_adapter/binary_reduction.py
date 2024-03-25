@@ -31,6 +31,27 @@ class BinaryReductionPostAdapter(nn.Module):
         return logit
 
 
+class SimpleBinaryReductionPostAdapter(nn.Module):
+    """
+    多クラス分類モデルのlogitを、等価な2クラス分類モデルのlogitに変換する
+    """
+
+    def __init__(self, target_class_index: int = 0, num_classes: int = 6):
+        super().__init__()
+        self.target_class_index = target_class_index
+        self.num_classes = num_classes
+
+    def forward(self, logit: Tensor) -> Tensor:
+        """
+        logit: b k c
+        """
+        z0 = logit[..., self.target_class_index]
+        logit = torch.zeros_like(logit).to(logit.device)
+        logit[..., self.target_class_index] = z0
+
+        return logit
+
+
 if __name__ == "__main__":
     logit = torch.randn(2, 3, 6)
     post_adapter = BinaryReductionPostAdapter()
