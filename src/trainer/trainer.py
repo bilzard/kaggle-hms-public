@@ -113,6 +113,14 @@ class Trainer(BaseTrainer):
             * cfg.label.schedule.min_weight.schedule_start_epoch,
             target_value=cfg.label.schedule.min_weight.target_value,
         )
+        self.max_weight_scheduler = LinearScheduler(
+            initial_value=cfg.label.schedule.max_weight.initial_value,
+            target_step=len(self.train_loader)
+            * cfg.label.schedule.max_weight.target_epoch,
+            schedule_start_step=len(self.train_loader)
+            * cfg.label.schedule.max_weight.schedule_start_epoch,
+            target_value=cfg.label.schedule.max_weight.target_value,
+        )
         print(
             "* weight_exponent: {} -> {} (step: {} -> {})".format(
                 self.weight_exponent_scheduler.initial_value,
@@ -129,11 +137,20 @@ class Trainer(BaseTrainer):
                 self.min_weight_scheduler.target_step,
             )
         )
+        print(
+            "* max_weight: {} -> {} (step: {} -> {})".format(
+                self.max_weight_scheduler.initial_value,
+                self.max_weight_scheduler.target_value,
+                self.max_weight_scheduler.schedule_start_step,
+                self.max_weight_scheduler.target_step,
+            )
+        )
 
     def update_scheduler(self):
         self.scheduler.step()
         self.weight_exponent_scheduler.step()
         self.min_weight_scheduler.step()
+        self.max_weight_scheduler.step()
 
     def fit(self):
         for epoch in range(self.epochs):
@@ -234,7 +251,8 @@ class Trainer(BaseTrainer):
 
                     # min_weight でフィルタリング
                     valid_indices = torch.where(
-                        (weight_0[:, 0] > self.min_weight_scheduler.value)
+                        (weight_0[:, 0] >= self.min_weight_scheduler.value)
+                        & (weight_0[:, 0] < self.max_weight_scheduler.value)
                     )[0]
                     if len(valid_indices) == 0:
                         continue
@@ -286,6 +304,7 @@ class Trainer(BaseTrainer):
                         "aux_loss": self._train_loss_meter_aux.mean,
                         "weight_exponent": self.weight_exponent_scheduler.value,
                         "min_weight": self.min_weight_scheduler.value,
+                        "max_weight": self.max_weight_scheduler.value,
                     }
                 )
 

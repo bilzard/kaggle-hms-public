@@ -91,6 +91,7 @@ class ParamScheduleConfig:
 class WeightScheduleConfig:
     weight_exponent: ParamScheduleConfig
     min_weight: ParamScheduleConfig
+    max_weight: ParamScheduleConfig
 
 
 @dataclass

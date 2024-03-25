@@ -99,6 +99,7 @@ class MetricsLogger(Callback):
                 data, trainer, "weight_exponent", group="epoch"
             )
             _add_scheduler_value_to_wandb(data, trainer, "min_weight", group="epoch")
+            _add_scheduler_value_to_wandb(data, trainer, "max_weight", group="epoch")
             _add_scheduler_value_to_wandb(
                 data, trainer, "contrastive_weight", group="epoch"
             )
