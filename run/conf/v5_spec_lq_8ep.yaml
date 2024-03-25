@@ -1,0 +1,21 @@
+defaults:
+  - baseline_v5
+  - _self_
+
+exp_name: v5_spec_lq_8ep
+description: v5 eeg fine-tune low quality labels
+
+trainer:
+  epochs: 8
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 4
+        target_epoch: 4
+        initial_value: 0.0
+        target_value: 0.1
+      max_weight:
+        schedule_start_epoch: 4
+        target_epoch: 4
+        initial_value: 1.0
+        target_value: 0.3
