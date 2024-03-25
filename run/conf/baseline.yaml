@@ -132,6 +132,8 @@ architecture:
     merger: null
     encoder:
       name: efficientnet_b0
+    post_adapter:
+      _target_: src.model.post_adapter.IdentityPostAdapter
   model_class:
     _target_: src.model.hms_model.HmsModel
   model_checker:
