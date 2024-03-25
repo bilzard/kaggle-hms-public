@@ -89,6 +89,11 @@ trainer:
         target_epoch: 0
         initial_value: 0.0
         target_value: 0.0
+      max_weight:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 1.0
+        target_value: 1.0
   class_weights: [1.151, 0.706, 1.039, 1.681, 1.17, 0.253]
   class_weight_exponent: 0.0
   use_loss_weights: true
