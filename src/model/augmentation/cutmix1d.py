@@ -19,7 +19,7 @@ def cutmix_1d(
     lambd = np.random.beta(alpha, alpha)
 
     cut_len = int(frame_length * (1 - lambd))
-    start = np.random.randint(0, frame_length - cut_len)
+    start = np.random.randint(0, frame_length - cut_len + 1)
     end = start + cut_len
 
     signal[:, :, start:end] = signal.flip(0)[:, :, start:end]
