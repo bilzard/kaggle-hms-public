@@ -22,6 +22,7 @@ class HmsModel1d(nn.Module):
         self.cfg = cfg
         self.feature_extractor = instantiate(cfg.model.feature_extractor)
         self.augmentation = instantiate(cfg.model.augmentation)
+        self.eeg_pre_adapter = instantiate(cfg.model.eeg_pre_adapter)
         self.eeg_adapter = instantiate(cfg.model.eeg_adapter)
         self.eeg_encoder = instantiate(
             cfg.model.eeg_encoder, in_channels=cfg.in_channels
@@ -45,6 +46,9 @@ class HmsModel1d(nn.Module):
         eeg_mask = batch[self.mask_key]
 
         output = self.feature_extractor(eeg, eeg_mask)
+        output["eeg"], output["eeg_mask"] = self.eeg_pre_adapter(
+            output["eeg"], output["eeg_mask"]
+        )
         if self.training:
             self.augmentation(batch, output)
 
@@ -99,6 +103,11 @@ def check_model(
     print_shapes(
         "Feature Extractor", model.feature_extractor, {k: v for k, v in output.items()}
     )
+
+    output["eeg"], output["eeg_mask"] = model.eeg_pre_adapter(
+        output["eeg"], output["eeg_mask"]
+    )
+    print_shapes("Eeg Pre Adapter", model.eeg_pre_adapter, output)
 
     model.augmentation(batch, output)
     print_shapes("Augmentation", model.augmentation, output)
