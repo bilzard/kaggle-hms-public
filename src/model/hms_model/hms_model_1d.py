@@ -32,6 +32,7 @@ class HmsModel1d(nn.Module):
         self.head = instantiate(
             cfg.model.head, in_channels=self.eeg_feature_processor.out_channels
         )
+        self.post_adapter = instantiate(cfg.model.post_adapter)
         self.feature_key = feature_key
         self.pred_key = pred_key
         self.mask_key = mask_key
@@ -58,6 +59,8 @@ class HmsModel1d(nn.Module):
         x = self.eeg_encoder(output["eeg"])
         x = self.eeg_feature_processor(x)
         x = self.head(x)
+        if not self.training:
+            x = self.post_adapter(x)
 
         output = {self.pred_key: x}
         return output
@@ -118,6 +121,9 @@ def check_model(
 
     x = model.head(x)
     print_shapes("Head", model.head, {"x": x})
+
+    x = model.post_adapter(x)
+    print_shapes("Post Adapter", model.post_adapter, {"x": x})
 
     print("=" * 80)
     print("Encoder (detail):")
