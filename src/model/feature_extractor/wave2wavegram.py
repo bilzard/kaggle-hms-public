@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from einops import rearrange
+from torch import Tensor
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 
 from src.model.feature_extractor import ChannelCollator
@@ -101,11 +102,11 @@ class Wave2Wavegram(nn.Module):
         - spec_mask: (b c) ch f t
         """
         output = self.collate_channels(x, mask)
+        return self.forward_spec(output)
+
+    def forward_spec(self, output: dict[str, Tensor]):
         eeg = output["eeg"]
         eeg_mask = output["eeg_mask"]
-
-        if mask is None:
-            mask = torch.ones_like(x)
 
         spec_mask = self.downsample_mask(eeg_mask, mode=self.downsample_mode)
         spec_mask = spec_mask.unsqueeze(dim=2)

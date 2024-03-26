@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch import Tensor
 
 from src.model.feature_extractor.eeg import ChannelCollator
 from src.model.tensor_util import rolling_mean, same_padding_1d
@@ -66,12 +67,13 @@ class Wave2Spectrogram(nn.Module):
         - spec_mask: (B, C, 1, T)
         """
         output = self.collate_channels(x, mask)
+        return self.forward_spec(output)
+
+    def forward_spec(self, output: dict[str, Tensor]):
         eeg = output["eeg"]
         eeg_mask = output["eeg_mask"]
 
-        _, num_frames, _ = x.shape
-        if mask is None:
-            mask = torch.ones_like(x)
+        _, _, num_frames = eeg.shape
 
         spec_mask = self.downsample_mask(eeg_mask, mode=self.downsample_mode)
         spec_mask = spec_mask.unsqueeze(dim=2)
