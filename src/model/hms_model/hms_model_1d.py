@@ -54,7 +54,11 @@ class HmsModel1d(nn.Module):
 
         eeg, eeg_mask = output["eeg"], output["eeg_mask"]
         eeg, eeg_mask = self.eeg_adapter(eeg, eeg_mask)
-        output["eeg"] = torch.cat([eeg, eeg_mask], dim=1)
+
+        if self.cfg.input_mask:
+            output["eeg"] = torch.cat([eeg, eeg_mask], dim=1)
+        else:
+            output["eeg"] = eeg
 
         return output
 
@@ -118,8 +122,11 @@ def check_model(
     eeg, eeg_mask = model.eeg_adapter(eeg, eeg_mask)
     print_shapes("Eeg Adapter", model.eeg_adapter, dict(eeg=eeg, eeg_mask=eeg_mask))
 
-    x = torch.cat([eeg, eeg_mask], dim=1)
-    print_shapes("Merge Mask", None, {"x": x})
+    if model.cfg.input_mask:
+        x = torch.cat([eeg, eeg_mask], dim=1)
+        print_shapes("Merge Mask", None, {"x": x})
+    else:
+        x = eeg
 
     encoder_input_shape = x.shape
     x = model.eeg_encoder(x)

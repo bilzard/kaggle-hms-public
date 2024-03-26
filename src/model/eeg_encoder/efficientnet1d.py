@@ -263,6 +263,7 @@ class EfficientNet1d(nn.Module):
         channel_mixer_kernel_size: int = 3,
         mixer_type: str = "sc",
         transformer_merge_type: str = "add",
+        input_mask: bool = True,
     ):
         super().__init__()
         if isinstance(layers, int):
@@ -275,11 +276,12 @@ class EfficientNet1d(nn.Module):
         self.num_frames = num_frames
         self.temporal_pool_sizes = pool_sizes
         self.temporal_layers = layers
-        self.num_eeg_channels = in_channels // 2
         self.drop_path_rate = drop_path_rate
+        self.real_in_channels = 2 if input_mask else 1
+        self.num_eeg_channels = in_channels // self.real_in_channels
 
         self.stem_conv = ConvBnAct2d(
-            2,
+            self.real_in_channels,
             hidden_dim,
             kernel_size=(1, stem_kernel_size),
             activation=activation,
@@ -360,7 +362,7 @@ class EfficientNet1d(nn.Module):
         x = x[
             :, :, self.frame_offset : self.frame_offset + self.num_frames
         ]  # 中央の512 frame(12.8sec)に絞る
-        x = rearrange(x, "b (c ch) t -> b c ch t", c=2)
+        x = rearrange(x, "b (c ch) t -> b c ch t", c=self.real_in_channels)
         x = self.stem_conv(x)
         x = self.efficient_net(x)  # b c ch t
         x = rearrange(x, "(d b) c ch t -> (d ch b) c t", d=2, ch=self.num_eeg_channels)
