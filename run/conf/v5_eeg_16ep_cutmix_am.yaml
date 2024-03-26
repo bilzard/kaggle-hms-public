@@ -1,0 +1,21 @@
+defaults:
+  - baseline_v5_eeg
+  - _self_
+
+exp_name: v5_eeg_16ep_cutmix_am
+description: v5 eeg cutmix(p=0.5, alpha=0.2); apply mask
+
+architecture:
+  model:
+    feature_extractor:
+      apply_mask: true
+    eeg_pre_adapter:
+      _target_: src.model.eeg_adapter.EegTimeCroppingTransform
+      start: 744
+      size: 512
+    augmentation:
+      _target_: src.model.augmentation.Cutmix1d
+      p: 0.5
+      alpha: 0.2
+    eeg_encoder:
+      frame_offset: 0
