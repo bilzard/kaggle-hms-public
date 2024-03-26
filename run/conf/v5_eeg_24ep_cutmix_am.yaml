@@ -1,0 +1,16 @@
+defaults:
+  - v5_eeg_16ep_cutmix_am
+  - _self_
+
+exp_name: v5_eeg_24ep_cutmix_am
+description: v5 eeg cutmix (16ep + ft 8ep); apply mask
+
+trainer:
+  epochs: 24
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 16
+        target_epoch: 16
+        initial_value: 0.0
+        target_value: 0.3
