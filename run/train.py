@@ -130,7 +130,8 @@ def save_sample_spec(
     specs = output.get("spec", None)
 
     if eegs is not None:
-        eegs = rearrange(eegs, "(d b) (c ch) t -> b ch t (d c)", d=2, c=2)
+        in_channels = 2 if cfg.architecture.input_mask else 1
+        eegs = rearrange(eegs, "(d b) (c ch) t -> b ch t (d c)", d=2, c=in_channels)
         eegs = eegs.detach().cpu().numpy()
         for eeg_id, eeg in zip(eeg_ids, eegs):
             np.save(figure_path / f"eeg_{eeg_id}.npy", eeg.astype(np.float16))

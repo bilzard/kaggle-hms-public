@@ -15,3 +15,4 @@ se_after_dw_conv: false
 use_channel_mixer: false
 channel_mixer_kernel_size: 3
 mixer_type: sc
+input_mask: true
