@@ -1,0 +1,16 @@
+defaults:
+  - v5_spec_8ep_cutmix
+  - _self_
+
+exp_name: v5_spec_12ep_cutmix
+description: v5 spec cutmix 12ep
+
+trainer:
+  epochs: 12
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 8
+        target_epoch: 8
+        initial_value: 0.0
+        target_value: 0.3

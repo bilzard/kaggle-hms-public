@@ -1,0 +1,13 @@
+defaults:
+  - baseline_v5
+  - _self_
+
+exp_name: v5_spec_8ep_mixup
+description: v5 spec mixup 8ep
+
+architecture:
+  model:
+    augmentation:
+      _target_: src.model.augmentation.Mixup1d
+      p: 0.5
+      alpha: 0.2
