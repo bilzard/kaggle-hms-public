@@ -58,7 +58,12 @@ class HmsModel(nn.Module):
     def generate_spec(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         eeg = batch[self.feature_key]
         eeg_mask = batch[self.mask_key]
-        output = self.feature_extractor(eeg, eeg_mask)
+        output = self.feature_extractor.collate_channels(eeg, eeg_mask)
+
+        if self.training:
+            self.augmentation(batch, output)
+
+        output = self.feature_extractor.forward_spec(output)
         return output
 
     def compose_spec(
@@ -99,8 +104,6 @@ class HmsModel(nn.Module):
 
     def preprocess(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         output = self.generate_spec(batch)
-        if self.training:
-            self.augmentation(batch, output)
         output = self.compose_spec(batch, output)
         output.pop("eeg")
         return output
@@ -132,7 +135,8 @@ def print_shapes(module_name: str, module: nn.Module | None, data: dict):
         print(f"{module_name}")
     print("-" * 80)
     for key, value in data.items():
-        print(f"{key}: {value.shape}")
+        if isinstance(value, Tensor):
+            print(f"{key}: {value.shape}")
 
 
 @torch.no_grad()
@@ -147,13 +151,20 @@ def check_model(
     eeg = torch.randn(2, 2048, 19).to(device)
     cqf = torch.randn(2, 2048, 19).to(device)
     bg_spec = torch.randn(2, 4, 100, 256).to(device)
+    weight = torch.randn(2, 2).to(device)
+    label = torch.randn(2, 2, 6).to(device)
+    batch = dict(eeg=eeg, cqf=cqf, weight=weight, label=label)
 
     print_shapes("Input", None, {"eeg": eeg, "cqf": cqf})
 
-    output = model.feature_extractor(eeg, cqf)
-    print_shapes(
-        "Feature Extractor", model.feature_extractor, {k: v for k, v in output.items()}
-    )
+    output = model.feature_extractor.collate_channels(eeg, cqf)
+    print_shapes("Collate Channel", model.feature_extractor.collate_channels, output)
+
+    model.augmentation(batch, output)
+    print_shapes("Augmentation", model.augmentation, output)
+
+    output = model.feature_extractor.forward_spec(output)
+    print_shapes("Feature Extractor", model.feature_extractor, output)
 
     spec = output["spec"]
     spec_mask = output["spec_mask"]
