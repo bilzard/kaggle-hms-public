@@ -284,3 +284,21 @@ class EnsembleMainConfig:
     apply_label_weight: bool
     env: EnvironmentConfig
     dev: DevelopmentConfig
+
+
+@dataclass
+class KaggleDatasetConfig:
+    title: str
+    user_name: str
+
+
+@dataclass
+class ModelCheckpointMainConfig:
+    phase: str
+    dry_run: bool
+    debug: bool
+    cleanup: bool
+    create: bool
+    ensemble_entity: EnsembleEntityConfig
+    env: EnvironmentConfig
+    kaggle_dataset: KaggleDatasetConfig
