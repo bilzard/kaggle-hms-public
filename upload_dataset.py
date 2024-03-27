@@ -82,9 +82,9 @@ def update_dataset(user_name, title, tmp_dir, create: bool):
 
 
 @click.command()
-@click.option("--title", "-t", default="HMS-model")
-@click.option("--src_dir", "-s", type=Path, default=Path("./data/train"))
-@click.option("--glob_patterns", "-g", multiple=True, default=["last_model.pth"])
+@click.option("--title", "-t")
+@click.option("--src_dir", "-s", type=Path)
+@click.option("--glob_patterns", "-g", multiple=True)
 @click.option("--user_name", "-u", default="tatamikenn")
 @click.option("--create", "-c", is_flag=True)
 @click.option("--dry_run", "-d", is_flag=True)
