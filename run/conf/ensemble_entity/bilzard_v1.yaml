@@ -1,0 +1,135 @@
+name: bilzard_v1
+ensemble_seeds: [0, 1, 2]
+experiments:
+  - exp_name: exp081_8ep_sc03
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: eeg022_16ep_sc03c
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: v5_spec_lq_8ep
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: v5_panns_12ep_sc03c
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: v5_eeg_16ep_cutmix
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: v5_eeg_24ep_cutmix
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: v5_spec_bg_8ep
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: v5_spec_8ep_cutmix
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: v5_spec_12ep_cutmix
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: v5_eeg_16ep_cutmix_nm
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
+  - exp_name: v5_eeg_16ep_cutmix_nm
+    folds:
+      - split: 0
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 1
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 2
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 3
+        seeds: ${ensemble_entity.ensemble_seeds}
+      - split: 4
+        seeds: ${ensemble_entity.ensemble_seeds}
