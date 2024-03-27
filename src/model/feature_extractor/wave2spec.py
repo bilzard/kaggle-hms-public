@@ -2,34 +2,27 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from src.model.feature_extractor.eeg import ChannelCollator
 from src.model.tensor_util import rolling_mean, same_padding_1d
 
 
 class Wave2Spectrogram(nn.Module):
     def __init__(
         self,
+        channel_collator: nn.Module,
         wave2spec: nn.Module,
-        cutoff_freqs: tuple[float, float] = (0.5, 50),
-        apply_mask: bool = True,
         downsample_mode: str = "linear",
         expand_mask: bool = True,
+        **kwargs,
     ):
         super().__init__()
 
-        self.cutoff_freqs = cutoff_freqs
-        self.apply_mask = apply_mask
         self.downsample_mode = downsample_mode
         self.expand_mask = expand_mask
 
         self.win_length = wave2spec.win_length
         self.hop_length = wave2spec.hop_length
 
-        self.collate_channels = ChannelCollator(
-            sampling_rate=wave2spec.sampling_rate,
-            cutoff_freqs=cutoff_freqs,
-            apply_mask=apply_mask,
-        )
+        self.collate_channels = channel_collator
         self.wave2spec = wave2spec
 
     @torch.no_grad()
@@ -98,6 +91,7 @@ class Wave2Spectrogram(nn.Module):
 if __name__ == "__main__":
     from torchinfo import summary
 
+    from src.model.feature_extractor import ChannelCollator
     from src.model.feature_extractor.module import MelSpec
 
     batch_size = 2
@@ -111,8 +105,11 @@ if __name__ == "__main__":
     eeg = torch.randn(batch_size, num_frames, num_probes)
     mask = torch.randn(batch_size, num_frames, num_probes)
     wave2spec = MelSpec(n_fft=n_fft, win_length=win_length, hop_length=hop_length)
+    channel_collator = ChannelCollator(
+        sampling_rate=sampling_rate, cutoff_freqs=(0.5, 50), apply_mask=True
+    )
     print(wave2spec)
-    model = Wave2Spectrogram(wave2spec)
+    model = Wave2Spectrogram(channel_collator, wave2spec)
     output = model(eeg, mask)
     assert output["spec"].shape == (
         batch_size,
