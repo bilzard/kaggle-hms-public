@@ -1,9 +1,10 @@
 from typing import Optional
 
-import kaggle_metric_utilities
 import numpy as np
 import pandas as pd
 import pandas.api.types
+
+import src.metric.kaggle_metric_utilities as kaggle_metric_utilities
 
 
 class ParticipantVisibleError(Exception):
