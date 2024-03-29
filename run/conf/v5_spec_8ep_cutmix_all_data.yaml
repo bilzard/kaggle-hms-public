@@ -1,0 +1,28 @@
+defaults:
+  - baseline_v5
+  - _self_
+
+exp_name: v5_spec_8ep_cutmix_all_data
+description: v5 spec cutmix 8ep + all data; weight_exponent=0, min_weight=0
+
+architecture:
+  model:
+    augmentation:
+      _target_: src.model.augmentation.Cutmix1d
+      p: 0.5
+      alpha: 0.2
+
+trainer:
+  epochs: 8
+  label:
+    schedule:
+      weight_exponent:
+        schedule_start_epoch: 0
+        target_epoch: 8
+        initial_value: 0.0
+        target_value: 0.0
+      min_weight:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 0.0
+        target_value: 0.0
