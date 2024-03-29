@@ -252,7 +252,7 @@ class Trainer(BaseTrainer):
                     # min_weight でフィルタリング
                     valid_indices = torch.where(
                         (weight_0[:, 0] >= self.min_weight_scheduler.value)
-                        & (weight_0[:, 0] < self.max_weight_scheduler.value)
+                        & (weight_0[:, 0] <= self.max_weight_scheduler.value)
                     )[0]
                     if len(valid_indices) == 0:
                         continue
