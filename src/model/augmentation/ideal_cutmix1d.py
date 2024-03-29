@@ -52,13 +52,13 @@ class IdealCutmix1d(BaseAugmentation):
 
         ideal_indices = torch.max(label[:, 0], dim=-1).values > self.prob_threshold
 
-        if sum(ideal_indices) <= 1:
-            return
-
         signal_ideal = signal[ideal_indices]
         mask_ideal = mask[ideal_indices]
         label_ideal = label[ideal_indices]
         weight_ideal = weight[ideal_indices]
+
+        if signal_ideal.shape[0] <= 1:
+            return
 
         signal_normal = signal[~ideal_indices]
         mask_normal = mask[~ideal_indices]
