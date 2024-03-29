@@ -1,0 +1,22 @@
+defaults:
+  - baseline_v5_eeg
+  - _self_
+
+exp_name: v5_eeg_16ep_ideal_cutmix
+description: v5 eeg ideal cutmix
+
+architecture:
+  model:
+    feature_extractor:
+      apply_mask: false
+    eeg_pre_adapter:
+      _target_: src.model.eeg_adapter.EegTimeCroppingTransform
+      start: 744
+      size: 512
+    augmentation:
+      _target_: src.model.augmentation.IdealCutmix1d
+      p: 0.8
+      alpha: 5.0
+      prob_threshold: 0.8
+    eeg_encoder:
+      frame_offset: 0
