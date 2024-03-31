@@ -29,7 +29,8 @@ class Trainer(BaseTrainer):
         valid_loader: DataLoader,
         epochs: int,
         callbacks: list[Callback] = [],
-        mixed_precision=True,
+        mixed_precision: bool = True,
+        no_eval: bool = False,
         **kwargs,
     ):
         super().__init__(cfg)
@@ -49,6 +50,7 @@ class Trainer(BaseTrainer):
 
         self.train_loader = train_loader
         self.valid_loader = valid_loader
+        self.no_eval = no_eval
 
         self._train_loss_meter = AverageMeter()
         self._train_loss_meter_aux = AverageMeter()
@@ -162,8 +164,9 @@ class Trainer(BaseTrainer):
                 callback.on_train_epoch_end(self, epoch, self._train_loss_meter.mean)
 
             self._valid_loss_meter.reset()
-            self.valid_loader.dataset.reset()  # type: ignore
-            self.valid_epoch(epoch)
+            if not self.no_eval:
+                self.valid_loader.dataset.reset()  # type: ignore
+                self.valid_epoch(epoch)
             for callback in self.callbacks:
                 callback.on_valid_epoch_end(
                     self,
