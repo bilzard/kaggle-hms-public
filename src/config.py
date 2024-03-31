@@ -243,6 +243,7 @@ class MainConfig:
     cleanup: bool
     final_submission: bool
     check_only: bool
+    no_eval: bool
     preprocess: PreprocessConfig
     env: EnvironmentConfig
     split: SplitConfig

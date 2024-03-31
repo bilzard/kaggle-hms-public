@@ -19,6 +19,7 @@ hydra:
           - dry_run
           - trainer.save_last
           - trainer.save_best
+          - no_eval
 
 defaults:
   - env: local
@@ -180,3 +181,4 @@ debug: false
 cleanup: true
 final_submission: false
 check_only: false
+no_eval: false

@@ -37,6 +37,7 @@ class ContrastiveTrainer(BaseTrainer):
         callbacks: list[Callback] = [],
         mixed_precision=True,
         teacher_model: nn.Module | None = None,
+        no_eval: bool = False,
     ):
         super().__init__(cfg)
         self.model = model
@@ -55,6 +56,7 @@ class ContrastiveTrainer(BaseTrainer):
 
         self.train_loader = train_loader
         self.valid_loader = valid_loader
+        self.no_eval = no_eval
 
         self._train_loss_meter = AverageMeter()
         self._train_loss_meter_eeg = AverageMeter()

@@ -305,6 +305,7 @@ def main(cfg: MainConfig):
                 ],
                 epochs=cfg.trainer.epochs,
                 teacher_model=teacher_model,
+                no_eval=cfg.no_eval,
             )
             trainer.fit()
 

@@ -63,6 +63,9 @@ class MetricsLogger(Callback):
 
     @torch.no_grad()
     def on_valid_epoch_end(self, trainer, epoch: int, loss: float):
+        if trainer.no_eval:
+            return
+
         output = self.evaluator.aggregate()
         val_loss, val_loss_per_label = output["val_loss"], output["val_loss_per_label"]
 
@@ -119,4 +122,6 @@ class MetricsLogger(Callback):
         output: dict[str, torch.Tensor],
         loss: float,
     ):
+        if trainer.no_eval:
+            return
         self.evaluator.process_batch(batch, output)
