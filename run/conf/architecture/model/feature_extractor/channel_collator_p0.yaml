@@ -1,0 +1,15 @@
+_target_: src.model.feature_extractor.ChannelCollator
+sampling_rate: 40
+cutoff_freqs: [0.5, 50]
+apply_mask: true
+probe_groups:
+    FPL: [Fp1, F7]
+    FL: [F7, F3, Fz]
+    CL: [T3, C3, Cz]
+    PL: [T5, P3, Pz]
+    LP: [T5, O1]
+    FPR: [Fp2, F8]
+    FR: [F8, F4, Fz]
+    CR: [T4, C4, Cz]
+    PR: [T6, P4, Pz]
+    RP: [T6, O2]
