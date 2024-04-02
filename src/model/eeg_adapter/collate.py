@@ -52,6 +52,46 @@ class EegDualStackingCollator(nn.Module):
         return eeg, eeg_mask
 
 
+def horizontal_dual_stack_eeg_channels(x: Tensor, num_channels: int) -> Tensor:
+    """
+    spec: (b, 2 * ch, t)
+    mask: (b, 2 * ch, t)
+
+    Return:
+    spec: (2, b, ch, t)
+    mask: (2, b, ch, t)
+    """
+    assert x.shape[1] == 2 * num_channels
+    left = x[:, 0:num_channels]
+    right = x[:, num_channels : 2 * num_channels]
+    x = torch.stack([left, right], dim=0)
+
+    return x.contiguous()
+
+
+class EegHorizontalDualStackingCollator(nn.Module):
+    """
+    左右ごとに独立してencodingする
+    """
+
+    def __init__(self, num_channels: int = 16):
+        super().__init__()
+        self.num_channels = num_channels
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}"
+
+    def forward(self, eeg: Tensor, eeg_mask: Tensor) -> tuple[Tensor, Tensor]:
+        eeg = horizontal_dual_stack_eeg_channels(eeg, num_channels=self.num_channels)
+        eeg_mask = horizontal_dual_stack_eeg_channels(
+            eeg_mask, num_channels=self.num_channels
+        )
+        eeg = rearrange(eeg, "d b c t -> (d b) c t")
+        eeg_mask = rearrange(eeg_mask, "d b c t -> (d b) c t")
+
+        return eeg, eeg_mask
+
+
 class EegDualPerChannelCollator(nn.Module):
     """
     左右、チャネルごとに独立してencodingする

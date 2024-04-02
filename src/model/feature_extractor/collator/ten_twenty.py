@@ -11,18 +11,21 @@ class ChannelCollator(nn.Module):
         sampling_rate=40,
         cutoff_freqs=(0.5, 50),
         apply_mask=True,
+        probe_groups=PROBE_GROUPS,
     ):
         super().__init__()
 
         self.sampling_rate = sampling_rate
         self.cutoff_freqs = cutoff_freqs
         self.apply_mask = apply_mask
+        self.probe_groups = probe_groups
 
     def __repr__(self):
         return f"""{self.__class__.__name__}(
             sampling_rate={self.sampling_rate},
             cutoff_freqs={self.cutoff_freqs},
             apply_mask={self.apply_mask},
+            probe_groups={self.probe_groups},
         )"""
 
     @torch.no_grad()
@@ -38,7 +41,7 @@ class ChannelCollator(nn.Module):
         if mask is None:
             mask = torch.ones_like(x)
 
-        for _, probes in PROBE_GROUPS.items():
+        for _, probes in self.probe_groups.items():
             for p1, p2 in zip(probes[:-1], probes[1:]):
                 x_diff = x[..., PROBE2IDX[p1]] - x[..., PROBE2IDX[p2]]
                 if self.apply_mask:
