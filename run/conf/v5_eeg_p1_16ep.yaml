@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v5_eeg_p1
+  - _self_
+
+exp_name: v5_eeg_p1_16ep
+description: min weight 0.0 -> 0.35
