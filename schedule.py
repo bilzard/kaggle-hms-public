@@ -27,7 +27,7 @@ def parse_multi_vars(ctx, param, value, sep=","):
 @click.option("--dry_run", is_flag=True)
 @click.option("--checkpointing", default="false")
 @click.option("--infer_batch_size", default=32)
-@click.option("--no_eval", is_flag=False)
+@click.option("--no_eval", is_flag=True)
 def run_experiments(
     job_name,
     phase,
