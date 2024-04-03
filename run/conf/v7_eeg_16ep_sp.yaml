@@ -1,0 +1,12 @@
+defaults:
+  - baseline_v7_eeg
+  - _self_
+
+exp_name: v7_eeg_16ep_sp
+description: train/eval with only sp center
+
+trainer:
+  label:
+    only_use_sp_center: true
+  val:
+    only_use_sp_center: true
