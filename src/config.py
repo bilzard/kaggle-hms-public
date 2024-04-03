@@ -71,6 +71,7 @@ class EvalConfig:
     seed: int
     weight_exponent: float
     min_weight: float
+    only_use_sp_center: bool
 
 
 @dataclass
@@ -101,6 +102,7 @@ class LabelConfig:
     max_votes: int
     label_postfix: list[str]
     weight_key: list[str]
+    only_use_sp_center: bool
     schedule: WeightScheduleConfig
 
 
