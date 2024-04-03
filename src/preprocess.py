@@ -231,6 +231,11 @@ def process_label(
         .with_columns(
             pl.col("label_group_id")
             .count()
+            .over("eeg_id", "label_group_id")
+            .alias("group_size"),
+            pl.col("label_group_id")
+            .max()
+            .add(1)
             .over("eeg_id")
             .alias("num_label_groups_per_eeg"),
             pl.cum_count()
