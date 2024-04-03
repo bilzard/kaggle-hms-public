@@ -201,7 +201,8 @@ def process_label(
     population_power: float = 1.0,
     diversity_power: float = 0.0,
     max_votes: int = 28,
-    add_dummy_label=False,
+    add_dummy_label: bool = False,
+    only_use_sp_center: bool = False,
 ) -> pl.DataFrame:
     if add_dummy_label:
         metadata = metadata.with_columns(
@@ -210,6 +211,50 @@ def process_label(
             pl.lit(0).cast(pl.Int64).alias("eeg_label_offset_seconds"),
             pl.lit(0).cast(pl.Int64).alias("spectrogram_label_offset_seconds"),
         )
+
+    metadata = (
+        metadata.with_columns(
+            (
+                (
+                    pl.col("seizure_vote").diff().fill_null(0).over("eeg_id").eq(0)
+                    & pl.col("lpd_vote").diff().fill_null(0).over("eeg_id").eq(0)
+                    & pl.col("gpd_vote").diff().fill_null(0).over("eeg_id").eq(0)
+                    & pl.col("lrda_vote").diff().fill_null(0).over("eeg_id").eq(0)
+                    & pl.col("grda_vote").diff().fill_null(0).over("eeg_id").eq(0)
+                    & pl.col("other_vote").diff().fill_null(0).over("eeg_id").eq(0)
+                ).not_()
+            ).alias("_is_changed")
+        )
+        .with_columns(
+            pl.col("_is_changed").cum_sum().over("eeg_id").alias("label_group_id"),
+        )
+        .with_columns(
+            pl.col("label_group_id")
+            .count()
+            .over("eeg_id")
+            .alias("num_label_groups_per_eeg"),
+            pl.cum_count()
+            .sub(0.5)
+            .over("eeg_id", "label_group_id")
+            .alias("_label_count"),
+        )
+        .with_columns(
+            pl.col("_label_count")
+            .median()
+            .over("eeg_id", "label_group_id")
+            .alias("_median_label_count")
+        )
+        .with_columns(
+            pl.col("_label_count")
+            .sub(pl.col("_median_label_count"))
+            .abs()
+            .lt(1)
+            .alias("is_sp_center")
+        )
+        .drop("_is_changed", "_label_count", "_median_label_count")
+    )
+    if only_use_sp_center:
+        metadata = metadata.filter(pl.col("is_sp_center"))
 
     total_votes = metadata.select(f"{label}_vote" for label in LABELS).fold(
         lambda s1, s2: s1 + s2
