@@ -152,17 +152,21 @@ def main(cfg: MainConfig):
     spec_dir = Path(working_dir / "preprocess" / cfg.phase / "spectrogram")
 
     metadata = pl.read_csv(data_dir / f"{cfg.phase}.csv")
-    metadata = process_label(
-        metadata,
-        population_power=cfg.trainer.label.population_power,
-        diversity_power=cfg.trainer.label.diversity_power,
-        max_votes=cfg.trainer.label.max_votes,
-    )
-
     fold_dir = Path(working_dir / "fold_split" / cfg.phase)
     fold_split_df = pl.read_parquet(fold_dir / "fold_split.pqt")
     train_df, valid_df = train_valid_split(metadata, fold_split_df, fold=cfg.fold)
+
+    # filer with SP center
+    train_df = process_label(
+        train_df,
+        only_use_sp_center=cfg.trainer.label.only_use_sp_center,
+    )
+    valid_df = process_label(
+        valid_df,
+        only_use_sp_center=cfg.trainer.val.only_use_sp_center,
+    )
     valid_df = valid_df.filter(pl.col("weight").ge(cfg.trainer.val.min_weight))
+
     if cfg.trainer.pseudo_label.ensemble_entity_name is not None:
         print(
             f"* injecting pseudo label from `{cfg.trainer.pseudo_label.ensemble_entity_name}`"

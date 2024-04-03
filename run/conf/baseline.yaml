@@ -58,6 +58,7 @@ trainer:
     seed: 123
     weight_exponent: 0.0
     min_weight: 0.3
+    only_use_sp_center: false
   scheduler:
     warmup_ratio: 0.0
   data:
@@ -79,6 +80,7 @@ trainer:
     max_votes: 28
     weight_key: [weight]
     label_postfix: [_prob]
+    only_use_sp_center: false
     schedule:
       weight_exponent:
         schedule_start_epoch: 0
