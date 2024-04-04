@@ -1,0 +1,45 @@
+defaults:
+  - baseline_v5
+  - architecture/model/eeg_adapter: eeg_dual_stacking_collator
+  - architecture/model/eeg_pre_adapter: time_cropping_1024
+  - architecture/model/eeg_encoder: efficientnet1d_yu4u
+  - architecture/model/eeg_feature_processor: eeg_dual_per_channel_v2
+  - override architecture/model/feature_extractor: channel_collator
+  - override architecture/model/head: mlp_head
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    feature_extractor:
+      apply_mask: false
+    augmentation:
+      _target_: src.model.augmentation.Cutmix1d
+      p: 0.5
+      alpha: 0.2
+    eeg_feature_processor:
+      num_eeg_channels: 10
+    eeg_encoder:
+      grad_checkpointing: true
+  hidden_dim: 128
+  model_class:
+    _target_: src.model.hms_model.hms_model_1d.HmsModel1d
+  model_checker:
+    _target_: src.model.hms_model.hms_model_1d.check_model
+  in_channels: 20
+
+trainer:
+  epochs: 16
+  lr: 3e-4
+  batch_size: 64
+  weight_decay: 0.01
+  label:
+    min_weight: 0.1
+    schedule:
+      min_weight:
+        schedule_start_epoch: 8
+        target_epoch: 8
+        initial_value: 0.0
+        target_value: 0.35
