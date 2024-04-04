@@ -160,13 +160,13 @@ def main(cfg: MainConfig):
     train_df = process_label(
         train_df,
         only_use_sp_center=cfg.trainer.label.only_use_sp_center,
+        min_weight=cfg.trainer.label.min_weight,
     )
     valid_df = process_label(
         valid_df,
         only_use_sp_center=cfg.trainer.val.only_use_sp_center,
+        min_weight=cfg.trainer.val.min_weight,
     )
-    train_df = train_df.filter(pl.col("weight").ge(cfg.trainer.label.min_weight))
-    valid_df = valid_df.filter(pl.col("weight").ge(cfg.trainer.val.min_weight))
 
     if cfg.trainer.pseudo_label.ensemble_entity_name is not None:
         print(
