@@ -51,6 +51,7 @@ class ConvBnAct2d(nn.Module):
         activation: type[nn.Module] = nn.ELU,
         drop_path_rate: float = 0.0,
         skip: bool = False,
+        momentum: float = 0.1,
     ):
         super().__init__()
         assert (
@@ -76,7 +77,7 @@ class ConvBnAct2d(nn.Module):
                 groups=groups,
                 bias=False,
             ),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, momentum=momentum),
             activation(inplace=True) if activation is not None else nn.Identity(),
         )
         self.drop_path = (
@@ -102,6 +103,7 @@ class DepthWiseSeparableConv(nn.Module):
         skip: bool = True,
         drop_path_rate: float = 0.0,
         se_after_dw_conv: bool = False,
+        momentum: float = 0.1,
     ):
         super().__init__()
         self.has_skip = skip
@@ -112,13 +114,18 @@ class DepthWiseSeparableConv(nn.Module):
                 kernel_size=kernel_size,
                 groups=hidden_dim,
                 activation=activation,
+                momentum=momentum,
             )
         ]
         if se_after_dw_conv:
             modules.append(
                 SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation)
             )
-        modules.append(ConvBnAct2d(hidden_dim, hidden_dim, activation=activation))
+        modules.append(
+            ConvBnAct2d(
+                hidden_dim, hidden_dim, activation=activation, momentum=momentum
+            )
+        )
         if not se_after_dw_conv:
             modules.append(
                 SqueezeExcite(hidden_dim, se_ratio=se_ratio, activation=activation)
@@ -148,18 +155,22 @@ class InvertedResidual(nn.Module):
         skip: bool = True,
         drop_path_rate: float = 0.0,
         se_after_dw_conv: bool = False,
+        momentum: float = 0.1,
     ):
         super().__init__()
         self.has_skip = skip
 
         modules: list[nn.Module] = [
-            ConvBnAct2d(hidden_dim, hidden_dim, activation=activation),
+            ConvBnAct2d(
+                hidden_dim, hidden_dim, activation=activation, momentum=momentum
+            ),
             ConvBnAct2d(
                 hidden_dim,
                 hidden_dim * depth_multiplier,
                 kernel_size=kernel_size,
                 groups=hidden_dim,
                 activation=activation,
+                momentum=momentum,
             ),
         ]
         if se_after_dw_conv:
@@ -175,6 +186,7 @@ class InvertedResidual(nn.Module):
                 hidden_dim * depth_multiplier,
                 hidden_dim,
                 activation=activation,
+                momentum=momentum,
             ),
         )
         if not se_after_dw_conv:
@@ -264,6 +276,7 @@ class EfficientNet1d(nn.Module):
         mixer_type: str = "sc",
         transformer_merge_type: str = "add",
         input_mask: bool = True,
+        momentum: float = 0.1,
     ):
         super().__init__()
         if isinstance(layers, int):
@@ -279,6 +292,7 @@ class EfficientNet1d(nn.Module):
         self.drop_path_rate = drop_path_rate
         self.real_in_channels = 2 if input_mask else 1
         self.num_eeg_channels = in_channels // self.real_in_channels
+        self.momentum = momentum
 
         self.stem_conv = ConvBnAct2d(
             self.real_in_channels,
@@ -286,6 +300,7 @@ class EfficientNet1d(nn.Module):
             kernel_size=(1, stem_kernel_size),
             activation=activation,
             drop_path_rate=drop_path_rate,
+            momentum=momentum,
         )
         self.efficient_net = nn.Sequential(
             *[
@@ -300,6 +315,7 @@ class EfficientNet1d(nn.Module):
                                 drop_path_rate=drop_path_rate,
                                 skip=skip_in_layer,
                                 se_after_dw_conv=se_after_dw_conv,
+                                momentum=momentum,
                             )
                             if i == 0 and use_ds_conv
                             else InvertedResidual(
@@ -311,6 +327,7 @@ class EfficientNet1d(nn.Module):
                                 drop_path_rate=drop_path_rate,
                                 skip=skip_in_layer,
                                 se_after_dw_conv=se_after_dw_conv,
+                                momentum=momentum,
                             )
                             for _ in range(nl)
                         ],
@@ -322,6 +339,7 @@ class EfficientNet1d(nn.Module):
                                 depth_multiplier=depth_multiplier,
                                 se_ratio=depth_multiplier,
                                 se_after_dw_conv=se_after_dw_conv,
+                                momentum=momentum,
                             )
                             if mixer_type == "ir"
                             else (
@@ -331,6 +349,7 @@ class EfficientNet1d(nn.Module):
                                     activation=activation,
                                     se_ratio=depth_multiplier,
                                     se_after_dw_conv=se_after_dw_conv,
+                                    momentum=momentum,
                                 )
                                 if mixer_type == "sc"
                                 else TransformerChannelMixer(
