@@ -10,10 +10,12 @@ NOTE: Implementing with 2D conv is 25~30% faster than 1D conv.
 2. 2D conv: 25.3 step/epoch (RTX 4090)
 """
 
+import torch
 import torch.nn as nn
 from einops import rearrange
 from timm.layers import DropPath
 from torch import Tensor
+from torch.utils.checkpoint import checkpoint
 
 from src.model.basic_block.transformer import SharedQkMultiHeadSelfAttention
 
@@ -277,6 +279,7 @@ class EfficientNet1d(nn.Module):
         transformer_merge_type: str = "add",
         input_mask: bool = True,
         momentum: float = 0.1,
+        grad_checkpointing: bool = False,
     ):
         super().__init__()
         if isinstance(layers, int):
@@ -293,6 +296,7 @@ class EfficientNet1d(nn.Module):
         self.real_in_channels = 2 if input_mask else 1
         self.num_eeg_channels = in_channels // self.real_in_channels
         self.momentum = momentum
+        self.grad_checkpointing = grad_checkpointing
 
         self.stem_conv = ConvBnAct2d(
             self.real_in_channels,
@@ -369,6 +373,10 @@ class EfficientNet1d(nn.Module):
             ]
         )
 
+    @torch.jit.unused
+    def set_grad_checkpointing(self, enable: bool = True):
+        self.grad_checkpointing = enable
+
     @property
     def out_channels(self) -> int:
         return self.hidden_dim
@@ -383,7 +391,13 @@ class EfficientNet1d(nn.Module):
         ]  # 中央の512 frame(12.8sec)に絞る
         x = rearrange(x, "b (c ch) t -> b c ch t", c=self.real_in_channels)
         x = self.stem_conv(x)
-        x = self.efficient_net(x)  # b c ch t
+
+        for layer in self.efficient_net:
+            if self.grad_checkpointing:
+                # save 20% VRAM, but 20% slower
+                x = checkpoint(layer, x, preserve_rng_state=True, use_reentrant=False)  # type: ignore
+            else:
+                x = layer(x)  # b c ch t
         x = rearrange(x, "(d b) c ch t -> (d ch b) c t", d=2, ch=self.num_eeg_channels)
         return x
 
