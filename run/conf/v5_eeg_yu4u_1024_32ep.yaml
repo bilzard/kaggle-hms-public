@@ -1,0 +1,19 @@
+defaults:
+  - baseline_v5_eeg_yu4u
+  - _self_
+
+exp_name: v5_eeg_yu4u_1024_32ep
+description: batch_size=64, frame=1024, 32ep
+
+
+trainer:
+  epochs: 32
+  lr: 3e-4
+  batch_size: 64
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 16
+        target_epoch: 16
+        initial_value: 0.0
+        target_value: 0.35
