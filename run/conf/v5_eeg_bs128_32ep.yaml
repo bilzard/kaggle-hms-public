@@ -1,0 +1,24 @@
+defaults:
+  - baseline_v5_eeg_cutmix
+  - _self_
+
+exp_name: v5_eeg_bs128_32ep
+description: batch_size=128, momentum=0.25, min_weight=0.1
+
+architecture:
+  model:
+    eeg_encoder:
+      momentum: 0.25
+
+trainer:
+  epochs: 32
+  batch_size: 128
+  weight_decay: 0.01
+  label:
+    min_weight: 0.1
+    schedule:
+      min_weight:
+        schedule_start_epoch: 24
+        target_epoch: 24
+        initial_value: 0.1
+        target_value: 0.35
