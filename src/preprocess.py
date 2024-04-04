@@ -203,6 +203,7 @@ def process_label(
     max_votes: int = 28,
     add_dummy_label: bool = False,
     only_use_sp_center: bool = False,
+    min_weight: float = 0.0,
 ) -> pl.DataFrame:
     if add_dummy_label:
         metadata = metadata.with_columns(
@@ -264,11 +265,12 @@ def process_label(
     total_votes = metadata.select(f"{label}_vote" for label in LABELS).fold(
         lambda s1, s2: s1 + s2
     )
+    metadata = metadata.with_columns(
+        pl.Series(total_votes).alias("total_votes"),
+    ).filter(pl.col("total_votes").ge(min_weight * max_votes))
+
     metadata = (
         metadata.with_columns(
-            pl.Series(total_votes).alias("total_votes"),
-        )
-        .with_columns(
             pl.col(f"{label}_vote").sum().over("eeg_id").alias(f"{label}_vote_per_eeg")
             for label in LABELS
         )
