@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from einops import rearrange
 from timm.layers import DropPath
 from torch import Tensor
+from torch.utils.checkpoint import checkpoint
 
 
 class GeMPool1d(nn.Module):
@@ -256,6 +257,7 @@ class EfficientNet1dYu4u(nn.Module):
         se_after_dw_conv: bool = False,
         channel_mixer_kernel_size: int = 3,
         input_mask: bool = True,
+        grad_checkpointing: bool = False,
     ):
         super().__init__()
         if isinstance(layers, int):
@@ -269,6 +271,7 @@ class EfficientNet1dYu4u(nn.Module):
         self.drop_path_rate = drop_path_rate
         self.real_in_channels = 2 if input_mask else 1
         self.num_eeg_channels = in_channels // self.real_in_channels
+        self.grad_checkpointing = grad_checkpointing
 
         self.stem_conv = ConvBnAct2d(
             self.real_in_channels,
@@ -278,8 +281,8 @@ class EfficientNet1dYu4u(nn.Module):
             drop_path_rate=drop_path_rate,
         )
 
-        self.efficient_net = nn.Sequential(
-            *[
+        self.layers = nn.ModuleList(
+            [
                 ResBlock2d(
                     in_channels=self.layer_num_to_channel(i),
                     out_channels=self.layer_num_to_channel(i + 1),
@@ -332,6 +335,10 @@ class EfficientNet1dYu4u(nn.Module):
         else:
             return int(hidden_dim * 2 ** ((i - 1) // 2) * 1.5)
 
+    @torch.jit.unused
+    def set_grad_checkpointing(self, enable: bool = True):
+        self.grad_checkpointing = enable
+
     @property
     def out_channels(self) -> int:
         return self.layer_num_to_channel(len(self.temporal_layers))
@@ -347,7 +354,12 @@ class EfficientNet1dYu4u(nn.Module):
         """
         x = rearrange(x, "b (c ch) t -> b c ch t", c=self.real_in_channels)
         x = self.stem_conv(x)
-        x = self.efficient_net(x)  # (d b) c ch t
+        for layer in self.layers:
+            if self.grad_checkpointing:
+                # save 20% VRAM, but 20% slower
+                x = checkpoint(layer, x, preserve_rng_state=True, use_reentrant=False)  # type: ignore
+            else:
+                x = layer(x)
         x = rearrange(x, "(d b) c ch t -> (d ch b) c t", d=2, ch=self.num_eeg_channels)
         return x
 
