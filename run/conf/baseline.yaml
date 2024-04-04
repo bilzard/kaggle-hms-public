@@ -81,6 +81,7 @@ trainer:
     weight_key: [weight]
     label_postfix: [_prob]
     only_use_sp_center: false
+    min_weight: 0.0
     schedule:
       weight_exponent:
         schedule_start_epoch: 0

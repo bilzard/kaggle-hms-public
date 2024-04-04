@@ -103,6 +103,7 @@ class LabelConfig:
     label_postfix: list[str]
     weight_key: list[str]
     only_use_sp_center: bool
+    min_weight: float
     schedule: WeightScheduleConfig
 
 
