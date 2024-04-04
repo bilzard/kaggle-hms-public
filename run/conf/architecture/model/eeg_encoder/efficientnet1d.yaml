@@ -16,3 +16,4 @@ use_channel_mixer: false
 channel_mixer_kernel_size: 3
 mixer_type: sc
 input_mask: true
+momentum: 0.1
