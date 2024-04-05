@@ -342,6 +342,7 @@ class EfficientNet1d(nn.Module):
                                 activation=activation,
                                 depth_multiplier=depth_multiplier,
                                 se_ratio=depth_multiplier,
+                                drop_path_rate=drop_path_rate,
                                 se_after_dw_conv=se_after_dw_conv,
                                 momentum=momentum,
                             )
@@ -352,6 +353,7 @@ class EfficientNet1d(nn.Module):
                                     kernel_size=(channel_mixer_kernel_size, 1),
                                     activation=activation,
                                     se_ratio=depth_multiplier,
+                                    drop_path_rate=drop_path_rate,
                                     se_after_dw_conv=se_after_dw_conv,
                                     momentum=momentum,
                                 )
