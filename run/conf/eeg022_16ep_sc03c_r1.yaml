@@ -1,0 +1,11 @@
+defaults:
+  - eeg022_16ep_sc03c
+  - _self_
+
+exp_name: eeg022_16ep_sc03c_r1
+description: eeg022_16ep_sc03c + down-sample after band pass filter
+
+architecture:
+  model:
+    feature_extractor:
+      down_sample_after_filter: true

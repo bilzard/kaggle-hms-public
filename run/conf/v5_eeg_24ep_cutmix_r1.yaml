@@ -1,0 +1,11 @@
+defaults:
+  - v5_eeg_24ep_cutmix
+  - _self_
+
+exp_name: v5_eeg_24ep_cutmix_r1
+description: v5_eeg_24ep_cutmix + down-sample after band pass filter
+
+architecture:
+  model:
+    feature_extractor:
+      down_sample_after_filter: true
