@@ -84,6 +84,7 @@ def process_single_eeg(
     apply_filter: bool,
     cutoff_freqs: tuple[float | None, float | None],
     reject_freq: float | None,
+    down_sampling_rate: int,
     drop_leftmost_nulls: bool,
     pad_mode: str,
     device: str,
@@ -93,6 +94,7 @@ def process_single_eeg(
     eeg_df = load_eeg(eeg_id, data_dir=data_dir, phase=phase)
     eeg, pad_mask = process_eeg(
         eeg_df,
+        down_sampling_rate=down_sampling_rate,
         clip_val=clip_val,
         apply_filter=apply_filter,
         cutoff_freqs=cutoff_freqs,
@@ -156,6 +158,7 @@ def preprocess_eeg(
             pad_mode=cfg.preprocess.pad_mode,
             device=cfg.preprocess.device,
             dry_run=cfg.dry_run,
+            down_sampling_rate=cfg.preprocess.down_sampling_rate,
         )
         with get_context("spawn").Pool(cfg.env.num_workers) as pool:
             print(f"Start processing eeg with {cfg.env.num_workers} workers.")
