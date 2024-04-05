@@ -77,12 +77,15 @@ class ChannelCollator(nn.Module):
             if not self.down_sample_after_filter:
                 eegs, eeg_masks = self.down_sample(eegs, eeg_masks)
 
+            sampling_rate = (
+                self.sampling_rate
+                if self.down_sample_after_filter
+                else self.sampling_rate // self.down_sample_rate
+            )
             if self.reject_freq is not None:
-                eegs = AF.bandreject_biquad(eegs, self.sampling_rate, self.reject_freq)
+                eegs = AF.bandreject_biquad(eegs, sampling_rate, self.reject_freq)
             if self.cutoff_freqs[0] is not None:
-                eegs = AF.highpass_biquad(
-                    eegs, self.sampling_rate, self.cutoff_freqs[0]
-                )
+                eegs = AF.highpass_biquad(eegs, sampling_rate, self.cutoff_freqs[0])
             if self.cutoff_freqs[1] is not None:
                 eegs = AF.lowpass_biquad(eegs, self.sampling_rate, self.cutoff_freqs[1])
 
