@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v8_eeg_yu4u
+  - _self_
+
+exp_name: v8_eeg_yu4u_ds2_24ep
+description: baseline_v8_eeg_yu4u

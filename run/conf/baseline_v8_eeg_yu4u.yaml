@@ -1,0 +1,57 @@
+defaults:
+  - baseline_v5
+  - architecture/model/eeg_pre_adapter: time_cropping_ds2_1024
+  - architecture/model/eeg_feature_processor: eeg_dual_per_channel_v2
+  - architecture/model/eeg_adapter: eeg_dual_stacking_collator
+  - architecture/model/eeg_encoder: efficientnet1d_yu4u_ds2
+  - override architecture/model/feature_extractor: channel_collator_ds2
+  - override architecture/model/head: mlp_head
+  - _self_
+
+exp_name: ???
+description: ???
+
+architecture:
+  model:
+    feature_extractor:
+      sampling_rate: 200
+      cutoff_freqs: [0.5, 50]
+      down_sample_rate: 2
+      down_sample_after_filter: true
+      apply_mask: false
+    augmentation:
+      _target_: src.model.augmentation.Mixup1d
+      p: 0.5
+      alpha: 0.2
+    eeg_encoder:
+      se_after_dw_conv: true
+      drop_path_rate: 0.2
+    eeg_feature_processor:
+      num_eeg_channels: 10
+  model_class:
+    _target_: src.model.hms_model.hms_model_1d.HmsModel1d
+  model_checker:
+    _target_: src.model.hms_model.hms_model_1d.check_model
+  in_channels: 20
+
+trainer:
+  epochs: 24
+  weight_decay: 0.01
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 16
+        target_epoch: 16
+        initial_value: 0.0
+        target_value: 0.28
+  transform:
+    _target_: src.transform.Compose
+    transforms:
+      - _target_: src.transform.SwapLr
+        p: 0.5
+      - _target_: src.transform.ChannelPermutation
+        p: 0.3
+      - _target_: src.transform.Cutout1d
+        p: 0.3
+        max_length: 256
+        num_cutouts: 4
