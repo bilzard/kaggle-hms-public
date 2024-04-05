@@ -95,8 +95,8 @@ def check_model(
 
     model.train()
     model = model.to(device)
-    eeg = torch.randn(2, 2048, 19).to(device)
-    cqf = torch.randn(2, 2048, 19).to(device)
+    eeg = torch.randn(2, 10240, 19).to(device)
+    cqf = torch.randn(2, 10240, 19).to(device)
     weight = torch.randn(2, 1).to(device)
     label = torch.randn(2, 6).to(device)
     batch = dict(eeg=eeg, cqf=cqf, weight=weight, label=label)

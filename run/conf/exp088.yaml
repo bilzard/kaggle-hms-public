@@ -18,4 +18,4 @@ architecture:
   lr_mapping_type: max-min
 
 trainer:
-  duration: 2048
+  duration: 10240

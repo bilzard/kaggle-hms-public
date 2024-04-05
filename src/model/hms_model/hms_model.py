@@ -148,8 +148,8 @@ def check_model(
 
     model.train()
     model = model.to(device)
-    eeg = torch.randn(2, 2048, 19).to(device)
-    cqf = torch.randn(2, 2048, 19).to(device)
+    eeg = torch.randn(2, 10240, 19).to(device)
+    cqf = torch.randn(2, 10240, 19).to(device)
     bg_spec = torch.randn(2, 4, 100, 256).to(device)
     weight = torch.randn(2, 2).to(device)
     label = torch.randn(2, 2, 6).to(device)

@@ -19,6 +19,7 @@ class Wave2Panns(nn.Module):
 
     def __init__(
         self,
+        channel_collator: nn.Module,
         wavegram: nn.Module,
         wave2spec: nn.Module,
         cutoff_freqs: tuple[float, float] = (0.5, 50),
@@ -38,11 +39,7 @@ class Wave2Panns(nn.Module):
         self.win_length = wave2spec.win_length
         self.hop_length = wave2spec.hop_length
 
-        self.collate_channels = ChannelCollator(
-            sampling_rate=wave2spec.sampling_rate,
-            cutoff_freqs=cutoff_freqs,
-            apply_mask=apply_mask,
-        )
+        self.collate_channels = channel_collator
         self.wavegram = wavegram
         self.wave2spec = wave2spec
 
@@ -130,12 +127,14 @@ if __name__ == "__main__":
     from src.model.feature_extractor.module import MelSpec, Wavegram
 
     batch_size = 2
-    num_frames = 2048
+    num_frames = 10240
     num_probes = 19
     num_channels = num_probes - 1
     num_filter_banks = 64
     hidden_dims = [64, 64, 64, 128, 128]
+    original_sampling_rate = 200
     sampling_rate = 40
+    down_sample_rate = 5
     n_fft = 256
     win_length = 64
     hop_length = 16
@@ -152,21 +151,27 @@ if __name__ == "__main__":
     wave2spec = MelSpec(
         n_fft=n_fft, win_length=win_length, hop_length=hop_length, n_mels=n_mels
     )
+    channel_collator = ChannelCollator(
+        sampling_rate=original_sampling_rate,
+        cutoff_freqs=(0.5, 50),
+        apply_mask=True,
+        down_sample_rate=down_sample_rate,
+    )
     print(wave2spec)
 
-    model = Wave2Panns(wavegram, wave2spec)
+    model = Wave2Panns(channel_collator, wavegram, wave2spec)
     output = model(eeg, mask)
     assert output["spec"].shape == (
         batch_size,
         num_channels,
         n_mels + num_filter_banks,
-        num_frames // hop_length,
+        num_frames // down_sample_rate // hop_length,
     ), f"{output['spec'].shape=}"
     assert output["spec_mask"].shape == (
         batch_size,
         num_channels,
         n_mels + num_filter_banks,
-        num_frames // hop_length,
+        num_frames // down_sample_rate // hop_length,
     ), f"{output['spec_mask'].shape=}"
     print("spec", output["spec"].shape)
     print("spec_mask", output["spec_mask"].shape)

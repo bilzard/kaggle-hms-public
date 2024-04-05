@@ -1,4 +1,12 @@
 _target_: src.model.feature_extractor.Wave2Wavegram
+channel_collator:
+  _target_: src.model.feature_extractor.ChannelCollator
+  sampling_rate: 200
+  cutoff_freqs: ${architecture.model.feature_extractor.cutoff_freqs}
+  apply_mask: ${architecture.model.feature_extractor.apply_mask}
+  down_sample_rate: 5
+  down_sample_after_filter: false
+  reject_freq: null
 wavegram:
   _target_: src.model.feature_extractor.module.Wavegram
   in_channels: 1

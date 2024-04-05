@@ -19,6 +19,7 @@ class Wave2Wavegram(nn.Module):
 
     def __init__(
         self,
+        channel_collator: nn.Module,
         wavegram: nn.Module,
         sampling_rate: int = 40,
         win_length: int = 64,
@@ -42,11 +43,7 @@ class Wave2Wavegram(nn.Module):
 
         self._frozen = False
 
-        self.collate_channels = ChannelCollator(
-            sampling_rate=sampling_rate,
-            cutoff_freqs=cutoff_freqs,
-            apply_mask=apply_mask,
-        )
+        self.collate_channels = channel_collator
         self.wavegram = wavegram
         self.spec_aug = torch.nn.Sequential(
             FrequencyMasking(freq_mask_param),
@@ -148,12 +145,14 @@ if __name__ == "__main__":
     from src.model.feature_extractor.module import Wavegram
 
     batch_size = 2
-    num_frames = 2048
+    num_frames = 10240
     num_probes = 19
     num_channels = num_probes - 1
     num_filter_banks = 64
     hidden_dims = [64, 64, 64, 128, 128]
     win_length = 64
+    original_sampling_rate = 200
+    down_sample_rate = 5
 
     for out_channels in [1, 8]:
         eeg = torch.randn(batch_size, num_frames, num_probes)
@@ -164,8 +163,14 @@ if __name__ == "__main__":
             hidden_dims=hidden_dims,
             num_filter_banks=num_filter_banks,
         )
-
+        channel_collator = ChannelCollator(
+            sampling_rate=original_sampling_rate,
+            cutoff_freqs=(0.5, 50),
+            apply_mask=True,
+            down_sample_rate=down_sample_rate,
+        )
         model = Wave2Wavegram(
+            channel_collator,
             wavegram,
             win_length=win_length,
         )
@@ -174,7 +179,7 @@ if __name__ == "__main__":
             batch_size * out_channels,
             num_channels,
             num_filter_banks,
-            num_frames // 2 ** (len(hidden_dims) - 1),
+            num_frames // down_sample_rate // 2 ** (len(hidden_dims) - 1),
         ), output["spec"].shape
 
     summary(model, input_size=(batch_size, num_frames, num_probes))

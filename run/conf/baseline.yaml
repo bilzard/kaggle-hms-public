@@ -47,7 +47,7 @@ trainer:
   batch_size: 32
   save_last: true
   save_best: false
-  duration: 2048
+  duration: 10240
   no_decay_bias_params: false
   val:
     batch_size: 32

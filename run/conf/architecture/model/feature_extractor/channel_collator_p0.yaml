@@ -1,5 +1,5 @@
 _target_: src.model.feature_extractor.ChannelCollator
-sampling_rate: 40
+sampling_rate: 200
 cutoff_freqs: [0.5, 50]
 apply_mask: true
 probe_groups:
@@ -13,3 +13,5 @@ probe_groups:
     CR: [T4, C4, Cz]
     PR: [T6, P4, Pz]
     RP: [T6, O2]
+down_sample_rate: 5
+down_sample_after_filter: false

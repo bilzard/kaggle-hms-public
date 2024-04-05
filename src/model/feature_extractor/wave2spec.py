@@ -97,8 +97,10 @@ if __name__ == "__main__":
     batch_size = 2
     num_probes = 19
     num_channels = num_probes - 1
-    num_frames = 2048
+    num_frames = 10240
+    original_sampling_rate = 200
     sampling_rate = 40
+    down_sample_rate = 5
     n_fft = 256
     win_length = 64
     hop_length = 16
@@ -106,7 +108,10 @@ if __name__ == "__main__":
     mask = torch.randn(batch_size, num_frames, num_probes)
     wave2spec = MelSpec(n_fft=n_fft, win_length=win_length, hop_length=hop_length)
     channel_collator = ChannelCollator(
-        sampling_rate=sampling_rate, cutoff_freqs=(0.5, 50), apply_mask=True
+        sampling_rate=original_sampling_rate,
+        cutoff_freqs=(0.5, 50),
+        apply_mask=True,
+        down_sample_rate=down_sample_rate,
     )
     print(wave2spec)
     model = Wave2Spectrogram(channel_collator, wave2spec)
@@ -115,12 +120,12 @@ if __name__ == "__main__":
         batch_size,
         num_channels,
         n_fft // 2,
-        num_frames // hop_length,
-    )
+        num_frames // down_sample_rate // hop_length,
+    ), f"{output['spec'].shape=}"
     assert output["spec_mask"].shape == (
         batch_size,
         num_channels,
         n_fft // 2,
-        num_frames // hop_length,
+        num_frames // down_sample_rate // hop_length,
     ), f"{output['spec_mask'].shape=}"
     summary(model, input_size=(batch_size, num_frames, num_probes))
