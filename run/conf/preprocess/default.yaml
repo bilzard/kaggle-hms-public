@@ -6,4 +6,4 @@ reject_freq: null
 drop_leftmost_nulls: false
 pad_mode: constant
 device: cuda
-down_sampling_rate: 5
+down_sampling_rate: 1
