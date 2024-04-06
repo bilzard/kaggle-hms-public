@@ -1,4 +1,5 @@
 from .collate import (
+    EegDualPartialStackingCollator,
     EegDualPerChannelCollator,
     EegDualStackingCollator,
     EegHorizontalDualStackingCollator,
@@ -12,6 +13,7 @@ __all__ = [
     "EegDualPerChannelCollator",
     "EegDualStackingCollator",
     "EegHorizontalDualStackingCollator",
+    "EegDualPartialStackingCollator",
     "Compose",
     "MuLawEncoding",
     "EegTimeCroppingTransform",

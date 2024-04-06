@@ -4,6 +4,81 @@ from einops import rearrange
 from torch import Tensor
 
 
+def dual_partial_stack_eeg_channels(
+    x: Tensor, xm: Tensor, drop_z: bool = False, eps: float = 1e-5
+) -> tuple[Tensor, Tensor]:
+    """
+    channelグループとにまとめる
+
+    spec: b ch t
+    mask: b ch t
+
+    Return:
+    spec: (d b) ch g t
+    mask: (d b) ch g t
+    """
+    ll = x[:, 0:4].unsqueeze(dim=2)  # b ch 1 t
+    lp = x[:, 4:8].unsqueeze(dim=2)  # b ch 1 t
+    z = x[:, 8:10].unsqueeze(dim=2)  # b ch 1 t
+    rp = x[:, 10:14].unsqueeze(dim=2)  # b ch 1 t
+    rl = x[:, 14:18].unsqueeze(dim=2)  # b ch 1 t
+
+    llm = xm[:, 0:4].unsqueeze(dim=2)  # b ch 1 t
+    lpm = xm[:, 4:8].unsqueeze(dim=2)  # b ch 1 t
+    zm = xm[:, 8:10].unsqueeze(dim=2)  # b ch 1 t
+    rpm = xm[:, 10:14].unsqueeze(dim=2)  # b ch 1 t
+    rlm = xm[:, 14:18].unsqueeze(dim=2)  # b ch 1 t
+
+    z_diff = (z[:, 0] - z[:, 1]).abs()
+    z_wgt = z[:, 0] * zm[:, 0] + z[:, 1] * zm[:, 1] / (zm[:, 0] + zm[:, 1] + eps)
+
+    z_feat = torch.stack([z_diff, z_wgt], dim=1)
+    zz = torch.cat([z, z_feat], dim=1)  # b ch 1 t
+
+    zm_min = zm[:, 0].min(zm[:, 1])
+    zm_max = zm[:, 0].max(zm[:, 1])
+    zm_feat = torch.stack([zm_min, zm_max], dim=1)
+    zzm = torch.cat([zm, zm_feat], dim=1)  # b ch 1 t
+
+    if not drop_z:
+        left = torch.cat([ll, lp, zz], dim=2)  # b ch g t
+        right = torch.cat([rl, rp, zz], dim=2)  # b ch g t
+        left_mask = torch.cat([llm, lpm, zzm], dim=2)  # b ch g t
+        right_mask = torch.cat([rlm, rpm, zzm], dim=2)  # b ch g t
+    else:
+        left = torch.cat([ll, lp], dim=2)  # b ch g t
+        right = torch.cat([rl, rp], dim=2)  # b ch g t
+        left_mask = torch.cat([llm, lpm], dim=2)  # b ch g t
+        right_mask = torch.cat([rlm, rpm], dim=2)  # b ch g t
+
+    x = torch.stack([left, right], dim=0)  # d b ch g t
+    xm = torch.stack([left_mask, right_mask], dim=0)  # d b ch g t
+
+    return x, xm
+
+
+class EegDualPartialStackingCollator(nn.Module):
+    def __init__(self, drop_z: bool = False):
+        super().__init__()
+        self.drop_z = drop_z
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(drop_z={self.drop_z})"
+
+    def forward(self, eeg: Tensor, eeg_mask: Tensor) -> tuple[Tensor, Tensor]:
+        """
+        output:
+        eeg: (d b) (ch g) t
+        eeg_mask: (d b) (ch g) t
+        """
+        eeg, eeg_mask = dual_partial_stack_eeg_channels(
+            eeg, eeg_mask, drop_z=self.drop_z
+        )
+        eeg = rearrange(eeg, "d b ch g t -> (d b) (ch g) t")
+        eeg_mask = rearrange(eeg_mask, "d b ch g t -> (d b) (ch g) t")
+        return eeg, eeg_mask
+
+
 def dual_stack_eeg_channels(x: Tensor, drop_z: bool = False) -> Tensor:
     """
     spec: (b, 18, t)

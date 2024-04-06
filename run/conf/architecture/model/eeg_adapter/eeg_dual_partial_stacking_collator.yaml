@@ -1,0 +1,2 @@
+_target_: src.model.eeg_adapter.EegDualPartialStackingCollator
+drop_z: false
