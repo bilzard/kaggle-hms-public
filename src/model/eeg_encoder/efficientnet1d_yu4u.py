@@ -258,6 +258,7 @@ class EfficientNet1dYu4u(nn.Module):
         channel_mixer_kernel_size: int = 3,
         input_mask: bool = True,
         grad_checkpointing: bool = False,
+        input_planes: int = 1,
     ):
         super().__init__()
         if isinstance(layers, int):
@@ -269,7 +270,7 @@ class EfficientNet1dYu4u(nn.Module):
         self.temporal_pool_sizes = pool_sizes
         self.temporal_layers = layers
         self.drop_path_rate = drop_path_rate
-        self.real_in_channels = 2 if input_mask else 1
+        self.real_in_channels = 2 * input_planes if input_mask else input_planes
         self.num_eeg_channels = in_channels // self.real_in_channels
         self.grad_checkpointing = grad_checkpointing
 
