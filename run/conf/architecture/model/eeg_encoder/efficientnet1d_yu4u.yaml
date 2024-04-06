@@ -11,4 +11,5 @@ drop_path_rate: 0.0
 use_ds_conv: false
 se_after_dw_conv: false
 channel_mixer_kernel_size: 3
-input_mask: true
+input_mask: ${architecture.input_mask}
+input_planes: 1

@@ -15,5 +15,6 @@ se_after_dw_conv: false
 use_channel_mixer: false
 channel_mixer_kernel_size: 3
 mixer_type: sc
-input_mask: true
+input_mask: ${architecture.input_mask}
 momentum: 0.1
+input_planes: 1
