@@ -35,7 +35,7 @@ python -m run.train --config-name=exp081 job_name=train fold=0 seed=0
 #### Batch execution
 
 ```bash
-python schedule.py train --config_names=exp081 --folds=0,1,2 --seeds=0,1,2
+python schedule.py train --config_names=exp081 --folds=0,1,2,3,4 --seeds=0,1,2
 ```
 
 ### Inference
@@ -49,7 +49,7 @@ python -m run.infer --config-name=exp081 job_name=infer fold=0 seed=0
 #### Batch execution
 
 ```bash
-python schedule.py infer --config_names=exp081 --folds=0,1,2 --seeds=0,1,2
+python schedule.py infer --config_names=exp081 --folds=0,1,2,3,4 --seeds=0,1,2
 ```
 
 #### Ensemble
