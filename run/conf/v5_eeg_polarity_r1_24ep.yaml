@@ -1,0 +1,16 @@
+defaults:
+  - baseline_v5_eeg_polarity_r1
+  - _self_
+
+exp_name: v5_eeg_polarity_r1_24ep
+description: w polarity feat (late fusion)
+
+trainer:
+  epochs: 24
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 16
+        target_epoch: 16
+        initial_value: 0.0
+        target_value: 0.3

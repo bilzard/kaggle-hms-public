@@ -1,6 +1,7 @@
 from .eeg_net import EegNet
 from .efficientnet1d import EfficientNet1d
 from .efficientnet1d_polarity import EfficientNet1dPolarity
+from .efficientnet1d_polarity_r1 import EfficientNet1dPolarityR1
 from .efficientnet1d_v2 import EfficientNet1dV2
 from .efficientnet1d_yu4u import EfficientNet1dYu4u
 from .resnet1d import ResNet1d
@@ -14,4 +15,5 @@ __all__ = [
     "EfficientNet1dV2",
     "EfficientNet1dYu4u",
     "EfficientNet1dPolarity",
+    "EfficientNet1dPolarityR1",
 ]

@@ -1,0 +1,22 @@
+_target_: src.model.eeg_encoder.EfficientNet1dPolarityR1
+hidden_dim: 64
+depth_multiplier: 4
+stem_kernel_size: 3
+kernel_sizes: [3, 3, 5, 5, 3]
+pool_sizes: [2, 2, 2, 2, 2]
+layers: 3
+frame_offset: 744 # 800 - (512 - 400) // 2
+num_frames: 512
+skip_in_block: true
+skip_in_layer: false
+drop_path_rate: 0.0
+use_ds_conv: false
+se_after_dw_conv: false
+use_channel_mixer: false
+channel_mixer_kernel_size: 3
+mixer_type: sc
+input_mask: ${architecture.input_mask}
+momentum: 0.1
+input_planes: 1
+polarity_window_size: 17
+polarity_stride: 1
