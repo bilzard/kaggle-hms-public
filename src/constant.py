@@ -33,23 +33,3 @@ IDX2PROBE = {v: k for k, v in PROBE2IDX.items()}
 PROBES = list(PROBE2IDX.keys())
 EEG_PROBES = PROBES[:-1]
 KEG_PROBE = PROBES[-1]
-EEG_PROBE_PAIRS = [
-    ("Fp1", "F7"),
-    ("F7", "T3"),
-    ("T3", "T5"),
-    ("T5", "O1"),
-    ("Fp1", "F3"),
-    ("F3", "C3"),
-    ("C3", "P3"),
-    ("P3", "O1"),
-    ("Fp2", "F8"),
-    ("F8", "T4"),
-    ("T4", "T6"),
-    ("T6", "O2"),
-    ("Fp2", "F4"),
-    ("F4", "C4"),
-    ("C4", "P4"),
-    ("P4", "O2"),
-    ("Fz", "Cz"),
-    ("Cz", "Pz"),
-]
