@@ -1,0 +1,11 @@
+defaults:
+  - baseline_v5_eeg_finetune
+  - _self_
+
+exp_name: v5_eeg_pt_cw_16ep_ft_8ep
+description: pretrain 16ep w balanced class weight + finetune 8ep
+trainer:
+  pretrained_weight:
+    exp_name: v5_eeg_pt_cw_16ep
+    seed: ${seed}
+    model_choice: last

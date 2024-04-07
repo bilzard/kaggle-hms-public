@@ -1,0 +1,11 @@
+defaults:
+  - baseline_v5_eeg_pretrain
+  - _self_
+
+exp_name: v5_eeg_pt_cw_16ep
+description: pretrain 16ep + balanced class weight
+
+trainer:
+  epochs: 16
+  class_weights: [6.54, 7.02, 9.61, 15.29, 8.71, 2.38]
+  class_weight_exponent: 1.0

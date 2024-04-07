@@ -1,0 +1,9 @@
+defaults:
+  - baseline_v5_eeg_pretrain
+  - _self_
+
+exp_name: v5_eeg_pt_16ep
+description: pretrain 16ep
+
+trainer:
+  epochs: 16

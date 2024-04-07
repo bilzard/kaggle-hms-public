@@ -1,0 +1,6 @@
+defaults:
+  - baseline_v5_eeg_pretrain
+  - _self_
+
+exp_name: v5_eeg_pt_8ep
+description: pretrain 8ep

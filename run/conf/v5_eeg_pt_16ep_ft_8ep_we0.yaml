@@ -1,0 +1,18 @@
+defaults:
+  - baseline_v5_eeg_finetune
+  - _self_
+
+exp_name: v5_eeg_pt_16ep_ft_8ep_we0
+description: finetune 8ep + weight exponent=0
+trainer:
+  label:
+    schedule:
+      weight_exponent:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 0.0
+        target_value: 0.0
+  pretrained_weight:
+    exp_name: v5_eeg_pt_16ep
+    seed: ${seed}
+    model_choice: last

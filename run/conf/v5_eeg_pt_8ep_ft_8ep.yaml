@@ -1,0 +1,11 @@
+defaults:
+  - baseline_v5_eeg_finetune
+  - _self_
+
+exp_name: v5_eeg_pt_8ep_ft_8ep
+description: finetune 8ep
+trainer:
+  pretrained_weight:
+    exp_name: v5_eeg_pt_8ep
+    seed: ${seed}
+    model_choice: last
