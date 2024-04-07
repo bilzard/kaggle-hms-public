@@ -305,6 +305,18 @@ def main(cfg: MainConfig):
                 teacher_model = None
 
             model = get_model(cfg.architecture)
+
+            if cfg.trainer.pretrained_weight.exp_name:
+                weight_path = (
+                    Path(cfg.env.checkpoint_dir)
+                    / cfg.trainer.pretrained_weight.exp_name
+                    / f"fold_{cfg.fold}"
+                    / f"seed_{cfg.trainer.pretrained_weight.seed}"
+                    / "model"
+                    / f"{cfg.trainer.pretrained_weight.model_choice}_model.pth"
+                )
+                load_checkpoint(model, weight_path)
+
             model.to(device="cuda")
             trainer = instantiate(
                 cfg.trainer.trainer_class,

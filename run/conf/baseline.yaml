@@ -122,6 +122,10 @@ trainer:
     binary_threshold: 0.3
     freeze_epoch: .inf
   feature_extractor_freeze_epoch: .inf
+  pretrained_weight:
+    exp_name: null
+    seed: null
+    model_choice: last
 
 architecture:
   model:

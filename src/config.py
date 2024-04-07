@@ -166,6 +166,13 @@ class AuxLossConfig:
 
 
 @dataclass
+class PretrainedWeightConfig:
+    exp_name: str
+    seed: int
+    model_choice: str
+
+
+@dataclass
 class TrainerConfig:
     trainer_class: DictConfig
     epochs: int
@@ -184,6 +191,7 @@ class TrainerConfig:
     class_weight_exponent: float
     use_loss_weights: bool
     feature_extractor_freeze_epoch: int
+    pretrained_weight: PretrainedWeightConfig
     transform: DictConfig | None
     train_dataset: DictConfig
     valid_dataset: DictConfig
