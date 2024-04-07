@@ -307,6 +307,7 @@ def main(cfg: MainConfig):
             model = get_model(cfg.architecture)
 
             if cfg.trainer.pretrained_weight.exp_name:
+                print(f"load pretrained weight from {cfg.trainer.pretrained_weight}")
                 weight_path = (
                     Path(cfg.env.checkpoint_dir)
                     / cfg.trainer.pretrained_weight.exp_name
