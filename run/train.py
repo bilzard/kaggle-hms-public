@@ -64,6 +64,39 @@ def load_config(config_name: str, parent_cfg: MainConfig) -> MainConfig:
     return cast(MainConfig, cfg)
 
 
+def get_samples(sample_dataset):
+    eeg_ids = []
+    eegs = []
+    cqfs = []
+    labels = []
+    weights = []
+    bg_specs = []
+
+    for sample in sample_dataset:
+        eeg_ids.append(sample["eeg_id"])
+        eegs.append(sample["eeg"])
+        cqfs.append(sample["cqf"])
+        labels.append(sample["label"])
+        weights.append(sample["weight"])
+        if "bg_spec" in sample:
+            bg_specs.append(sample["bg_spec"])
+
+    eeg_ids = torch.from_numpy(np.array(eeg_ids))
+    eeg = torch.from_numpy(np.stack(eegs))
+    cqf = torch.from_numpy(np.stack(cqfs))
+    weight = torch.from_numpy(np.stack(weights))
+    label = torch.from_numpy(np.stack(labels))
+    batch = dict(eeg_id=eeg_ids, eeg=eeg, cqf=cqf, label=label, weight=weight)
+
+    if len(bg_specs) > 0:
+        bg_spec = (
+            torch.from_numpy(np.stack(bg_specs)) if len(bg_specs) is not None else None
+        )
+        batch["bg_spec"] = bg_spec  # type: ignore
+
+    return batch
+
+
 @torch.no_grad()
 def save_sample_spec(
     cfg: MainConfig,
@@ -100,24 +133,7 @@ def save_sample_spec(
         transform_enabled=True,
         transform=instantiate(cfg.trainer.transform) if cfg.trainer.transform else None,
     )
-    eeg_ids = [sample["eeg_id"] for sample in sample_dataset]
-    eeg = torch.stack([torch.from_numpy(sample["eeg"]) for sample in sample_dataset])
-    cqf = torch.stack([torch.from_numpy(sample["cqf"]) for sample in sample_dataset])
-    label = torch.stack(
-        [torch.from_numpy(sample["label"]) for sample in sample_dataset]
-    )
-    weight = torch.stack(
-        [torch.from_numpy(sample["weight"]) for sample in sample_dataset]
-    )
-    bg_spec = (
-        torch.stack([torch.from_numpy(sample["bg_spec"]) for sample in sample_dataset])
-        if cfg.architecture.use_bg_spec
-        else None
-    )
-    batch = dict(eeg=eeg, cqf=cqf, label=label, weight=weight)
-    if bg_spec is not None:
-        batch |= dict(bg_spec=bg_spec)
-
+    batch = get_samples(sample_dataset)
     input_keys = cfg.trainer.data.input_keys + ["label", "weight"]
     move_device(batch, input_keys=input_keys, device=device)
 
@@ -126,6 +142,7 @@ def save_sample_spec(
         return
 
     output = model.preprocess(batch)
+    eeg_ids = batch["eeg_id"]
     eegs = output.get("eeg", None)
     specs = output.get("spec", None)
 
