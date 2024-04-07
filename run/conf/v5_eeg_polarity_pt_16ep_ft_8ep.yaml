@@ -1,0 +1,11 @@
+defaults:
+  - baseline_v5_eeg_polarity_ft
+  - _self_
+
+exp_name: v5_eeg_polarity_pt_16ep_ft_8ep
+description: w polarity pretrain 16ep + finetune 8ep
+trainer:
+  pretrained_weight:
+    exp_name: v5_eeg_polarity_pt_16ep
+    seed: ${seed}
+    model_choice: last

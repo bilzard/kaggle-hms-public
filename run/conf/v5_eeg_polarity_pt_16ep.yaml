@@ -1,0 +1,9 @@
+defaults:
+  - baseline_v5_eeg_polarity_pt
+  - _self_
+
+exp_name: v5_eeg_polarity_pt_16ep
+description: w polarity pretrain 16ep
+
+trainer:
+  epochs: 16

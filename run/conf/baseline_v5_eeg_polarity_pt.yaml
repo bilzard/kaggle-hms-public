@@ -1,0 +1,16 @@
+defaults:
+  - baseline_v5_eeg_polarity
+  - _self_
+
+exp_name: ???
+description: ???
+
+trainer:
+  epochs: 8
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 0.0
+        target_value: 0.0
