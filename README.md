@@ -66,8 +66,16 @@ python -m run.batch_infer job_name=ensemble ensemble_entity=f01234_s012 ensemble
 
 ### Generate Pseudo Labels
 
+#### per eeg_id
+
 ```bash
 python -m run.pseudo_label job_name=pseudo_label ensemble_entity=f01234_s012 ensemble_entity.name=exp081_8ep_sc03
+```
+
+#### per label_id
+
+```bash
+python -m run.pseudo_label_per_label job_name=pseudo_label_per_label ensemble_entity=f01234_s012 ensemble_entity.name=exp081_8ep_sc03
 ```
 
 ### Upload Checkpoints
