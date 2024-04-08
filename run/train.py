@@ -16,6 +16,7 @@ from torch.utils.data import WeightedRandomSampler
 
 from src.callback import MetricsLogger, SaveModelCheckpoint
 from src.config import MainConfig
+from src.constant import LABELS
 from src.data_util import (
     preload_cqf,
     preload_eegs,
@@ -28,7 +29,7 @@ from src.preprocess import (
 )
 from src.proc_util import trace
 from src.random_util import seed_everything, seed_worker
-from src.train_util import check_model, get_model, inject_pseudo_labels, move_device
+from src.train_util import check_model, get_model, make_pseudo_label, move_device
 
 
 def load_checkpoint(
@@ -176,6 +177,7 @@ def main(cfg: MainConfig):
     train_df, valid_df = train_valid_split(metadata, fold_split_df, fold=cfg.fold)
 
     # filer with SP center
+    train_df_org = train_df
     train_df = process_label(
         train_df,
         only_use_sp_center=cfg.trainer.label.only_use_sp_center,
@@ -186,16 +188,39 @@ def main(cfg: MainConfig):
         only_use_sp_center=cfg.trainer.val.only_use_sp_center,
         min_weight=cfg.trainer.val.min_weight,
     )
+    train_df = train_df.with_columns(pl.lit(False).alias("is_pl"))
+    valid_df = valid_df.with_columns(pl.lit(False).alias("is_pl"))
 
-    if cfg.trainer.pseudo_label.ensemble_entity_name is not None:
-        print(
-            f"* injecting pseudo label from `{cfg.trainer.pseudo_label.ensemble_entity_name}`"
-        )
+    if cfg.trainer.pseudo_label.name is not None:
+        print(f"* injecting pseudo label from `{cfg.trainer.pseudo_label.name}`")
         pseudo_label_path = Path(
-            working_dir / "pseudo_label" / cfg.trainer.pseudo_label.ensemble_entity_name
+            working_dir / "pseudo_label_per_label" / cfg.trainer.pseudo_label.name
         )
-        train_df = inject_pseudo_labels(
-            train_df, cfg.trainer.pseudo_label, pseudo_label_path
+        pseudo_label_df = make_pseudo_label(
+            train_df_org,
+            pseudo_label_path,
+            num_votes=cfg.trainer.pseudo_label.num_votes,
+        )
+        pseudo_label_df = process_label(
+            pseudo_label_df,
+            only_use_sp_center=cfg.trainer.label.only_use_sp_center,
+            min_weight=cfg.trainer.label.min_weight,
+        )
+        print(train_df.select("label_id", *[f"{label}_prob" for label in LABELS]))
+        print(
+            pseudo_label_df.select("label_id", *[f"{label}_prob" for label in LABELS])
+        )
+        pseudo_label_df = pseudo_label_df.with_columns(pl.lit(True).alias("is_pl"))
+
+        if cfg.trainer.pseudo_label.mode == "concat":
+            train_df = pl.concat([train_df, pseudo_label_df])
+        elif cfg.trainer.pseudo_label.mode == "replace":
+            train_df = pseudo_label_df
+
+        print(
+            train_df.select(
+                "label_id", *[f"{label}_prob" for label in LABELS], "weight", "is_pl"
+            )
         )
 
     with trace("load eeg"):

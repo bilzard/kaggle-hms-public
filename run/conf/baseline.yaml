@@ -134,10 +134,9 @@ trainer:
     norm_policy: relative
     global_mean: 0.227
   pseudo_label:
-    ensemble_entity_name: null
-    weight: 0.5
-    injection_mode: replace
-    min_weight: 0.3
+    name: null
+    num_votes: 7
+    mode: concat
   aux_loss:
     lambd: 0.0
     is_binary: true

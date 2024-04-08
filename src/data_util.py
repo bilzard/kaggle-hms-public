@@ -18,8 +18,8 @@ def train_valid_split(metadata: pl.DataFrame, fold_split_df: pl.DataFrame, fold:
         .to_numpy()
         .flatten()
     )
-    train_df = metadata.filter(pl.col("eeg_id").is_in(eeg_ids_train))
-    valid_df = metadata.filter(pl.col("eeg_id").is_in(eeg_ids_valid))
+    train_df = metadata.filter(pl.col("eeg_id").is_in(eeg_ids_train)).drop("fold")
+    valid_df = metadata.filter(pl.col("eeg_id").is_in(eeg_ids_valid)).drop("fold")
     return train_df, valid_df
 
 

@@ -159,10 +159,9 @@ class ContrastiveConfig(SslConfig):
 
 @dataclass
 class PseudoLabelConfig:
-    ensemble_entity_name: str
-    weight: float
-    injection_mode: str
-    min_weight: float
+    name: str
+    num_votes: int
+    mode: str
 
 
 @dataclass
