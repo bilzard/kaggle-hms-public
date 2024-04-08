@@ -676,7 +676,11 @@ class PerLabelDataset(HmsBaseDataset):
 
     def _compute_weights(self):
         weights = [
-            self.sample_weight[cls] for cls in self.metadata_pandas["sampling_class"]
+            self.sample_weight[cls] / num_lables_per_eeg
+            for cls, num_lables_per_eeg in zip(
+                self.metadata_pandas["sampling_class"],
+                self.metadata_pandas["num_labels_per_eeg"],
+            )
         ]
         return weights
 
