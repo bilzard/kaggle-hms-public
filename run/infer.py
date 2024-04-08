@@ -112,6 +112,7 @@ def predict(
                 logits = output["pred"].detach().cpu().numpy()
 
                 for eeg_id, logit in zip(eeg_ids, logits):
+                    # NOTE: このif文の意図は...? TTAしても最初のやつしか考慮されないような...?
                     if eeg_id not in eeg_id2logits:
                         eeg_id2logits[eeg_id].append(logit)
 
