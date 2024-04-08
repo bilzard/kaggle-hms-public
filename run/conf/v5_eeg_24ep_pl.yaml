@@ -1,0 +1,20 @@
+defaults:
+  - baseline_v5_eeg_cutmix
+  - _self_
+
+exp_name: v5_eeg_24ep_pl
+description: pseudo label (num_votes=7)
+
+trainer:
+  epochs: 24
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 16
+        target_epoch: 16
+        initial_value: 0.0
+        target_value: 0.3
+  pseudo_label:
+    name: v5_eeg_24ep_cutmix
+    num_votes: 7
+    mode: concat
