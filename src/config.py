@@ -55,11 +55,19 @@ class SchedulerConfig:
 
 
 @dataclass
+class SamplerConfig:
+    enabled: bool
+    num_samples_per_epoch: int
+    sample_weight: dict[str, float]
+
+
+@dataclass
 class DataConfig:
     target_key: str
     pred_key: str
     weight_key: str
     input_keys: list[str]
+    sampler: SamplerConfig
 
 
 @dataclass

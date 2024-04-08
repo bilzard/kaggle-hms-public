@@ -12,6 +12,7 @@ from einops import rearrange
 from hydra.core.global_hydra import GlobalHydra
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+from torch.utils.data import WeightedRandomSampler
 
 from src.callback import MetricsLogger, SaveModelCheckpoint
 from src.config import MainConfig
@@ -126,6 +127,7 @@ def save_sample_spec(
         ),
         id2eeg=id2eeg,
         id2cqf=id2cqf,
+        sample_weight=cfg.trainer.data.sampler.sample_weight,
         spec_id2spec=spec_id2spec,
         duration=cfg.trainer.duration,
         num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
@@ -246,6 +248,7 @@ def main(cfg: MainConfig):
                 metadata=train_df,
                 id2eeg=id2eeg,
                 id2cqf=id2cqf,
+                sample_weight=cfg.trainer.data.sampler.sample_weight,
                 spec_id2spec=spec_id2spec,
                 duration=cfg.trainer.duration,
                 num_samples_per_eeg=cfg.trainer.num_samples_per_eeg,
@@ -258,13 +261,23 @@ def main(cfg: MainConfig):
                 label_postfix=cfg.trainer.label.label_postfix,
                 weight_key=cfg.trainer.label.weight_key,
             )
+            train_sampler = (
+                WeightedRandomSampler(
+                    weights=train_dataset.weights,
+                    num_samples=len(train_dataset),
+                    replacement=True,
+                )
+                if cfg.trainer.data.sampler.enabled
+                else None
+            )
             train_loader = get_train_loader(
                 train_dataset,
                 batch_size=cfg.trainer.batch_size,
                 num_workers=cfg.env.num_workers,
                 pin_memory=True,
                 worker_init_fn=seed_worker,
-                shuffle=True,
+                shuffle=True if train_sampler is None else False,
+                sampler=train_sampler,
             )
             valid_dataset = instantiate(
                 cfg.trainer.valid_dataset,
