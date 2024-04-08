@@ -68,26 +68,26 @@ trainer:
     input_keys: [eeg, cqf]
     sampler:
       enabled: false
-      num_samples_per_epoch: 12_800
+      num_samples_per_epoch: 17_280
       sample_weight:
-        hq-seizure: 0.505
-        hq-lpd: 0.534
-        hq-gpd: 0.583
-        hq-lrda: 0.432
-        hq-grda: 0.457
-        hq-other: 0.736
-        lq-seizure: 0.053
-        lq-lpd: 0.677
-        lq-gpd: 1.050
-        lq-lrda: 0.244
-        lq-grda: 0.174
-        lq-other: 1.245
-        vlq-seizure: 0.038
-        vlq-lpd: 0.030
-        vlq-gpd: 0.048
-        vlq-lrda: 0.096
-        vlq-grda: 0.056
-        vlq-other: 0.032
+        hq-seizure: 0.697
+        hq-lpd: 0.885
+        hq-gpd: 0.533
+        hq-lrda: 0.477
+        hq-grda: 0.609
+        hq-other: 1.371
+        lq-seizure: 0.088
+        lq-lpd: 1.352
+        lq-gpd: 1.158
+        lq-lrda: 0.324
+        lq-grda: 0.279
+        lq-other: 2.794
+        vlq-seizure: 4.104
+        vlq-lpd: 3.912
+        vlq-gpd: 3.503
+        vlq-lrda: 8.353
+        vlq-grda: 5.874
+        vlq-other: 4.758
   transform: null
   num_samples_per_eeg: 1
   log_file_name: train_pipeline.txt
