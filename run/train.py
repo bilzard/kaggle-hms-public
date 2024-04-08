@@ -264,7 +264,7 @@ def main(cfg: MainConfig):
             train_sampler = (
                 WeightedRandomSampler(
                     weights=train_dataset.weights,
-                    num_samples=len(train_dataset),
+                    num_samples=cfg.trainer.data.sampler.num_samples_per_epoch,
                     replacement=True,
                 )
                 if cfg.trainer.data.sampler.enabled

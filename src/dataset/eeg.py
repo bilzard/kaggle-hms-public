@@ -636,7 +636,6 @@ class PerLabelDataset(HmsBaseDataset):
         label_postfix: list[str] = ["_prob"],
         seed: int = 42,
         transform_enabled: bool = False,
-        num_samples_per_epoch: int = 10_240,
         **kwdargs,
     ):
         super().__init__(
@@ -658,7 +657,6 @@ class PerLabelDataset(HmsBaseDataset):
             transform=transform,
             with_label=with_label,
         )
-        self.num_samples_per_epoch = num_samples_per_epoch
         self.metadata_pandas = metadata.to_pandas()
 
         self.duration_sec = duration_sec
@@ -685,7 +683,7 @@ class PerLabelDataset(HmsBaseDataset):
         return weights
 
     def __len__(self):
-        return self.num_samples_per_epoch
+        return len(self.metadata_pandas)
 
     def __getitem__(self, idx):
         row = self.metadata_pandas.iloc[idx]
