@@ -377,6 +377,23 @@ def process_label(
             .mul(pl.col("diversity_weight"))
             .alias("weight_per_eeg")
         )
+        .with_columns(
+            pl.when(pl.col("weight").lt(0.1))
+            .then(pl.lit("vlq"))
+            .otherwise(
+                pl.when(pl.col("weight").ge(0.1).and_(pl.col("weight").lt(0.3)))
+                .then(pl.lit("lq"))
+                .otherwise(pl.lit("hq"))
+            )
+            .alias("data_quality")
+        )
+        .with_columns(
+            pl.concat_str(
+                pl.col("data_quality"),
+                pl.lit("-"),
+                pl.col("expert_consensus").str.to_lowercase(),
+            ).alias("sampling_class")
+        )
     )
 
     return metadata
