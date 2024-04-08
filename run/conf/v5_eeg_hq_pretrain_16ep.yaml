@@ -1,0 +1,16 @@
+defaults:
+  - v5_eeg_16ep_cutmix
+  - _self_
+
+exp_name: v5_eeg_hq_pretrain_16ep
+description: v5 eeg pretrain only with high quality data (16ep)
+
+trainer:
+  epochs: 16
+  label:
+    schedule:
+      min_weight:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 0.3
+        target_value: 0.3
