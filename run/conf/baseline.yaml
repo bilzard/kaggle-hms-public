@@ -70,24 +70,24 @@ trainer:
       enabled: false
       num_samples_per_epoch: 17_280
       sample_weight:
-        hq-seizure: 0.837
-        hq-lpd: 1.076
-        hq-gpd: 0.696
-        hq-lrda: 0.726
-        hq-grda: 0.691
-        hq-other: 1.130
-        lq-seizure: 0.106
-        lq-lpd: 1.645
-        lq-gpd: 1.509
-        lq-lrda: 0.494
-        lq-grda: 0.317
-        lq-other: 2.303
-        vlq-seizure: 4.929
-        vlq-lpd: 4.758
-        vlq-gpd: 4.567
-        vlq-lrda: 12.724
-        vlq-grda: 6.672
-        vlq-other: 3.921
+        hq-seizure: 0.266
+        hq-lpd: 0.314
+        hq-gpd: 0.364
+        hq-lrda: 0.321
+        hq-grda: 0.305
+        hq-other: 0.328
+        lq-seizure: 0.041
+        lq-lpd: 0.639
+        lq-gpd: 0.877
+        lq-lrda: 0.335
+        lq-grda: 0.202
+        lq-other: 0.772
+        vlq-seizure: 0.272
+        vlq-lpd: 0.345
+        vlq-gpd: 0.295
+        vlq-lrda: 0.635
+        vlq-grda: 0.330
+        vlq-other: 0.245
   transform: null
   num_samples_per_eeg: 1
   log_file_name: train_pipeline.txt
