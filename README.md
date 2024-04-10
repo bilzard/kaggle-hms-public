@@ -1,6 +1,8 @@
 # About This Repository
 
-This repository contains resources to reproduce submissions for the competition [HMS - Harmful Brain Activity Classification](https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification)
+This repository contains resources of 4th place solution (bilzard part) on the competition [HMS - Harmful Brain Activity Classification](https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification)
+
+Details of the solution is shared [here](https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/discussion/492388).
 
 ## Setup
 
@@ -107,6 +109,10 @@ python -m run.model_checkpoint ensemble_entity=bilzard_v1
 |--|--|
 |v5_eeg_24ep_cutmix|0.2477|
 
-## Acknowledgements
+## LICENSE
 
-## Reference
+Apache 2.0
+
+## External Sources
+
+- [mgrankin/over9000](https://github.com/mgrankin/over9000) Apache 2.0
