@@ -10,6 +10,23 @@ This repository contains resources to reproduce submissions for the competition 
 pip install --editable .
 ```
 
+### Configure Local Environment Settings
+
+You should edit `conf/env/local.yaml` to meet configuration of your local environment.
+
+```yaml
+name: local
+num_workers: 24
+infer_batch_size: 32
+grad_checkpointing: false
+
+data_dir: (path to competition data)
+working_dir: (path to your working directory)
+output_dir: ${env.working_dir}/${job_name}/${phase}
+checkpoint_dir: ${env.working_dir}/train
+submission_dir: .
+```
+
 ## How to Reproduce
 
 ### Pre-Process
@@ -64,7 +81,7 @@ python -m run.ensemble job_name=ensemble ensemble_entity=f01234_s012 ensemble_en
 python -m run.batch_infer job_name=ensemble ensemble_entity=f01234_s012 ensemble_entity.name=v5_eeg_24ep_cutmix
 ```
 
-### Generate Pseudo Labels
+### Generate Pseudo Labels (Optional)
 
 #### per eeg_id
 
@@ -78,7 +95,7 @@ python -m run.pseudo_label job_name=pseudo_label ensemble_entity=f01234_s012 ens
 python -m run.pseudo_label_per_label job_name=pseudo_label_per_label ensemble_entity=f01234_s012 ensemble_entity.name=v5_eeg_24ep_cutmix
 ```
 
-### Upload Checkpoints
+### Upload Checkpoints (Optional)
 
 ```bash
 python -m run.model_checkpoint ensemble_entity=bilzard_v1
