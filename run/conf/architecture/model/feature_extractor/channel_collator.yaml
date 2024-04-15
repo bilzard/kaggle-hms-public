@@ -1,0 +1,4 @@
+_target_: src.model.feature_extractor.ChannelCollator
+sampling_rate: 40
+cutoff_freqs: [0.5, 50]
+apply_mask: true

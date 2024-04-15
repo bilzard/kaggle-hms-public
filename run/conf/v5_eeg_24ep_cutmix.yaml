@@ -1,0 +1,320 @@
+hydra:
+  run:
+    dir: ${env.working_dir}/${job_name}/${exp_name}/fold_${fold}/seed_${seed}
+  sweep:
+    dir: ${env.working_dir}/multirun/${job_name}
+    subdir: ${hydra.job.override_dirname}
+  job:
+    name: ${job_name}
+    chdir: true
+    config:
+      override_dirname:
+        exclude_keys:
+          - job_name
+          - verbose
+          - debug
+          - description
+          - wandb.project
+          - wandb.mode
+          - dry_run
+          - trainer.save_last
+          - trainer.save_best
+          - no_eval
+
+defaults:
+  - env: local
+  - preprocess: with_cqf
+  - split: gkfold5
+  - dev: small
+  - trainer/optimizer: adamw
+  - architecture/model/sample_collator: simple_collator
+  - architecture/model/feature_extractor: channel_collator
+  - architecture/model/consistency_regularizer: identity
+  - architecture/model/eeg_encoder: efficientnet1d
+  - architecture/model/decoder: pick_last
+  - architecture/model/sample_aggregator: mean_aggregator
+  - architecture/model/eeg_feature_processor: eeg_dual_per_channel_v2
+  - architecture/model/head: mlp_head
+  - _self_
+
+preprocess:
+  clip_val: 65504
+  ref_voltage: 1000
+  apply_filter: false
+  cutoff_freqs:
+    - null
+    - null
+  reject_freq: null
+  drop_leftmost_nulls: false
+  pad_mode: constant
+  device: cuda
+  down_sampling_rate: 5
+  process_cqf: true
+split:
+  strategy: group_k_fold
+  num_splits: 5
+dev:
+  num_samples: 128
+trainer:
+  optimizer:
+    _target_: torch.optim.AdamW
+    eps: 0.0001
+    betas:
+      - 0.9
+      - 0.999
+  trainer_class:
+    _target_: src.trainer.Trainer
+  epochs: 24
+  lr: 0.001
+  lr_adjustments: []
+  weight_decay: 1.0e-05
+  batch_size: 32
+  save_last: true
+  save_best: false
+  duration: 2048
+  no_decay_bias_params: false
+  val:
+    batch_size: 32
+    duration: ${trainer.duration}
+    stride: 1024
+    aggregation_fn: mean
+    agg_policy: per_eeg_weighted
+    seed: 123
+    weight_exponent: 0.0
+    min_weight: 0.3
+    only_use_sp_center: false
+  scheduler:
+    warmup_ratio: 0.0
+  data:
+    target_key: label
+    pred_key: pred
+    weight_key: weight
+    input_keys:
+      - eeg
+      - cqf
+    sampler:
+      enabled: false
+      num_samples_per_epoch: 17280
+      sample_weight:
+        hq-seizure: 0.266
+        hq-lpd: 0.314
+        hq-gpd: 0.364
+        hq-lrda: 0.321
+        hq-grda: 0.305
+        hq-other: 0.328
+        lq-seizure: 0.041
+        lq-lpd: 0.639
+        lq-gpd: 0.877
+        lq-lrda: 0.335
+        lq-grda: 0.202
+        lq-other: 0.772
+        vlq-seizure: 0.272
+        vlq-lpd: 0.345
+        vlq-gpd: 0.295
+        vlq-lrda: 0.635
+        vlq-grda: 0.33
+        vlq-other: 0.245
+  transform:
+    _target_: src.transform.Compose
+    transforms:
+      - _target_: src.transform.SwapLr
+        p: 0.5
+      - _target_: src.transform.ChannelPermutation
+        p: 0.3
+      - _target_: src.transform.Cutout1d
+        p: 0.3
+        max_length: 128
+        num_cutouts: 4
+  num_samples_per_eeg: 1
+  log_file_name: train_pipeline.txt
+  random_seed_offset: 127458
+  train_dataset:
+    _target_: src.dataset.eeg.PerEegSubsampleDataset
+  valid_dataset:
+    _target_: src.dataset.eeg.PerEegSubsampleDataset
+    num_samples_per_eeg: 3
+    transform: null
+  label:
+    diversity_power: 0.0
+    population_power: 1.0
+    max_votes: 28
+    weight_key:
+      - weight
+      - weight_per_eeg
+    label_postfix:
+      - _prob
+      - _prob_per_eeg
+    only_use_sp_center: false
+    min_weight: 0.0
+    schedule:
+      weight_exponent:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 1.0
+        target_value: 1.0
+      min_weight:
+        schedule_start_epoch: 16
+        target_epoch: 16
+        initial_value: 0.0
+        target_value: 0.3
+      max_weight:
+        schedule_start_epoch: 0
+        target_epoch: 0
+        initial_value: 1.0
+        target_value: 1.0
+  class_weights:
+    - 1.151
+    - 0.706
+    - 1.039
+    - 1.681
+    - 1.17
+    - 0.253
+  class_weight_exponent: 0.0
+  use_loss_weights: true
+  distillation:
+    teacher_exp_name: null
+    target_epochs: 0
+    target_forget_rate: 1.0
+    use_loss_weights: false
+  contrastive:
+    lambd: 0.0
+  loss_weight:
+    norm_policy: relative
+    global_mean: 0.227
+  pseudo_label:
+    name: null
+    num_votes: 7
+    mode: concat
+  aux_loss:
+    lambd: 0.0
+    is_binary: true
+    binary_threshold: 0.3
+    freeze_epoch: .inf
+  feature_extractor_freeze_epoch: .inf
+  pretrained_weight:
+    exp_name: null
+    seed: null
+    model_choice: last
+architecture:
+  model:
+    sample_collator:
+      _target_: src.model.sample_collator.SimpleCollator
+    feature_extractor:
+      _target_: src.model.feature_extractor.ChannelCollator
+      sampling_rate: 40
+      cutoff_freqs:
+        - 0.5
+        - null
+      apply_mask: false
+    consistency_regularizer:
+      _target_: src.model.consistency_regularizer.Identity
+    decoder:
+      _target_: src.model.decoder.PickLast
+    sample_aggregator:
+      _target_: src.model.sample_aggregator.MeanAggregator
+    head:
+      _target_: src.model.head.Head
+      bottleneck_ratio: 4
+      num_heads: 2
+    eeg_pre_adapter:
+      _target_: src.model.eeg_adapter.EegTimeCroppingTransform
+      start: 744
+      size: 512
+    augmentation:
+      _target_: src.model.augmentation.Cutmix1d
+      p: 0.5
+      alpha: 0.2
+    spec_transform: null
+    adapters:
+      - _target_: src.model.adapter.ConstantNormalizer
+      - _target_: src.model.adapter.DualCanvasAggregator
+        drop_z: true
+      - _target_: src.model.adapter.ResizeTransform
+        scale_factor:
+          - 0.5
+          - 1.0
+    bg_adapters: []
+    merger: null
+    post_adapter:
+      _target_: src.model.post_adapter.IdentityPostAdapter
+    eeg_adapter:
+      _target_: src.model.eeg_adapter.EegDualStackingCollator
+      drop_z: false
+    eeg_encoder:
+      _target_: src.model.eeg_encoder.EfficientNet1d
+      hidden_dim: 64
+      depth_multiplier: 4
+      stem_kernel_size: 3
+      kernel_sizes:
+        - 3
+        - 3
+        - 5
+        - 5
+        - 3
+      pool_sizes:
+        - 2
+        - 2
+        - 2
+        - 2
+        - 2
+      layers: 3
+      frame_offset: 0
+      num_frames: 512
+      skip_in_block: true
+      skip_in_layer: false
+      drop_path_rate: 0.0
+      use_ds_conv: false
+      se_after_dw_conv: true
+      use_channel_mixer: true
+      channel_mixer_kernel_size: 3
+      mixer_type: sc
+      input_mask: ${architecture.input_mask}
+      momentum: 0.1
+      input_planes: 1
+    eeg_feature_processor:
+      _target_: src.model.eeg_feature_processor.EegDualPerChannelFeatureProcessorV2
+      hidden_dim: ${architecture.hidden_dim}
+      num_eeg_channels: 10
+      lr_mapping_type: max-min
+  model_class:
+    _target_: src.model.hms_model.hms_model_1d.HmsModel1d
+  model_checker:
+    _target_: src.model.hms_model.hms_model_1d.check_model
+  in_channels: 20
+  in_channels_eeg: -1
+  in_channels_spec: -1
+  out_channels: 6
+  recover_dual: true
+  use_lr_feature: true
+  use_similarity_feature: true
+  hidden_dim: 64
+  input_mask: true
+  use_bg_spec: false
+  lr_mapping_type: max-min
+  spec_cropped_duration: 256
+  bg_spec_mask_value: 1.0
+infer:
+  batch_size: ${env.infer_batch_size}
+  model_choice: last
+  log_name: infer_pipeline.txt
+  tta_iterations: 1
+  tta: null
+  test_dataset:
+    _target_: src.dataset.eeg.PerEegSubsampleDataset
+    num_samples_per_eeg: 1
+    duration: ${trainer.duration}
+wandb:
+  project: kaggle-hms
+  mode: disabled
+job_name: train
+exp_name: v5_eeg_24ep_cutmix
+description: v5 eeg cutmix (16ep + ft 8ep)
+fold: ???
+seed: ???
+phase: train
+dry_run: false
+debug: false
+cleanup: true
+final_submission: false
+check_only: false
+no_eval: false

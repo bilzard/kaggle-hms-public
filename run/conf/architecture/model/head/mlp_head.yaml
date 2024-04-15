@@ -1,0 +1,3 @@
+_target_: src.model.head.Head
+bottleneck_ratio: 4
+num_heads: 1

@@ -1,0 +1,10 @@
+name: local
+num_workers: 24
+infer_batch_size: 32
+grad_checkpointing: false
+
+data_dir: /ml-docker/input/hms-harmful-brain-activity-classification
+working_dir: /ml-docker/working/kaggle-hms-public/data
+output_dir: ${env.working_dir}/${job_name}/${phase}
+checkpoint_dir: ${env.working_dir}/train
+submission_dir: .

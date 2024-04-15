@@ -1,0 +1,3 @@
+_target_: src.model.encoder.timm_encoder.TimmEncoder
+name: ???
+grad_checkpointing: ${env.grad_checkpointing}

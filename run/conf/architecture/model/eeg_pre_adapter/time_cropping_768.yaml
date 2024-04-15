@@ -1,0 +1,3 @@
+_target_: src.model.eeg_adapter.EegTimeCroppingTransform
+start: 616
+size: 768

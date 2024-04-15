@@ -1,0 +1,2 @@
+strategy: group_k_fold
+num_splits: 5

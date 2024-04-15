@@ -1,0 +1,28 @@
+hydra:
+  run:
+    dir: ${env.output_dir}
+  sweep:
+    dir: ${env.working_dir}/multirun/${job_name}/${phase}
+    subdir: ${hydra.job.override_dirname}
+  job:
+    name: ${job_name}
+    chdir: true
+    config:
+      override_dirname:
+        exclude_keys:
+          - verbose
+          - debug
+
+defaults:
+  - env: local
+  - preprocess: with_cqf
+  - preprocess/cqf: default
+  - split: gkfold5
+  - dev: small
+  - _self_
+
+job_name: ???
+phase: train # train or test
+dry_run: false
+debug: false
+cleanup: false

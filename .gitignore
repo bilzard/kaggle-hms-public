@@ -1,0 +1,9 @@
+data/*
+log/*
+tmp/
+sandbox*
+**/wandb/
+!.gitkeep
+debug*.yaml
+notebook/*
+note/*

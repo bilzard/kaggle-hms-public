@@ -1,0 +1,10 @@
+name: kaggle
+num_workers: 4
+infer_batch_size: 24
+grad_checkpointing: true
+
+data_dir: /kaggle/input/hms-harmful-brain-activity-classification
+working_dir: /kaggle/temp/kaggle-hms-bilzard/data
+output_dir: ${env.working_dir}/${job_name}/${phase}
+checkpoint_dir: /kaggle/input/hms-model
+submission_dir: /kaggle/working

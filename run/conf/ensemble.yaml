@@ -1,0 +1,36 @@
+hydra:
+  run:
+    dir: ${env.working_dir}/${job_name}/${ensemble_entity.name}
+  sweep:
+    dir: ${env.working_dir}/multirun/${job_name}/${ensemble_entity.name}
+    subdir: ${hydra.job.override_dirname}
+  job:
+    name: ${job_name}
+    chdir: true
+    config:
+      override_dirname:
+        exclude_keys:
+          - verbose
+          - debug
+          - dry_run
+          - description
+          - cleanup
+          - final_submission
+
+defaults:
+  - env: local
+  - dev: small
+  - ensemble_entity: f01234_s012
+  - preprocess: with_cqf
+  - _self_
+
+job_name: ensemble
+phase: train # train or test
+dry_run: false
+debug: false
+cleanup: true
+final_submission: true
+apply_label_weight: false
+optimize_weight: true
+min_weight: 0.3
+max_weight: .inf
