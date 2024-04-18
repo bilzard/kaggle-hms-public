@@ -2,7 +2,7 @@
 
 This repository contains part of resources in 4th place solution (bilzard part) on the competition [HMS - Harmful Brain Activity Classification](https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification)
 
-Details of this solution is described [here](https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification/discussion/492388).
+Details of this solution is described [here](https://github.com/bilzard/kaggle-hms-public/blob/main/doc/02_solution_bilzard.pdf).
 
 ## LICENSE
 
