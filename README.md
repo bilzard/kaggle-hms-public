@@ -10,13 +10,18 @@ Apache 2.0
 
 ## Environment
 
-- [docker-python](https://github.com/Kaggle/docker-python)
 - Graphic card: Nvidia RTX4090
 - CUDA: 12.1
 
 ## Setup
 
-### Install All Dependencies for Development
+### Install required packages
+
+```bash
+pip install -r requirements.txt
+```
+
+### Install local packages with additional requirements
 
 Below command installs this repository in your local python environment with dependent packages.
 
